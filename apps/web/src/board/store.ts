@@ -2,8 +2,12 @@ import {
   type BoardItem,
   boardItemSchema,
   compareItems,
+  DEFAULT_GRID,
+  type GridSettings,
+  gridSettingsSchema,
   ITEMS_MAP,
   type Layer,
+  SETTINGS_MAP,
 } from "@scryboard/shared";
 import * as Y from "yjs";
 
@@ -16,7 +20,9 @@ export type ItemPatch = Partial<Omit<BoardItem, "id" | "kind">> & Record<string,
  */
 export class BoardStore {
   private readonly map: Y.Map<unknown>;
+  private readonly settings: Y.Map<unknown>;
   private readonly undoManager: Y.UndoManager;
+  private grid: GridSettings = DEFAULT_GRID;
   private readonly byId = new Map<string, BoardItem>();
   private sorted: BoardItem[] = [];
   private readonly listeners = new Set<() => void>();
@@ -26,8 +32,14 @@ export class BoardStore {
     readonly userId: string,
   ) {
     this.map = doc.getMap(ITEMS_MAP);
-    this.undoManager = new Y.UndoManager(this.map, {
+    this.settings = doc.getMap(SETTINGS_MAP);
+    this.undoManager = new Y.UndoManager([this.map, this.settings], {
       trackedOrigins: new Set([this]),
+    });
+    this.loadSettings();
+    this.settings.observe(() => {
+      this.loadSettings();
+      this.emit();
     });
     for (const key of this.map.keys()) this.load(key);
     this.resort();
@@ -46,6 +58,11 @@ export class BoardStore {
     else this.byId.delete(key);
   }
 
+  private loadSettings() {
+    const parsed = gridSettingsSchema.safeParse(this.settings.get("grid"));
+    this.grid = parsed.success ? parsed.data : DEFAULT_GRID;
+  }
+
   private resort() {
     this.sorted = [...this.byId.values()].sort(compareItems);
     this.emit();
@@ -61,6 +78,14 @@ export class BoardStore {
   };
 
   getSnapshot = (): BoardItem[] => this.sorted;
+
+  getGrid = (): GridSettings => this.grid;
+
+  updateGrid(patch: Partial<GridSettings>) {
+    const next = { ...this.grid, ...patch };
+    if (!gridSettingsSchema.safeParse(next).success) return;
+    this.transact(() => this.settings.set("grid", next));
+  }
 
   get(id: string): BoardItem | undefined {
     return this.byId.get(id);

@@ -1,5 +1,12 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import type { BoardItem, Role, ShapeItem, StrokeItem, TextItem } from "@scryboard/shared";
+import type {
+  BoardItem,
+  Role,
+  ShapeItem,
+  StrokeItem,
+  TextItem,
+  TokenItem,
+} from "@scryboard/shared";
 import type Konva from "konva";
 import {
   type DragEvent as ReactDragEvent,
@@ -10,13 +17,18 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Layer, Line, Stage, Transformer } from "react-konva";
+import { Layer, Line, Rect, Stage, Transformer } from "react-konva";
 import { Cursors, useCursorBroadcast } from "./Cursors";
+import { GridLines } from "./GridLines";
 import { bakeScale, normalizeBox, unionBounds } from "./geometry";
-import { ItemNode } from "./ItemNode";
+import { calibrateFromBox, nextTokenName, snapTokenCenter } from "./grid";
+import { ItemNode, SELECTION_COLOR } from "./ItemNode";
+import { canModify, canSelect } from "./permissions";
+import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
 import { type BoardStore, newItemId } from "./store";
 import { TextEditor } from "./TextEditor";
+import { TokenList } from "./TokenList";
 import { Toolbar } from "./Toolbar";
 import { useBoardUi } from "./tools";
 import { isSupportedImage, UploadError, uploadImage } from "./upload";
@@ -34,7 +46,8 @@ type Interaction =
   | { type: "pan"; start: Point; viewport: Viewport }
   | { type: "stroke"; origin: Point; points: number[] }
   | { type: "shape"; shape: ShapeItem["shape"]; start: Point; end: Point }
-  | { type: "erase" };
+  | { type: "erase" }
+  | { type: "calibrate"; start: Point; end: Point };
 
 const DEFAULT_FONT_SIZE = 24;
 
@@ -50,6 +63,7 @@ function findItemId(node: Konva.Node | null): string | null {
 
 export function Board({ store, provider, roomId, role }: Props) {
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const contentLayerRef = useRef<Konva.Layer>(null);
@@ -68,18 +82,14 @@ export function Board({ store, provider, roomId, role }: Props) {
   const editingTextId = useBoardUi((s) => s.editingTextId);
   const viewport = useBoardUi((s) => s.viewport);
   const spacePan = useBoardUi((s) => s.spacePan);
-  const { select, setViewport, setEditingText } = useBoardUi.getState();
+  const { select, setViewport, setEditingText, setTool, setGridPanelOpen } = useBoardUi.getState();
 
-  const canEdit = useCallback(
-    (item: BoardItem | undefined) =>
-      item !== undefined && (role === "gm" || (item.layer !== "map" && !item.locked)),
-    [role],
-  );
+  const canEdit = useCallback((item: BoardItem | undefined) => canModify(item, role), [role]);
   const panMode = tool === "hand" || spacePan;
   const broadcastCursor = useCursorBroadcast(provider);
 
   const fitToContent = useCallback(() => {
-    const bounds = unionBounds(store.getSnapshot());
+    const bounds = unionBounds(store.getSnapshot(), store.getGrid().size);
     if (bounds && size.width > 0) setViewport(fitBounds(bounds, size));
   }, [store, size, setViewport]);
 
@@ -118,7 +128,10 @@ export function Board({ store, provider, roomId, role }: Props) {
     const layer = contentLayerRef.current;
     if (!transformer || !layer) return;
     const nodes = selectedIds
-      .filter((id) => canEdit(store.get(id)) && id !== editingTextId)
+      // I token hanno un loro indicatore di selezione e la taglia si cambia dal pannello.
+      .filter(
+        (id) => canEdit(store.get(id)) && store.get(id)?.kind !== "token" && id !== editingTextId,
+      )
       .map((id) => layer.findOne((node: Konva.Node) => node.hasName("item") && node.id() === id))
       .filter((n): n is Konva.Node => n !== undefined);
     transformer.nodes(nodes);
@@ -168,7 +181,7 @@ export function Board({ store, provider, roomId, role }: Props) {
 
     switch (tool) {
       case "select": {
-        if (!target || !canEdit(target)) {
+        if (!canSelect(target, role)) {
           select([]);
           return;
         }
@@ -216,7 +229,30 @@ export function Board({ store, provider, roomId, role }: Props) {
         setInteraction({ type: "erase" });
         eraseAt(p.screen);
         return;
+      case "token":
+        placeToken(p.world);
+        return;
+      case "calibrate":
+        setInteraction({ type: "calibrate", start: p.world, end: p.world });
+        return;
     }
+  }
+
+  function placeToken(at: Point) {
+    const { tokenDraft } = useBoardUi.getState();
+    const existing = store
+      .getSnapshot()
+      .filter((i): i is TokenItem => i.kind === "token")
+      .map((t) => t.name);
+    const center = grid.enabled ? snapTokenCenter(at, tokenDraft.size, grid) : at;
+    store.add({
+      ...base("token", center),
+      kind: "token",
+      name: nextTokenName(tokenDraft.name, existing),
+      color: tokenDraft.color,
+      size: tokenDraft.size,
+      assetId: tokenDraft.assetId,
+    });
   }
 
   function onPointerMove() {
@@ -244,6 +280,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         return;
       }
       case "shape":
+      case "calibrate":
         setInteraction({ ...interaction, end: p.world });
         return;
       case "erase":
@@ -267,6 +304,16 @@ export function Board({ store, provider, roomId, role }: Props) {
         strokeWidth: strokeWidth / viewport.scale,
       };
       store.add(item);
+    } else if (current.type === "calibrate") {
+      const calibration = calibrateFromBox(normalizeBox(current.start, current.end));
+      if (!calibration) {
+        setNotice("Riquadro troppo piccolo: traccia il bordo di una casella della mappa.");
+        return;
+      }
+      store.updateGrid({ ...calibration, enabled: true });
+      setTool("select");
+      setGridPanelOpen(true);
+      setNotice(`Griglia calibrata: caselle di ${calibration.size} px.`);
     } else if (current.type === "shape") {
       const dx = current.end.x - current.start.x;
       const dy = current.end.y - current.start.y;
@@ -296,6 +343,13 @@ export function Board({ store, provider, roomId, role }: Props) {
     // Il pinch sul trackpad arriva come wheel con ctrlKey e delta piccoli.
     const factor = Math.exp(-e.evt.deltaY * (e.evt.ctrlKey ? 0.01 : 0.0015));
     setViewport(zoomAt(viewport, p.screen, factor));
+  }
+
+  /** I token si agganciano alla griglia durante il trascinamento (Alt per muoverli liberi). */
+  function onItemDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+    const item = store.get(e.target.id());
+    if (item?.kind !== "token" || !grid.enabled || e.evt.altKey) return;
+    e.target.position(snapTokenCenter(e.target.position(), item.size, grid));
   }
 
   function onItemDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
@@ -410,9 +464,33 @@ export function Board({ store, provider, roomId, role }: Props) {
           ? "default"
           : tool === "text"
             ? "text"
-            : "crosshair";
+            : tool === "token"
+              ? "copy"
+              : "crosshair";
 
   const editingItem = editingTextId ? store.get(editingTextId) : undefined;
+
+  const firstOther = items.findIndex((i) => i.layer !== "map");
+  const mapItems = firstOther === -1 ? items : items.slice(0, firstOther);
+  const otherItems = firstOther === -1 ? [] : items.slice(firstOther);
+  const visibleWorld = {
+    ...screenToWorld(viewport, { x: 0, y: 0 }),
+    width: size.width / viewport.scale,
+    height: size.height / viewport.scale,
+  };
+  const renderItem = (item: BoardItem) => (
+    <ItemNode
+      key={item.id}
+      item={item}
+      roomId={roomId}
+      cellSize={grid.size}
+      draggable={tool === "select" && !panMode && canEdit(item)}
+      hidden={item.id === editingTextId}
+      selected={selectedIds.includes(item.id)}
+      onDragMove={item.kind === "token" ? onItemDragMove : undefined}
+      onDragEnd={onItemDragEnd}
+    />
+  );
 
   return (
     <div
@@ -423,7 +501,8 @@ export function Board({ store, provider, roomId, role }: Props) {
       data-item-count={items.length}
       style={{
         cursor,
-        // La griglia di puntini segue pan e zoom.
+        // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.
+        backgroundImage: grid.enabled ? "none" : undefined,
         backgroundPosition: `${viewport.x}px ${viewport.y}px`,
         backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`,
       }}
@@ -446,16 +525,9 @@ export function Board({ store, provider, roomId, role }: Props) {
           onWheel={onWheel}
         >
           <Layer ref={contentLayerRef}>
-            {items.map((item) => (
-              <ItemNode
-                key={item.id}
-                item={item}
-                roomId={roomId}
-                draggable={tool === "select" && !panMode && canEdit(item)}
-                hidden={item.id === editingTextId}
-                onDragEnd={onItemDragEnd}
-              />
-            ))}
+            {mapItems.map(renderItem)}
+            <GridLines grid={grid} visible={visibleWorld} scale={viewport.scale} />
+            {otherItems.map(renderItem)}
           </Layer>
           <Layer>
             <Transformer
@@ -480,6 +552,15 @@ export function Board({ store, provider, roomId, role }: Props) {
                 lineCap="round"
                 lineJoin="round"
                 tension={0.4}
+              />
+            )}
+            {interaction?.type === "calibrate" && (
+              <Rect
+                {...normalizeBox(interaction.start, interaction.end)}
+                stroke={SELECTION_COLOR}
+                strokeWidth={2 / viewport.scale}
+                dash={[6 / viewport.scale, 4 / viewport.scale]}
+                fill="rgba(142, 124, 240, 0.15)"
               />
             )}
             {interaction?.type === "shape" && (
@@ -519,8 +600,14 @@ export function Board({ store, provider, roomId, role }: Props) {
           }}
         />
       )}
+      {tool === "select" && selectedIds.length > 0 && (
+        <SelectionPanel store={store} role={role} roomId={roomId} />
+      )}
+      <TokenList items={items} grid={grid} />
       <Toolbar
         store={store}
+        role={role}
+        roomId={roomId}
         onUpload={(files) => void addImages(files, viewportCenter())}
         onFit={fitToContent}
         viewportSize={size}

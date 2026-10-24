@@ -1,0 +1,66 @@
+import { DEFAULT_GRID } from "@scryboard/shared";
+import { describe, expect, it } from "vitest";
+import {
+  calibrateFromBox,
+  cellAt,
+  nextTokenName,
+  normalizeOffset,
+  snapTokenCenter,
+  tokenInitials,
+  visibleGridLines,
+} from "./grid";
+
+const grid = { ...DEFAULT_GRID, enabled: true, size: 50, offsetX: 10, offsetY: 20 };
+
+describe("grid", () => {
+  it("snaps odd-sized tokens to cell centres", () => {
+    expect(snapTokenCenter({ x: 40, y: 40 }, 1, grid)).toEqual({ x: 35, y: 45 });
+    expect(snapTokenCenter({ x: 70, y: 99 }, 3, grid)).toEqual({ x: 85, y: 95 });
+    expect(snapTokenCenter({ x: 12, y: 30 }, 0.5, grid)).toEqual({ x: 35, y: 45 });
+  });
+
+  it("snaps even-sized tokens to grid intersections", () => {
+    expect(snapTokenCenter({ x: 50, y: 60 }, 2, grid)).toEqual({ x: 60, y: 70 });
+    expect(snapTokenCenter({ x: -30, y: -25 }, 4, grid)).toEqual({ x: -40, y: -30 });
+  });
+
+  it("finds the cell under a point", () => {
+    expect(cellAt({ x: 10, y: 20 }, grid)).toEqual({ col: 0, row: 0 });
+    expect(cellAt({ x: 59.9, y: 69.9 }, grid)).toEqual({ col: 0, row: 0 });
+    expect(cellAt({ x: 9, y: 19 }, grid)).toEqual({ col: -1, row: -1 });
+  });
+
+  it("calibrates from a box drawn over one cell", () => {
+    expect(calibrateFromBox({ x: 130, y: 245, width: 72, height: 68 })).toEqual({
+      size: 70,
+      offsetX: 60,
+      offsetY: 35,
+    });
+    expect(calibrateFromBox({ x: 0, y: 0, width: 4, height: 4 })).toBeNull();
+  });
+
+  it("normalizes offsets into [0, size)", () => {
+    expect(normalizeOffset(-5, 50)).toBe(45);
+    expect(normalizeOffset(120, 50)).toBe(20);
+  });
+
+  it("lists only the visible lines, or none when cells are tiny", () => {
+    expect(visibleGridLines(grid, { x: 0, y: 0, width: 120, height: 80 }, 1)).toEqual({
+      xs: [10, 60, 110],
+      ys: [20, 70],
+    });
+    expect(visibleGridLines(grid, { x: 0, y: 0, width: 100, height: 100 }, 0.1)).toBeNull();
+  });
+
+  it("builds initials", () => {
+    expect(tokenInitials("Goblin arciere")).toBe("GA");
+    expect(tokenInitials("thorin")).toBe("TH");
+    expect(tokenInitials("  ")).toBe("?");
+  });
+
+  it("numbers duplicate token names", () => {
+    expect(nextTokenName("Goblin", [])).toBe("Goblin");
+    expect(nextTokenName("Goblin", ["Goblin", "Goblin 2"])).toBe("Goblin 3");
+    expect(nextTokenName("  ", ["x"])).toBe("");
+  });
+});

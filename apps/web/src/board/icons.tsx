@@ -62,6 +62,18 @@ export const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M11 9l5 5M6 19h14" />
     </Icon>
   ),
+  token: (
+    <Icon>
+      <circle cx="12" cy="10" r="6.5" />
+      <path d="M6 20h12" />
+    </Icon>
+  ),
+  calibrate: (
+    <Icon>
+      <rect x="6" y="6" width="12" height="12" strokeDasharray="3 2" />
+      <path d="M3 3l3 3M21 21l-3-3" />
+    </Icon>
+  ),
 };
 
 export const ImageIcon = (
@@ -89,5 +101,39 @@ export const RedoIcon = (
 export const FitIcon = (
   <Icon>
     <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </Icon>
+);
+
+export const TokenIcon = (
+  <Icon>
+    <circle cx="12" cy="10" r="6.5" />
+    <path d="M6 20h12" />
+  </Icon>
+);
+
+export const GridIcon = (
+  <Icon>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="1.5" />
+    <path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17" />
+  </Icon>
+);
+
+export const LockIcon = (
+  <Icon>
+    <rect x="5" y="11" width="14" height="9" rx="1.5" />
+    <path d="M8 11V8a4 4 0 018 0v3" />
+  </Icon>
+);
+
+export const UnlockIcon = (
+  <Icon>
+    <rect x="5" y="11" width="14" height="9" rx="1.5" />
+    <path d="M8 11V8a4 4 0 017.5-2" />
+  </Icon>
+);
+
+export const TrashIcon = (
+  <Icon>
+    <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
   </Icon>
 );

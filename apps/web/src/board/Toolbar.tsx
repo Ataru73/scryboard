@@ -1,7 +1,10 @@
-import { DRAW_COLORS, STROKE_WIDTHS } from "@scryboard/shared";
+import { DRAW_COLORS, type Role, STROKE_WIDTHS } from "@scryboard/shared";
 import { useRef, useSyncExternalStore } from "react";
-import { FitIcon, ImageIcon, RedoIcon, TOOL_ICONS, UndoIcon } from "./icons";
+import { COLOR_NAMES } from "./colors";
+import { GridPanel } from "./GridPanel";
+import { FitIcon, GridIcon, ImageIcon, RedoIcon, TOOL_ICONS, UndoIcon } from "./icons";
 import type { BoardStore } from "./store";
+import { TokenStyleFields } from "./TokenStyleFields";
 import { type Tool, useBoardUi } from "./tools";
 import { clampScale, zoomAt } from "./viewport";
 
@@ -14,30 +17,31 @@ const TOOLS: { tool: Tool; label: string; key: string }[] = [
   { tool: "ellipse", label: "Ellisse", key: "O" },
   { tool: "text", label: "Testo", key: "T" },
   { tool: "eraser", label: "Gomma", key: "E" },
+  { tool: "token", label: "Token", key: "K" },
 ];
 
 const DRAWING_TOOLS: Tool[] = ["pen", "line", "rect", "ellipse", "text"];
-const COLOR_NAMES: Record<string, string> = {
-  "#1d1a24": "Nero",
-  "#ffffff": "Bianco",
-  "#e5484d": "Rosso",
-  "#f76b15": "Arancione",
-  "#ffc53d": "Giallo",
-  "#46a758": "Verde",
-  "#0090ff": "Blu",
-  "#8e4ec6": "Viola",
-};
 
 interface Props {
   store: BoardStore;
+  role: Role;
+  roomId: string;
   onUpload: (files: File[]) => void;
   onFit: () => void;
   viewportSize: { width: number; height: number };
 }
 
-export function Toolbar({ store, onUpload, onFit, viewportSize }: Props) {
-  const { tool, color, strokeWidth, filled, viewport } = useBoardUi();
-  const { setTool, setColor, setStrokeWidth, setFilled, setViewport } = useBoardUi.getState();
+export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: Props) {
+  const { tool, color, strokeWidth, filled, viewport, tokenDraft, gridPanelOpen } = useBoardUi();
+  const {
+    setTool,
+    setColor,
+    setStrokeWidth,
+    setFilled,
+    setViewport,
+    setTokenDraft,
+    setGridPanelOpen,
+  } = useBoardUi.getState();
   const canUndo = useSyncExternalStore(store.subscribe, () => store.canUndo());
   const canRedo = useSyncExternalStore(store.subscribe, () => store.canRedo());
   const fileInput = useRef<HTMLInputElement>(null);
@@ -69,6 +73,18 @@ export function Toolbar({ store, onUpload, onFit, viewportSize }: Props) {
         >
           {ImageIcon}
         </button>
+        {role === "gm" && (
+          <button
+            type="button"
+            className="icon-button"
+            title="Griglia"
+            aria-label="Griglia"
+            aria-pressed={gridPanelOpen}
+            onClick={() => setGridPanelOpen(!gridPanelOpen)}
+          >
+            {GridIcon}
+          </button>
+        )}
         <input
           ref={fileInput}
           type="file"
@@ -102,6 +118,22 @@ export function Toolbar({ store, onUpload, onFit, viewportSize }: Props) {
           {RedoIcon}
         </button>
       </div>
+
+      {tool === "token" && (
+        <div className="toolbar toolbar-style" role="toolbar" aria-label="Nuovo token">
+          <TokenStyleFields value={tokenDraft} roomId={roomId} onChange={setTokenDraft} liveName />
+        </div>
+      )}
+
+      {tool === "calibrate" && (
+        <div className="toolbar toolbar-style toolbar-hint" role="status">
+          Trascina un riquadro sul bordo di una casella della mappa. Esc per annullare.
+        </div>
+      )}
+
+      {role === "gm" && gridPanelOpen && (
+        <GridPanel store={store} onClose={() => setGridPanelOpen(false)} />
+      )}
 
       {DRAWING_TOOLS.includes(tool) && (
         <div className="toolbar toolbar-style" role="toolbar" aria-label="Stile">

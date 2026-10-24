@@ -8,6 +8,17 @@ describe("board items", () => {
     const items: unknown[] = [
       {
         ...base,
+        id: "t",
+        layer: "token",
+        z: 0,
+        kind: "token",
+        name: "Goblin",
+        color: "#46a758",
+        assetId: null,
+        size: 1,
+      },
+      {
+        ...base,
         id: "a",
         layer: "map",
         z: 0,

@@ -11,11 +11,22 @@ interface Options {
   viewportSize: { width: number; height: number };
 }
 
+const NON_TEXT_INPUTS = new Set([
+  "checkbox",
+  "radio",
+  "button",
+  "submit",
+  "reset",
+  "color",
+  "range",
+  "file",
+]);
+
+/** Le scorciatoie si disattivano solo mentre si scrive, non con il focus su una checkbox o un bottone. */
 function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    target.closest("input, textarea, select, [contenteditable]") !== null
-  );
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement) return !NON_TEXT_INPUTS.has(target.type);
+  return target.closest("textarea, select, [contenteditable]") !== null;
 }
 
 export function useBoardShortcuts({ store, canEdit, fitToContent, viewportSize }: Options) {
@@ -65,7 +76,8 @@ export function useBoardShortcuts({ store, canEdit, fitToContent, viewportSize }
           }
           return;
         case "Escape":
-          ui.select([]);
+          if (ui.tool === "calibrate") ui.setTool("select");
+          else ui.select([]);
           return;
         case "]":
           store.bringToFront(editable);

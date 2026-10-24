@@ -185,11 +185,16 @@ Note sulla M1: annulla/ripeti e i test E2E (Playwright) sono stati anticipati da
 per ora si salvano sul disco del server, con un'interfaccia (`AssetStore`) pronta per uno storage
 S3. Il server non valida ancora i contenuti dei documenti: arriva con i permessi nella M3.
 
+Note sulla M2: il blocco vale per tutti, GM compreso (il GM lo toglie dal pannello di selezione);
+i token hanno l'origine nel centro e il diametro in caselle, così seguono la griglia quando la si
+ricalibra; un elenco testuale nascosto dei token con la loro casella rende la lavagna usabile
+anche con uno screen reader.
+
 | Milestone                | Contenuto                                                                                 | Stima           |
 | ------------------------ | ----------------------------------------------------------------------------------------- | --------------- |
 | M0 – Fondamenta ✅       | Monorepo, CI, Hocuspocus + Hono, creazione stanza e link                                  | 3–4 giorni      |
 | M1 – Canvas condiviso ✅ | Pan/zoom, upload immagini, disegno, testo, cursori, persistenza, annulla/ripeti, test E2E | 1–1,5 settimane |
-| M2 – Token e griglia     | Token, griglia, calibrazione, snap, blocco                                                | 4–5 giorni      |
+| M2 – Token e griglia ✅  | Token, griglia, calibrazione, snap, blocco                                                | 4–5 giorni      |
 | M3 – Visibilità          | Doppio documento, nascondi/rivela, fog statico, permessi server                           | 1–1,5 settimane |
 | M4 – Rifinitura          | Ping, selezione a riquadro, rifiniture, deploy                                            | 1 settimana     |
 

@@ -80,6 +80,22 @@ describe("BoardStore", () => {
     expect(store.getSnapshot().map((i) => i.id)).toEqual(["a"]);
   });
 
+  it("shares grid settings and undoes them like any other action", () => {
+    const [docA, docB] = linkedDocs();
+    const gm = new BoardStore(docA, "gm");
+    const player = new BoardStore(docB, "player");
+    expect(player.getGrid().enabled).toBe(false);
+
+    gm.updateGrid({ enabled: true, size: 50 });
+    expect(player.getGrid()).toMatchObject({ enabled: true, size: 50 });
+
+    gm.updateGrid({ size: 2 }); // non valida: ignorata
+    expect(player.getGrid().size).toBe(50);
+
+    gm.undo();
+    expect(player.getGrid().enabled).toBe(false);
+  });
+
   it("syncs between clients and undoes only local changes", () => {
     const [docA, docB] = linkedDocs();
     const alice = new BoardStore(docA, "alice");

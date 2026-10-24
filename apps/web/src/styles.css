@@ -353,7 +353,8 @@ button.primary {
 }
 
 .toolbar-style .toolbar-separator,
-.toolbar-zoom .toolbar-separator {
+.toolbar-zoom .toolbar-separator,
+.selection-panel .toolbar-separator {
   width: 1px;
   height: 24px;
 }
@@ -428,6 +429,119 @@ button.primary {
   overflow: hidden;
   white-space: pre;
   transform-origin: top left;
+}
+
+.selection-panel {
+  top: 12px;
+  left: 0;
+  right: 0;
+  width: fit-content;
+  margin-inline: auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100% - 140px);
+}
+
+.toolbar-style:has(~ .selection-panel),
+.selection-panel {
+  z-index: 3;
+}
+
+.toolbar select,
+.toolbar .token-name,
+.toolbar > button:not(.icon-button):not(.color-button) {
+  width: auto;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.toolbar .token-name {
+  width: 9rem;
+}
+
+.toolbar-style .color-button,
+.selection-panel .color-button {
+  margin: 3px;
+}
+
+.toolbar select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.toolbar-hint {
+  padding: 0.5rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.token-error {
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+}
+
+.panel {
+  position: absolute;
+  /* Sotto la fascia in alto, dove compaiono i pannelli di stile e di selezione. */
+  top: 72px;
+  right: 12px;
+  z-index: 3;
+  width: 15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+}
+
+.panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -0.4rem -0.4rem 0 0;
+}
+
+.grid-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.grid-fields input {
+  padding: 0.35rem 0.5rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.checkbox input {
+  width: auto;
+}
+
+.small {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .board-notice {

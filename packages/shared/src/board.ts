@@ -57,17 +57,33 @@ export const textItemSchema = z.object({
   width: z.number().positive().nullable(),
 });
 
+/**
+ * Pedina su griglia. A differenza degli altri oggetti, (x, y) è il centro; il diametro è
+ * `size` caselle, così i token seguono la griglia se la si ricalibra.
+ */
+export const tokenItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("token"),
+  name: z.string().max(40),
+  color,
+  /** Immagine del token; null = cerchio colorato con le iniziali. */
+  assetId: z.string().nullable(),
+  size: z.number().positive().max(10),
+});
+
 export const boardItemSchema = z.discriminatedUnion("kind", [
   imageItemSchema,
   strokeItemSchema,
   shapeItemSchema,
   textItemSchema,
+  tokenItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
 export type StrokeItem = z.infer<typeof strokeItemSchema>;
 export type ShapeItem = z.infer<typeof shapeItemSchema>;
 export type TextItem = z.infer<typeof textItemSchema>;
+export type TokenItem = z.infer<typeof tokenItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 
@@ -86,6 +102,30 @@ export const DRAW_COLORS = [
 ] as const;
 
 export const STROKE_WIDTHS = [2, 4, 8, 16] as const;
+
+/** Taglie dei token in caselle, con i nomi delle categorie di D&D. */
+export const TOKEN_SIZES = [
+  { size: 0.5, label: "Minuscola" },
+  { size: 1, label: "Media" },
+  { size: 2, label: "Grande" },
+  { size: 3, label: "Enorme" },
+  { size: 4, label: "Mastodontica" },
+] as const;
+
+/** Nome della Y.Map con le impostazioni della board (documento pubblico). */
+export const SETTINGS_MAP = "settings";
+
+export const gridSettingsSchema = z.object({
+  enabled: z.boolean(),
+  /** Lato di una casella, in pixel del mondo. */
+  size: z.number().min(8).max(1000),
+  /** Spostamento della griglia, in [0, size). */
+  offsetX: z.number(),
+  offsetY: z.number(),
+});
+export type GridSettings = z.infer<typeof gridSettingsSchema>;
+
+export const DEFAULT_GRID: GridSettings = { enabled: false, size: 70, offsetX: 0, offsetY: 0 };
 
 /** Ordina per livello e poi per z, con l'id come spareggio stabile. */
 export function compareItems(a: BoardItem, b: BoardItem): number {

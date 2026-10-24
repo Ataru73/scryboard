@@ -1,4 +1,4 @@
-import type { BoardItem } from "@scryboard/shared";
+import { type BoardItem, DEFAULT_GRID } from "@scryboard/shared";
 import type { Box, Point } from "./viewport";
 
 export function normalizeBox(a: Point, b: Point): Box {
@@ -10,9 +10,16 @@ export function normalizeBox(a: Point, b: Point): Box {
   };
 }
 
-/** Riquadro dell'oggetto non ruotato, relativo alla sua origine (x, y). */
-export function localBox(item: BoardItem): Box {
+/**
+ * Riquadro dell'oggetto non ruotato, relativo alla sua origine (x, y). Per i token l'origine è
+ * il centro e il diametro dipende dalla casella della griglia.
+ */
+export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
   switch (item.kind) {
+    case "token": {
+      const r = (item.size * cellSize) / 2;
+      return { x: -r, y: -r, width: 2 * r, height: 2 * r };
+    }
     case "image":
       return { x: 0, y: 0, width: item.width, height: item.height };
     case "shape":
@@ -53,8 +60,8 @@ export function localBox(item: BoardItem): Box {
 }
 
 /** Riquadro in coordinate mondo, tenendo conto della rotazione. */
-export function itemBounds(item: BoardItem): Box {
-  const box = localBox(item);
+export function itemBounds(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
+  const box = localBox(item, cellSize);
   const rad = (item.rotation * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
@@ -71,9 +78,9 @@ export function itemBounds(item: BoardItem): Box {
   return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
 }
 
-export function unionBounds(items: BoardItem[]): Box | null {
+export function unionBounds(items: BoardItem[], cellSize = DEFAULT_GRID.size): Box | null {
   if (items.length === 0) return null;
-  const boxes = items.map(itemBounds);
+  const boxes = items.map((item) => itemBounds(item, cellSize));
   const x = Math.min(...boxes.map((b) => b.x));
   const y = Math.min(...boxes.map((b) => b.y));
   const right = Math.max(...boxes.map((b) => b.x + b.width));
@@ -93,6 +100,9 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
       return { width: item.width * sx, height: item.height * sy };
     case "stroke":
       return { points: item.points.map((v, i) => v * (i % 2 === 0 ? sx : sy)) };
+    case "token":
+      // I token non hanno il Transformer: la taglia si cambia dal pannello.
+      return {};
     case "text":
       return {
         fontSize: Math.max(4, item.fontSize * sy),
