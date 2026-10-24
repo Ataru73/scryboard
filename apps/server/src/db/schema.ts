@@ -32,3 +32,20 @@ export const assets = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.roomId, t.assetId] })],
 );
+
+/**
+ * Giocatori di una stanza, per i messaggi privati: l'id del profilo è pubblico, il segreto (qui
+ * il suo hash) resta nel browser del giocatore. Si registrano alla prima connessione alla loro
+ * casella di posta.
+ */
+export const players = sqliteTable(
+  "players",
+  {
+    roomId: text("room_id").notNull(),
+    profileId: text("profile_id").notNull(),
+    secretHash: text("secret_hash").notNull(),
+    name: text("name").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.roomId, t.profileId] })],
+);

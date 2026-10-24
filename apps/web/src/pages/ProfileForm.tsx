@@ -1,6 +1,6 @@
 import { PLAYER_COLORS } from "@scryboard/shared";
 import { type FormEvent, useState } from "react";
-import { newProfileId, type Profile } from "../lib/storage";
+import { newProfileId, newProfileSecret, type Profile } from "../lib/storage";
 
 interface Props {
   roomName: string;
@@ -16,7 +16,8 @@ export function ProfileForm({ roomName, isGm, onSubmit }: Props) {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (name.trim()) onSubmit({ id: newProfileId(), name: name.trim(), color });
+    if (name.trim())
+      onSubmit({ id: newProfileId(), name: name.trim(), color, secret: newProfileSecret() });
   }
 
   return (

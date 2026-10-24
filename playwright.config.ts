@@ -40,6 +40,7 @@ export default defineConfig({
       // I test creano molte stanze dallo stesso indirizzo.
       ROOMS_PER_10_MIN: "1000",
       UPLOADS_PER_10_MIN: "1000",
+      MESSAGES_PER_10_MIN: "1000",
     },
   },
 });

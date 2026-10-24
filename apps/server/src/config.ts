@@ -8,7 +8,7 @@ export interface Config {
   migrationsDir: string;
   webDistDir: string | null;
   /** Richieste consentite per IP ogni 10 minuti. */
-  limits: { rooms: number; uploads: number };
+  limits: { rooms: number; uploads: number; messages: number };
   /** Dietro un proxy (Fly.io, nginx) l'IP del client arriva negli header. */
   trustProxy: boolean;
 }
@@ -25,6 +25,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     limits: {
       rooms: Number(env.ROOMS_PER_10_MIN ?? 20),
       uploads: Number(env.UPLOADS_PER_10_MIN ?? 200),
+      messages: Number(env.MESSAGES_PER_10_MIN ?? 300),
     },
     trustProxy: env.TRUST_PROXY === "true",
   };

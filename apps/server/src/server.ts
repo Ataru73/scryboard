@@ -10,10 +10,12 @@ import { WebSocketServer } from "ws";
 import { AssetAccess } from "./assets/access";
 import { LocalAssetStore } from "./assets/store";
 import { createCollab } from "./collab/hocuspocus";
+import { MessageService } from "./collab/messages";
 import { publicReferenceCheck } from "./collab/references";
 import type { Config } from "./config";
 import { openDatabase } from "./db/client";
 import { createApi } from "./http/app";
+import { PlayerService } from "./rooms/players";
 import { RoomService } from "./rooms/service";
 
 export const COLLAB_PATH = "/collab";
@@ -26,17 +28,24 @@ export interface RunningServer {
 export async function startServer(config: Config): Promise<RunningServer> {
   const { db, close: closeDb } = openDatabase(config.databasePath, config.migrationsDir);
   const rooms = new RoomService(db);
-  const collab = createCollab(db, rooms);
+  const players = new PlayerService(db);
+  const collab = createCollab(db, rooms, players);
 
   const app = new Hono();
   if (process.env.NODE_ENV !== "test") app.use(logger());
   const access = new AssetAccess(db, publicReferenceCheck(collab, db));
   app.route(
     "/api",
-    createApi(rooms, new LocalAssetStore(config.assetsDir), access, {
-      limits: config.limits,
-      trustProxy: config.trustProxy,
-    }),
+    createApi(
+      rooms,
+      new LocalAssetStore(config.assetsDir),
+      access,
+      {
+        limits: config.limits,
+        trustProxy: config.trustProxy,
+      },
+      { messages: new MessageService(collab, players), players },
+    ),
   );
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 

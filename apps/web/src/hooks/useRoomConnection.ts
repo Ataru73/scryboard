@@ -1,5 +1,11 @@
 import { HocuspocusProvider, HocuspocusProviderWebsocket } from "@hocuspocus/provider";
-import { type PresenceUser, roomDocumentName } from "@scryboard/shared";
+import {
+  GM_MAILBOX,
+  mailDocumentName,
+  type PresenceUser,
+  playerCredentials,
+  roomDocumentName,
+} from "@scryboard/shared";
 import { useEffect, useState } from "react";
 import * as Y from "yjs";
 
@@ -13,7 +19,7 @@ export interface ConnectedUser extends PresenceUser {
 interface Options {
   roomId: string;
   gmToken: string | null;
-  profile: { id: string; name: string; color: string };
+  profile: { id: string; name: string; color: string; secret: string };
 }
 
 function collabUrl(): string {
@@ -30,6 +36,7 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
   const [users, setUsers] = useState<ConnectedUser[]>([]);
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   const [gmProvider, setGmProvider] = useState<HocuspocusProvider | null>(null);
+  const [mailProvider, setMailProvider] = useState<HocuspocusProvider | null>(null);
 
   useEffect(() => {
     const socket = new HocuspocusProviderWebsocket({ url: collabUrl() });
@@ -81,14 +88,26 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
     gmProvider?.attach();
     setGmProvider(gmProvider);
 
+    // Casella dei messaggi privati: il GM riceve tutto, ogni giocatore solo i suoi.
+    const mailProvider = new HocuspocusProvider({
+      websocketProvider: socket,
+      name: mailDocumentName(roomId, gmToken ? GM_MAILBOX : profile.id),
+      document: new Y.Doc(),
+      token: gmToken ?? playerCredentials(profile.id, profile.secret),
+    });
+    mailProvider.attach();
+    setMailProvider(mailProvider);
+
     return () => {
       setProvider(null);
       setGmProvider(null);
+      setMailProvider(null);
       publicProvider.destroy();
       gmProvider?.destroy();
+      mailProvider.destroy();
       socket.destroy();
     };
   }, [roomId, gmToken, profile]);
 
-  return { status, users, provider, gmProvider };
+  return { status, users, provider, gmProvider, mailProvider };
 }

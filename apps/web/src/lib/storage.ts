@@ -3,6 +3,19 @@ export interface Profile {
   id: string;
   name: string;
   color: string;
+  /**
+   * Segreto del profilo: dimostra al server che i messaggi privati sono davvero di questo
+   * browser (l'id invece è visibile a tutti). Non si condivide mai.
+   */
+  secret: string;
+}
+
+export function newProfileSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 export function newProfileId(): string {
@@ -37,9 +50,14 @@ export const storage = {
     try {
       const parsed = JSON.parse(raw) as Partial<Profile>;
       if (typeof parsed.name !== "string" || typeof parsed.color !== "string") return null;
-      const profile = { id: parsed.id ?? newProfileId(), name: parsed.name, color: parsed.color };
-      // I profili salvati prima della M1 non hanno un id: lo si aggiunge una volta sola.
-      if (!parsed.id) write("scryboard:profile", JSON.stringify(profile));
+      const profile = {
+        id: parsed.id ?? newProfileId(),
+        name: parsed.name,
+        color: parsed.color,
+        secret: parsed.secret ?? newProfileSecret(),
+      };
+      // I profili salvati prima non hanno id o segreto: li si aggiunge una volta sola.
+      if (!parsed.id || !parsed.secret) write("scryboard:profile", JSON.stringify(profile));
       return profile;
     } catch {
       return null;

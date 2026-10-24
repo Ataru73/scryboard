@@ -1,0 +1,218 @@
+import type { HocuspocusProvider } from "@hocuspocus/provider";
+import { GM_MAILBOX, MAX_MESSAGE_LENGTH, type PresenceUser } from "@scryboard/shared";
+import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { api, describeApiError } from "../lib/api";
+import { groupConversations } from "./conversations";
+import { useLastRead, useMailbox } from "./useMailbox";
+
+interface Props {
+  roomId: string;
+  /** "gm" o l'id del profilo del giocatore. */
+  me: string;
+  myName: string;
+  mailProvider: HocuspocusProvider | null;
+  /** Utenti connessi (presenza), per scegliere a chi scrivere. */
+  users: (PresenceUser & { clientId: number })[];
+  auth: { gmToken: string } | { credentials: string };
+}
+
+/**
+ * Messaggi privati nella barra laterale. I giocatori scrivono al GM o tra loro; il GM scrive a
+ * chiunque e legge anche le conversazioni tra giocatori (in sola lettura).
+ */
+export function MessagesPanel({ roomId, me, myName, mailProvider, users, auth }: Props) {
+  const messages = useMailbox(mailProvider);
+  const { lastRead, markRead } = useLastRead(`scryboard:read:${roomId}:${me}`);
+  // I nomi dei giocatori connessi valgono più di quelli salvati (chi non ha mai scritto non ne ha).
+  const knownNames = useMemo(
+    () =>
+      new Map(users.flatMap((u) => (u.id && u.role === "player" ? [[u.id, u.name] as const] : []))),
+    [users],
+  );
+  const conversations = useMemo(
+    () => groupConversations(messages, me, lastRead, knownNames),
+    [messages, me, lastRead, knownNames],
+  );
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const unread = conversations.reduce((n, c) => n + c.unread, 0);
+  const isGm = me === GM_MAILBOX;
+  const recipientId = useId();
+
+  // Possibili destinatari: il GM (per i giocatori), chi è connesso e chi ha già scritto.
+  const recipients = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!isGm) map.set(GM_MAILBOX, "GM");
+    for (const u of users) if (u.id && u.role === "player" && u.id !== me) map.set(u.id, u.name);
+    for (const c of conversations)
+      if (c.partner && !map.has(c.partner)) map.set(c.partner, c.title);
+    return [...map.entries()];
+  }, [users, conversations, isGm, me]);
+
+  const open = openKey ? conversations.find((c) => c.key === openKey) : undefined;
+  const openTitle = open?.title ?? recipients.find(([id]) => id === openKey)?.[1] ?? "";
+  const openPartner = open ? open.partner : openKey;
+
+  // Una conversazione aperta si considera letta, anche quando arrivano messaggi nuovi.
+  useEffect(() => {
+    const last = open?.messages.at(-1);
+    if (open && last) markRead(open.key, last.at);
+  }, [open, markRead]);
+
+  return (
+    <section className="messages" aria-label="Messaggi">
+      <h2>Messaggi {unread > 0 && <span className="badge unread-badge">{unread}</span>}</h2>
+      {openKey ? (
+        <Thread
+          title={openTitle}
+          me={me}
+          messages={open?.messages ?? []}
+          readOnly={openPartner === null}
+          onBack={() => setOpenKey(null)}
+          onSend={(text) =>
+            api
+              .sendMessage(roomId, { to: openPartner as string, text, fromName: myName }, auth)
+              .then(() => undefined)
+          }
+        />
+      ) : (
+        <>
+          {!isGm && <p className="muted small">Il GM può leggere tutti i messaggi.</p>}
+          <label htmlFor={recipientId} className="visually-hidden">
+            Scrivi a
+          </label>
+          <select
+            id={recipientId}
+            value=""
+            onChange={(e) => e.target.value && setOpenKey(e.target.value)}
+          >
+            <option value="">Scrivi a…</option>
+            {recipients.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <ul className="conversations">
+            {conversations.map((c) => (
+              <li key={c.key}>
+                <button type="button" className="conversation" onClick={() => setOpenKey(c.key)}>
+                  <span className="conversation-title">
+                    {c.title}
+                    {c.partner === null && <span className="muted small"> (tra giocatori)</span>}
+                  </span>
+                  <span className="muted small conversation-preview">
+                    {c.messages.at(-1)?.text}
+                  </span>
+                  {c.unread > 0 && <span className="badge unread-badge">{c.unread}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+function Thread({
+  title,
+  me,
+  messages,
+  readOnly,
+  onBack,
+  onSend,
+}: {
+  title: string;
+  me: string;
+  messages: { id: string; from: string; fromName: string; text: string; at: string }[];
+  readOnly: boolean;
+  onBack: () => void;
+  onSend: (text: string) => Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const listRef = useRef<HTMLOListElement>(null);
+  const inputId = useId();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: si scorre in fondo a ogni nuovo messaggio.
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [messages.length]);
+
+  async function submit(event?: FormEvent) {
+    event?.preventDefault();
+    const body = text.trim();
+    if (!body || sending) return;
+    setSending(true);
+    setError(null);
+    try {
+      await onSend(body);
+      setText("");
+    } catch (e) {
+      setError(describeApiError(e));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="thread">
+      <header className="thread-header">
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Torna ai messaggi"
+          onClick={onBack}
+        >
+          ‹
+        </button>
+        <span className="thread-title">{title}</span>
+      </header>
+      <ol className="thread-messages" ref={listRef} aria-label={`Conversazione con ${title}`}>
+        {messages.map((m) => (
+          <li key={m.id} className={m.from === me ? "bubble mine" : "bubble"}>
+            {m.from !== me && <span className="bubble-author">{m.fromName}</span>}
+            <span className="bubble-text">{m.text}</span>
+            <time className="bubble-time" dateTime={m.at}>
+              {new Date(m.at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+            </time>
+          </li>
+        ))}
+        {messages.length === 0 && (
+          <li className="muted small">Nessun messaggio, scrivi tu per primo.</li>
+        )}
+      </ol>
+      {readOnly ? (
+        <p className="muted small">
+          Conversazione privata tra giocatori: la leggi solo tu, non puoi rispondere.
+        </p>
+      ) : (
+        <form className="composer" onSubmit={submit}>
+          <label htmlFor={inputId} className="visually-hidden">
+            Messaggio
+          </label>
+          <textarea
+            id={inputId}
+            value={text}
+            maxLength={MAX_MESSAGE_LENGTH}
+            rows={2}
+            placeholder="Scrivi un messaggio…"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              // Invio spedisce, Maiusc+Invio va a capo.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void submit();
+              }
+            }}
+          />
+          <button type="submit" className="primary" disabled={sending || !text.trim()}>
+            Invia
+          </button>
+          {error && <p className="error small">{error}</p>}
+        </form>
+      )}
+    </div>
+  );
+}

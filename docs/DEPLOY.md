@@ -6,14 +6,15 @@ sulla porta 3000.
 
 ## Variabili d'ambiente
 
-| Variabile            | Default              | Note                                                        |
-| -------------------- | -------------------- | ----------------------------------------------------------- |
-| `PORT`               | `3000`               |                                                             |
-| `DATABASE_PATH`      | `/data/scryboard.db` | Nel container; in sviluppo `./data/scryboard.db`            |
-| `ASSETS_DIR`         | `/data/assets`       | Immagini caricate                                           |
-| `TRUST_PROXY`        | `false`              | `true` dietro un proxy: l'IP del client arriva negli header |
-| `ROOMS_PER_10_MIN`   | `20`                 | Stanze create per IP ogni 10 minuti                         |
-| `UPLOADS_PER_10_MIN` | `200`                | Immagini caricate per IP ogni 10 minuti                     |
+| Variabile             | Default              | Note                                                        |
+| --------------------- | -------------------- | ----------------------------------------------------------- |
+| `PORT`                | `3000`               |                                                             |
+| `DATABASE_PATH`       | `/data/scryboard.db` | Nel container; in sviluppo `./data/scryboard.db`            |
+| `ASSETS_DIR`          | `/data/assets`       | Immagini caricate                                           |
+| `TRUST_PROXY`         | `false`              | `true` dietro un proxy: l'IP del client arriva negli header |
+| `ROOMS_PER_10_MIN`    | `20`                 | Stanze create per IP ogni 10 minuti                         |
+| `UPLOADS_PER_10_MIN`  | `200`                | Immagini caricate per IP ogni 10 minuti                     |
+| `MESSAGES_PER_10_MIN` | `300`                | Messaggi privati inviati per IP ogni 10 minuti              |
 
 ## Fly.io
 

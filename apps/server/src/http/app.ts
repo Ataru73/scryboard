@@ -1,18 +1,22 @@
 import {
   createRoomRequestSchema,
   MAX_ASSET_BYTES,
+  parsePlayerCredentials,
   ROOM_ID_PATTERN,
+  sendMessageRequestSchema,
   type UploadAssetResponse,
 } from "@scryboard/shared";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { AssetAccess } from "../assets/access";
 import { type AssetStore, UnsupportedAssetError } from "../assets/store";
+import { MessageError, type MessageService, type Sender } from "../collab/messages";
+import type { PlayerService } from "../rooms/players";
 import type { RoomService } from "../rooms/service";
 import { rateLimit } from "./rateLimit";
 
 export interface ApiOptions {
-  limits: { rooms: number; uploads: number };
+  limits: { rooms: number; uploads: number; messages: number };
   trustProxy: boolean;
 }
 
@@ -23,6 +27,7 @@ export function createApi(
   assets: AssetStore,
   access: AssetAccess,
   options: ApiOptions,
+  messaging: { messages: MessageService; players: PlayerService },
 ): Hono {
   const api = new Hono();
   const limitRooms = rateLimit({
@@ -30,6 +35,12 @@ export function createApi(
     windowMs: TEN_MINUTES,
     trustProxy: options.trustProxy,
     message: "Troppe stanze create in poco tempo: riprova tra qualche minuto.",
+  });
+  const limitMessages = rateLimit({
+    max: options.limits.messages,
+    windowMs: TEN_MINUTES,
+    trustProxy: options.trustProxy,
+    message: "Troppi messaggi in poco tempo: riprova tra qualche minuto.",
   });
   const limitUploads = rateLimit({
     max: options.limits.uploads,
@@ -92,6 +103,46 @@ export function createApi(
       }
     },
   );
+
+  // Messaggi privati: il GM si identifica con il suo token, i giocatori con id del profilo e
+  // segreto ("Player <id>:<segreto>").
+  api.post("/rooms/:id/messages", limitMessages, async (c) => {
+    const room = findRoom(c.req.param("id"));
+    if (!room) return c.json({ error: "Stanza non trovata" }, 404);
+    const parsed = sendMessageRequestSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: "Messaggio non valido" }, 400);
+    const header = c.req.header("authorization") ?? "";
+    let sender: Sender | null = null;
+    if (isGmRequest(room.id, header)) {
+      sender = { kind: "gm", name: parsed.data.fromName };
+    } else {
+      const credentials = parsePlayerCredentials(header.match(/^Player (.+)$/)?.[1] ?? "");
+      if (
+        credentials &&
+        messaging.players.authenticate(
+          room.id,
+          credentials.profileId,
+          credentials.secret,
+          parsed.data.fromName,
+        )
+      ) {
+        sender = { kind: "player", profileId: credentials.profileId, name: parsed.data.fromName };
+      }
+    }
+    if (!sender) return c.json({ error: "Non autorizzato" }, 401);
+    try {
+      const message = await messaging.messages.send(
+        room.id,
+        sender,
+        parsed.data.to,
+        parsed.data.text,
+      );
+      return c.json({ id: message.id }, 201);
+    } catch (error) {
+      if (error instanceof MessageError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
+  });
 
   api.get("/rooms/:id/assets/:assetId", async (c) => {
     const roomId = c.req.param("id");

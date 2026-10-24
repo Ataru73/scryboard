@@ -1,9 +1,15 @@
 import { Database } from "@hocuspocus/extension-database";
 import { Hocuspocus } from "@hocuspocus/server";
-import { parseRoomDocumentName, type Role } from "@scryboard/shared";
+import {
+  GM_MAILBOX,
+  parsePlayerCredentials,
+  parseRoomDocumentName,
+  type Role,
+} from "@scryboard/shared";
 import { eq } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { documents } from "../db/schema";
+import type { PlayerService } from "../rooms/players";
 import type { RoomService } from "../rooms/service";
 import { guardPublicDocument } from "./guard";
 
@@ -12,16 +18,40 @@ export interface ConnectionContext {
   role: Role;
 }
 
-export function createCollab(db: Db, rooms: RoomService): Hocuspocus<ConnectionContext> {
+export function createCollab(
+  db: Db,
+  rooms: RoomService,
+  players: PlayerService,
+): Hocuspocus<ConnectionContext> {
   return new Hocuspocus<ConnectionContext>({
     name: "scryboard",
     quiet: true,
     debounce: 2000,
     maxDebounce: 10000,
 
-    async onAuthenticate({ documentName, token }): Promise<ConnectionContext> {
+    async onAuthenticate({ documentName, token, connectionConfig }): Promise<ConnectionContext> {
       const parsed = parseRoomDocumentName(documentName);
       if (!parsed || !rooms.get(parsed.roomId)) throw new Error("Stanza non trovata");
+      if (parsed.scope === "mail") {
+        // Caselle di posta: le legge solo il proprietario (il GM la sua, che contiene tutto) e
+        // nessuno ci scrive direttamente, i messaggi li consegna il server.
+        connectionConfig.readOnly = true;
+        if (parsed.mailbox === GM_MAILBOX) {
+          if (!rooms.isGmToken(parsed.roomId, token)) throw new Error("Accesso negato");
+          rooms.touch(parsed.roomId);
+          return { roomId: parsed.roomId, role: "gm" };
+        }
+        const credentials = parsePlayerCredentials(token);
+        if (
+          !credentials ||
+          credentials.profileId !== parsed.mailbox ||
+          !players.authenticate(parsed.roomId, credentials.profileId, credentials.secret)
+        ) {
+          throw new Error("Accesso negato");
+        }
+        rooms.touch(parsed.roomId);
+        return { roomId: parsed.roomId, role: "player" };
+      }
       const isGm = rooms.isGmToken(parsed.roomId, token);
       // Il documento del GM contiene gli oggetti nascosti: i giocatori non devono mai riceverlo.
       if (parsed.scope === "gm" && !isGm) throw new Error("Accesso negato");

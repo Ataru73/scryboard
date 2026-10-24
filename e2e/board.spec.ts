@@ -37,8 +37,10 @@ test("GM and player draw together on a shared board", async ({ browser }) => {
   const player = await (await browser.newContext()).newPage();
   await player.goto(gm.playerLink);
   await joinAs(player, "Arwen");
-  await expect(player.getByText("Master")).toBeVisible();
-  await expect(gm.page.getByText("Arwen")).toBeVisible();
+  // Nell'elenco "Al tavolo" (i nomi compaiono anche tra i destinatari dei messaggi).
+  const atTable = (page: Page) => page.getByRole("complementary").getByRole("listitem");
+  await expect(atTable(player).filter({ hasText: "Master" })).toBeVisible();
+  await expect(atTable(gm.page).filter({ hasText: "Arwen" })).toBeVisible();
 
   // Il GM disegna un rettangolo, il giocatore lo vede.
   await gm.page.getByRole("button", { name: "Rettangolo" }).click();

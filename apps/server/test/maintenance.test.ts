@@ -13,7 +13,9 @@ import { startTestServer, tempDatabasePath } from "./helpers";
 describe("rate limits", () => {
   it("refuses to create too many rooms from the same address", async () => {
     const db = tempDatabasePath();
-    const server = await startTestServer(db.path, { limits: { rooms: 2, uploads: 2 } });
+    const server = await startTestServer(db.path, {
+      limits: { rooms: 2, uploads: 2, messages: 2 },
+    });
     try {
       const create = () =>
         fetch(`${server.baseUrl}/api/rooms`, {

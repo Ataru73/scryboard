@@ -103,6 +103,15 @@ Il GM può nascondere qualsiasi oggetto ai giocatori (o crearlo già nascosto): 
 e le loro immagini non arrivano proprio ai browser dei giocatori. La nebbia copre mappa e token;
 il GM la vede semitrasparente, i giocatori opaca.
 
+## Messaggi privati
+
+Nella barra laterale ogni partecipante può scrivere in privato: il GM a qualunque giocatore, i
+giocatori al GM o tra loro. Il GM riceve una copia di tutti i messaggi e legge anche le
+conversazioni tra giocatori (senza poter rispondere lì); i giocatori lo sanno, il pannello lo
+dice. Ogni giocatore ha una casella di posta che solo lui può aprire: il server la lega all'id del
+profilo e a un segreto che resta nel suo browser, e scrive i messaggi soltanto nelle caselle di
+mittente, destinatario e GM. Chi non è coinvolto non li riceve nemmeno.
+
 ## Produzione
 
 ```bash

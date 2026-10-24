@@ -288,6 +288,148 @@ button.primary {
   font-weight: 700;
 }
 
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.messages select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font: inherit;
+  font-size: 0.9rem;
+  color: inherit;
+}
+
+.unread-badge {
+  margin-left: 0.4rem;
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.conversations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.conversation {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0 0.4rem;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.conversation:hover {
+  background: var(--surface-2);
+}
+
+.conversation-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.conversation-preview {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation .unread-badge {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.thread-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.thread-title {
+  font-weight: 600;
+}
+
+.thread-messages {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.bubble {
+  align-self: flex-start;
+  max-width: 88%;
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px 10px 10px 2px;
+  background: var(--surface-2);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.bubble.mine {
+  align-self: flex-end;
+  border-radius: 10px 10px 2px 10px;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.bubble-author {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.bubble-time {
+  align-self: flex-end;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.composer textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font: inherit;
+  color: inherit;
+  resize: vertical;
+}
+
 .board-area {
   grid-area: board;
   position: relative;

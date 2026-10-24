@@ -1,4 +1,4 @@
-import type { RoomInfo } from "@scryboard/shared";
+import { GM_MAILBOX, playerCredentials, type RoomInfo } from "@scryboard/shared";
 import { useEffect, useId, useMemo, useState } from "react";
 import { AssetAuthContext } from "../board/assetAuth";
 import { Board } from "../board/Board";
@@ -7,6 +7,7 @@ import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnec
 import { ApiRequestError, api } from "../lib/api";
 import { gmLink, gmTokenFromHash, playerLink } from "../lib/links";
 import { type Profile, storage } from "../lib/storage";
+import { MessagesPanel } from "../messages/MessagesPanel";
 import { ProfileForm } from "./ProfileForm";
 
 type Load =
@@ -99,7 +100,7 @@ function Room({
   gmToken: string | null;
   profile: Profile;
 }) {
-  const { status, users, provider, gmProvider } = useRoomConnection({
+  const { status, users, provider, gmProvider, mailProvider } = useRoomConnection({
     roomId: room.id,
     gmToken,
     profile,
@@ -139,6 +140,16 @@ function Room({
             ))}
           </ul>
         </section>
+        <MessagesPanel
+          roomId={room.id}
+          me={gmToken ? GM_MAILBOX : profile.id}
+          myName={profile.name}
+          mailProvider={mailProvider}
+          users={users}
+          auth={
+            gmToken ? { gmToken } : { credentials: playerCredentials(profile.id, profile.secret) }
+          }
+        />
       </aside>
       <main className="board-area">
         {store && provider ? (

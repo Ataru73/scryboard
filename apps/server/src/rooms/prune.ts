@@ -1,9 +1,8 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { roomDocumentName } from "@scryboard/shared";
-import { eq, inArray } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import type { Db } from "../db/client";
-import { assets, documents, rooms } from "../db/schema";
+import { assets, documents, players, rooms } from "../db/schema";
 import type { RoomService } from "./service";
 
 /**
@@ -21,11 +20,11 @@ export async function pruneInactiveRooms(
   const ids = roomService.inactiveSince(cutoff);
   for (const id of ids) {
     db.transaction((tx) => {
+      // Tutti i documenti della stanza: pubblico, del GM e caselle di posta.
       tx.delete(documents)
-        .where(
-          inArray(documents.name, [roomDocumentName(id, "public"), roomDocumentName(id, "gm")]),
-        )
+        .where(like(documents.name, `room:${id}:%`))
         .run();
+      tx.delete(players).where(eq(players.roomId, id)).run();
       tx.delete(assets).where(eq(assets.roomId, id)).run();
       tx.delete(rooms).where(eq(rooms.id, id)).run();
     });

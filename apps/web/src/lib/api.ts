@@ -1,4 +1,9 @@
-import type { CreateRoomResponse, RoomInfo, UploadAssetResponse } from "@scryboard/shared";
+import type {
+  CreateRoomResponse,
+  RoomInfo,
+  SendMessageRequest,
+  UploadAssetResponse,
+} from "@scryboard/shared";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -43,6 +48,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ token }),
     }).then((r) => r.valid),
+  /** Messaggio privato: il GM firma con il suo token, i giocatori con id e segreto del profilo. */
+  sendMessage: (
+    roomId: string,
+    body: SendMessageRequest,
+    auth: { gmToken: string } | { credentials: string },
+  ) =>
+    request<{ id: string }>(`/rooms/${encodeURIComponent(roomId)}/messages`, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: {
+        authorization: "gmToken" in auth ? `Bearer ${auth.gmToken}` : `Player ${auth.credentials}`,
+      },
+    }),
   /** Con il token del GM l'immagine resta privata finché un oggetto che la usa non è visibile. */
   uploadAsset: (roomId: string, file: Blob, gmToken: string | null) =>
     request<UploadAssetResponse>(`/rooms/${encodeURIComponent(roomId)}/assets`, {
