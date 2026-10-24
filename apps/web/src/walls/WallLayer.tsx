@@ -21,6 +21,8 @@ interface Props {
   walls: Wall[];
   /** Nebbia ordinata per seq: ai giocatori si nascondono le porte coperte. */
   fog: FogOp[];
+  /** Visione dinamica del giocatore: le porte al buio non si vedono né si aprono. */
+  isDoorVisible: (door: Door) => boolean;
   role: Role;
   scale: number;
   selectedWallId: string | null;
@@ -36,6 +38,7 @@ interface Props {
 export function WallLayer({
   walls,
   fog,
+  isDoorVisible,
   role,
   scale,
   selectedWallId,
@@ -74,14 +77,15 @@ export function WallLayer({
               )}
             </>
           )}
-          {wall.kind === "door" && (role === "gm" || !isDoorFogged(wall, fog)) && (
-            <DoorIcon
-              door={wall}
-              scale={scale}
-              interactive={interactive}
-              onToggle={() => onToggleDoor(wall)}
-            />
-          )}
+          {wall.kind === "door" &&
+            (role === "gm" || (!isDoorFogged(wall, fog) && isDoorVisible(wall))) && (
+              <DoorIcon
+                door={wall}
+                scale={scale}
+                interactive={interactive}
+                onToggle={() => onToggleDoor(wall)}
+              />
+            )}
         </Group>
       ))}
     </>

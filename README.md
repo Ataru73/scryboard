@@ -54,6 +54,7 @@ Per i test end-to-end serve Chromium, da installare una volta con
 | B (solo GM)                            | Terreno: dipinge i biomi a pennello o come regioni, con gomma                |
 | J (solo GM)                            | Percorso: strade e fiumi a clic o a mano libera; [ e ] cambiano la larghezza |
 | W (solo GM)                            | Muri, porte, finestre e barriere invisibili agganciati alla griglia          |
+| I (solo GM)                            | Luci, visione dinamica, luce ambientale e anteprima come un giocatore        |
 | Doppio clic su un percorso selezionato | Aggiunge un punto di controllo                                               |
 | F (solo GM)                            | Nebbia: copri o scopri con rettangolo, poligono o pennello                   |
 | Shift+H (solo GM)                      | Nasconde ai giocatori la selezione, o la rivela                              |
@@ -86,6 +87,11 @@ Con lo strumento Muri il GM disegna polilinee agganciate agli incroci della grig
 libere), porte, finestre e muri invisibili. Può anche generare i muri dal contorno di un bioma.
 I muri fermano i token trascinati; i giocatori vedono solo le icone delle porte e possono aprire o
 chiudere quelle non chiuse a chiave. Selezionando un muro il GM ne modifica i vertici o lo elimina.
+
+Con la visione dinamica attiva (strumento Luce) ogni giocatore vede solo ciò che vedono i suoi
+token: i muri e le porte chiuse fermano la vista; di notte servono luci (fisse o portate dai
+token) o scurovisione. Le zone già viste restano in penombra. Il GM imposta visione, luce portata
+e giocatore di ogni token dal pannello di selezione e può vedere la lavagna come un giocatore.
 
 Il GM può nascondere qualsiasi oggetto ai giocatori (o crearlo già nascosto): gli oggetti nascosti
 e le loro immagini non arrivano proprio ai browser dei giocatori. La nebbia copre mappa e token;

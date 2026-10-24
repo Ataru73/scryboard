@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blocksMovement, canPlayerToggleDoor, wallSchema } from "./walls";
+import { blocksMovement, blocksSight, canPlayerToggleDoor, wallSchema } from "./walls";
 
 const wall = {
   id: "w",
@@ -47,5 +47,15 @@ describe("wall rules", () => {
     expect(canPlayerToggleDoor(wallSchema.parse({ ...door, door: "open" }))).toBe(true);
     expect(canPlayerToggleDoor(wallSchema.parse({ ...door, door: "locked" }))).toBe(false);
     expect(canPlayerToggleDoor(wallSchema.parse(wall))).toBe(false);
+  });
+});
+
+describe("blocksSight", () => {
+  it("lets windows, invisible walls and open doors through", () => {
+    expect(blocksSight({ id: "w", kind: "wall", points: [0, 0, 1, 1] })).toBe(true);
+    expect(blocksSight({ id: "w", kind: "window", points: [0, 0, 1, 1] })).toBe(false);
+    expect(blocksSight({ id: "w", kind: "invisible", points: [0, 0, 1, 1] })).toBe(false);
+    expect(blocksSight({ id: "d", kind: "door", points: [0, 0, 1, 1], door: "open" })).toBe(false);
+    expect(blocksSight({ id: "d", kind: "door", points: [0, 0, 1, 1], door: "locked" })).toBe(true);
   });
 });

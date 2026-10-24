@@ -1,7 +1,9 @@
+import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { BoardItem, Role } from "@scryboard/shared";
 import { canModify } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
 import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
+import { LightFields, VisionFields } from "./LightFields";
 import { PathFields } from "./PathFields";
 import type { BoardStore } from "./store";
 import { TokenStyleFields } from "./TokenStyleFields";
@@ -11,10 +13,11 @@ interface Props {
   store: BoardStore;
   role: Role;
   roomId: string;
+  provider: HocuspocusProvider;
 }
 
 /** Azioni sugli oggetti selezionati: proprietà del token, blocco (GM) ed eliminazione. */
-export function SelectionPanel({ store, role, roomId }: Props) {
+export function SelectionPanel({ store, role, roomId, provider }: Props) {
   // Si aggiorna anche quando gli oggetti cambiano da remoto.
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   const selectedIds = useBoardUi((s) => s.selectedIds);
@@ -41,6 +44,12 @@ export function SelectionPanel({ store, role, roomId }: Props) {
           />
           <span className="toolbar-separator" />
         </>
+      )}
+      {single?.kind === "token" && role === "gm" && canModify(single, role) && (
+        <VisionFields token={single} store={store} provider={provider} />
+      )}
+      {single?.kind === "light" && canModify(single, role) && (
+        <LightFields light={single} store={store} />
       )}
       {single?.kind === "path" && canModify(single, role) && (
         <PathFields path={single} store={store} cellSize={store.getGrid().size} />

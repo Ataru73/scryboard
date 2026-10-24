@@ -46,6 +46,12 @@ export function blocksMovement(wall: Wall): boolean {
   return wall.kind !== "door" || wall.door !== "open";
 }
 
+/** Fermano la vista e la luce: muri e porte non aperte (non le finestre né i muri invisibili). */
+export function blocksSight(wall: Wall): boolean {
+  if (wall.kind === "door") return wall.door !== "open";
+  return wall.kind === "wall";
+}
+
 /** Un giocatore può aprire e chiudere una porta, ma mai bloccarla o aprirla se è chiusa a chiave. */
 export function canPlayerToggleDoor(wall: Wall | undefined): wall is Door {
   return wall?.kind === "door" && wall.door !== "locked";

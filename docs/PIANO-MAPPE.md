@@ -150,7 +150,22 @@ convivere (per esempio un edificio importato su un prato dipinto).
 - Generazione dai bordi: contorno della maschera del bioma (marching squares) → semplificazione
   → segmenti di muro.
 
-### F4 — Luci e visione dinamica (≈ 2–2,5 settimane)
+### F4 — Luci e visione dinamica (≈ 2–2,5 settimane) ✅
+
+**Stato**: completata. Note rispetto al piano:
+- Le luci fisse sono oggetti della lavagna sul livello mappa (solo il GM le modifica; nascoste
+  non illuminano per i giocatori). I token hanno campi facoltativi `vision`, `light` e `owners`:
+  un giocatore vede attraverso i token che ha creato e quelli che il GM gli assegna. Il server
+  impedisce ai giocatori di cambiare questi campi.
+- Fermano la vista i muri e le porte non aperte; finestre e muri invisibili no.
+- I poligoni di visibilità si calcolano in un Web Worker, in cache per posizione (circa 30 ms per
+  una vista illimitata con 2.000 segmenti di muro, 1 ms per una luce).
+- Buio e luci stanno su un canvas grande quanto lo schermo: buio, penombra delle zone esplorate,
+  zona visibile ricavata ritagliando la linea di vista di ogni token e le luci che la raggiungono.
+- La memoria delle zone esplorate è salvata nel browser del giocatore (localStorage, per stanza e
+  profilo); "Azzera esplorazione" la fa dimenticare a tutti.
+- Le porte e i token al buio non si vedono e le porte non si aprono (controllo nel browser: la
+  visione, come previsto, è calcolata dal client).
 
 **Cosa vede l'utente**
 - Strumento **Luce** (solo GM, tasto `I`): sorgenti con raggio di luce piena e fioca, colore,
@@ -201,7 +216,7 @@ sono la parte più costosa.
 
 1. **Priorità**: prima la pittura (F1–F2) o prima muri e visione (F3–F4)?
 2. **Porte**: deciso in F3: i giocatori possono aprire e chiudere le porte non chiuse a chiave.
-3. **Visione dinamica**: va bene la versione calcolata nel browser (semplice, ma aggirabile da
-   chi usa gli strumenti di sviluppo) per il gioco tra amici?
+3. **Visione dinamica**: deciso in F4: calcolata nel browser (aggirabile da chi usa gli strumenti
+   di sviluppo, accettabile per il gioco tra amici).
 4. **Texture**: procedurali (zero dipendenze, stile più semplice) o texture CC0 incluse
    nell'app (più belle, qualche MB in più)?

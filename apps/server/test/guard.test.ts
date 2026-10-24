@@ -96,6 +96,48 @@ describe("isAllowedPlayerItemChange", () => {
   });
 });
 
+describe("token vision fields", () => {
+  it("are reserved to the GM", () => {
+    const seer = token("t", { vision: { range: 0, darkvision: 12 } });
+    expect(isAllowedPlayerItemChange("add", "t", undefined, seer)).toBe(false);
+    expect(isAllowedPlayerItemChange("add", "t", undefined, token("t", { owners: [] }))).toBe(true);
+    expect(isAllowedPlayerItemChange("update", "t", token("t"), seer)).toBe(false);
+    expect(
+      isAllowedPlayerItemChange(
+        "update",
+        "t",
+        token("t"),
+        token("t", { light: { bright: 4, dim: 8, color: "#ffffff" } }),
+      ),
+    ).toBe(false);
+    expect(
+      isAllowedPlayerItemChange(
+        "update",
+        "t",
+        token("t", { owners: ["p2"] }),
+        token("t", { owners: ["p1"] }),
+      ),
+    ).toBe(false);
+    // Spostare un token con la visione assegnata dal GM resta permesso.
+    expect(isAllowedPlayerItemChange("update", "t", seer, { ...seer, x: 140 })).toBe(true);
+  });
+
+  it("leave GM-only light items untouchable", () => {
+    const lamp = {
+      ...base,
+      id: "l",
+      kind: "light",
+      layer: "map",
+      locked: false,
+      bright: 4,
+      dim: 8,
+      color: "#ffffff",
+    };
+    expect(isAllowedPlayerItemChange("add", "l", undefined, lamp)).toBe(false);
+    expect(isAllowedPlayerItemChange("delete", "l", lamp, undefined)).toBe(false);
+  });
+});
+
 describe("isAllowedPlayerWallChange", () => {
   it("allows only actual open/closed toggles on an existing door", () => {
     const closed = door("d");

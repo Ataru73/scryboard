@@ -1,6 +1,7 @@
 import {
   type BiomeId,
   DRAW_COLORS,
+  type LIGHT_PRESETS,
   PATH_STYLES,
   type PathStyleId,
   STROKE_WIDTHS,
@@ -28,7 +29,9 @@ export type Tool =
   /** Solo GM: strade e fiumi. */
   | "path"
   /** Solo GM: muri, porte, finestre e barriere invisibili. */
-  | "wall";
+  | "wall"
+  /** Solo GM: sorgenti di luce e impostazioni della visione. */
+  | "light";
 
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
@@ -44,10 +47,11 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   b: "terrain",
   j: "path",
   w: "wall",
+  i: "light",
 };
 
 /** Strumenti riservati al GM: le scorciatoie non li attivano per i giocatori. */
-export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain", "path", "wall"];
+export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain", "path", "wall", "light"];
 
 /** Larghezze dei percorsi, in caselle della griglia. */
 export const PATH_WIDTHS = [0.5, 1, 1.5, 2, 3] as const;
@@ -99,6 +103,10 @@ interface BoardUiState {
   wallBiome: BiomeId;
   /** Muri selezionati con lo strumento Seleziona (separati dagli oggetti board). */
   selectedWallId: string | null;
+  /** Luce che lo strumento Luce piazza. */
+  lightPreset: (typeof LIGHT_PRESETS)[number]["id"];
+  /** Solo GM: vede la lavagna come la vede questo giocatore (id del profilo). */
+  visionPreview: string | null;
   setTool: (tool: Tool) => void;
   setColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
@@ -117,6 +125,8 @@ interface BoardUiState {
   setPathWidth: (width: number) => void;
   setWall: (patch: Partial<Pick<BoardUiState, "wallKind" | "wallBiome">>) => void;
   selectWall: (id: string | null) => void;
+  setLightPreset: (preset: BoardUiState["lightPreset"]) => void;
+  setVisionPreview: (viewerId: string | null) => void;
   setTerrain: (
     patch: Partial<Pick<BoardUiState, "terrainBiome" | "terrainMode" | "terrainSize">>,
   ) => void;
@@ -146,6 +156,8 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   wallKind: "wall",
   wallBiome: "rock",
   selectedWallId: null,
+  lightPreset: "torch",
+  visionPreview: null,
   setTool: (tool) =>
     set({ tool, selectedIds: [], pathPoint: null, selectedWallId: null, editingTextId: null }),
   setColor: (color) => set({ color }),
@@ -166,4 +178,6 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setPathWidth: (pathWidth) => set({ pathWidth: Math.min(8, Math.max(0.25, pathWidth)) }),
   setWall: (patch) => set(patch),
   selectWall: (selectedWallId) => set({ selectedWallId, selectedIds: [], pathPoint: null }),
+  setLightPreset: (lightPreset) => set({ lightPreset }),
+  setVisionPreview: (visionPreview) => set({ visionPreview }),
 }));

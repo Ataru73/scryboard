@@ -2,6 +2,7 @@ import {
   assetUrl,
   type BoardItem,
   type ImageItem,
+  type LightItem,
   type PathItem,
   type TokenItem,
 } from "@scryboard/shared";
@@ -65,6 +66,8 @@ export const ItemNode = memo(function ItemNode({
         <TokenContent item={item} roomId={roomId} cellSize={cellSize} selected={selected} />
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
+      ) : item.kind === "light" ? (
+        <LightIcon color={item.color} cellSize={cellSize} selected={selected} />
       ) : (
         <ItemContent item={item} roomId={roomId} />
       )}
@@ -76,7 +79,7 @@ function ItemContent({
   item,
   roomId,
 }: {
-  item: Exclude<BoardItem, TokenItem | PathItem>;
+  item: Exclude<BoardItem, TokenItem | PathItem | LightItem>;
   roomId: string;
 }) {
   switch (item.kind) {
@@ -235,5 +238,41 @@ function TokenImage({
         }}
       />
     </Group>
+  );
+}
+
+/** Icona di una luce fissa (la vede solo il GM): un disco con raggi del colore della luce. */
+function LightIcon({
+  color,
+  cellSize,
+  selected,
+}: {
+  color: string;
+  cellSize: number;
+  selected: boolean;
+}) {
+  const r = cellSize * 0.2;
+  const rays = Array.from({ length: 8 }, (_, i) => (i * Math.PI) / 4);
+  return (
+    <>
+      {selected && (
+        <Circle radius={r * 1.9} stroke={SELECTION_COLOR} strokeWidth={2} dash={[5, 3]} />
+      )}
+      {rays.map((a) => (
+        <Line
+          key={a}
+          points={[
+            Math.cos(a) * r * 1.25,
+            Math.sin(a) * r * 1.25,
+            Math.cos(a) * r * 1.65,
+            Math.sin(a) * r * 1.65,
+          ]}
+          stroke={color}
+          strokeWidth={Math.max(1.5, r * 0.18)}
+          lineCap="round"
+        />
+      ))}
+      <Circle radius={r} fill={color} stroke="#1d1a24" strokeWidth={1.5} />
+    </>
   );
 }

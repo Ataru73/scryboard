@@ -64,6 +64,23 @@ export const textItemSchema = z.object({
  * Pedina su griglia. A differenza degli altri oggetti, (x, y) è il centro; il diametro è
  * `size` caselle, così i token seguono la griglia se la si ricalibra.
  */
+/** Luce: raggi in caselle, così segue la griglia; entro `bright` piena, fino a `dim` fioca. */
+export const lightSpecSchema = z.object({
+  bright: z.number().min(0).max(100),
+  dim: z.number().min(0).max(100),
+  color,
+});
+export type LightSpec = z.infer<typeof lightSpecSchema>;
+
+/** Visione di un token, in caselle: `range` 0 = illimitata; `darkvision` vede al buio. */
+export const visionSpecSchema = z.object({
+  range: z.number().min(0).max(1000),
+  darkvision: z.number().min(0).max(1000),
+});
+export type VisionSpec = z.infer<typeof visionSpecSchema>;
+
+export const DEFAULT_VISION: VisionSpec = { range: 0, darkvision: 0 };
+
 export const tokenItemSchema = z.object({
   ...baseItem,
   kind: z.literal("token"),
@@ -72,7 +89,29 @@ export const tokenItemSchema = z.object({
   /** Immagine del token; null = cerchio colorato con le iniziali. */
   assetId: z.string().nullable(),
   size: z.number().positive().max(10),
+  // Campi della F4, facoltativi: i token creati prima restano validi.
+  vision: visionSpecSchema.optional(),
+  /** Luce portata dal token (torcia, lanterna…). */
+  light: lightSpecSchema.nullable().optional(),
+  /** Utenti (id del profilo) che vedono attraverso il token, oltre a chi l'ha creato. */
+  owners: z.array(z.string().max(64)).max(20).optional(),
 });
+
+/** Sorgente di luce fissa piazzata dal GM (sul livello mappa, quindi solo il GM la modifica). */
+export const lightItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("light"),
+  ...lightSpecSchema.shape,
+});
+
+/** Luci tipiche, con raggi in caselle (come in D&D: 1 casella = 1,5 m). */
+export const LIGHT_PRESETS = [
+  { id: "candle", label: "Candela", bright: 1, dim: 2, color: "#ffd18a" },
+  { id: "torch", label: "Torcia", bright: 4, dim: 8, color: "#ffb35c" },
+  { id: "lantern", label: "Lanterna", bright: 6, dim: 12, color: "#ffe2a8" },
+  { id: "campfire", label: "Falò", bright: 4, dim: 8, color: "#ff8a3d" },
+  { id: "magic", label: "Luce magica", bright: 4, dim: 8, color: "#a8c8ff" },
+] as const;
 
 /** Stili dei percorsi, con larghezza predefinita (in caselle) e assottigliamento alle estremità. */
 export const PATH_STYLES = [
@@ -109,6 +148,7 @@ export const boardItemSchema = z.discriminatedUnion("kind", [
   textItemSchema,
   tokenItemSchema,
   pathItemSchema,
+  lightItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
@@ -117,6 +157,7 @@ export type ShapeItem = z.infer<typeof shapeItemSchema>;
 export type TextItem = z.infer<typeof textItemSchema>;
 export type TokenItem = z.infer<typeof tokenItemSchema>;
 export type PathItem = z.infer<typeof pathItemSchema>;
+export type LightItem = z.infer<typeof lightItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 
@@ -159,6 +200,24 @@ export const gridSettingsSchema = z.object({
 export type GridSettings = z.infer<typeof gridSettingsSchema>;
 
 export const DEFAULT_GRID: GridSettings = { enabled: false, size: 70, offsetX: 0, offsetY: 0 };
+
+/**
+ * Visione dinamica: se attiva, i giocatori vedono solo ciò che vedono i loro token. Di giorno
+ * tutto è illuminato, al crepuscolo un po' meno, di notte solo le luci e la scurovisione.
+ */
+export const lightingSettingsSchema = z.object({
+  enabled: z.boolean(),
+  ambient: z.enum(["day", "twilight", "night"]),
+  /** Cambia quando il GM azzera le zone esplorate: i client cancellano la loro memoria. */
+  explorationEpoch: z.number(),
+});
+export type LightingSettings = z.infer<typeof lightingSettingsSchema>;
+
+export const DEFAULT_LIGHTING: LightingSettings = {
+  enabled: false,
+  ambient: "day",
+  explorationEpoch: 0,
+};
 
 /** Ordina per livello e poi per z, con l'id come spareggio stabile. */
 export function compareItems(a: BoardItem, b: BoardItem): number {

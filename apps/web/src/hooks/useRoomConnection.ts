@@ -13,7 +13,7 @@ export interface ConnectedUser extends PresenceUser {
 interface Options {
   roomId: string;
   gmToken: string | null;
-  profile: { name: string; color: string };
+  profile: { id: string; name: string; color: string };
 }
 
 function collabUrl(): string {
@@ -65,7 +65,7 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
       },
     });
     let usersKey = "";
-    const user: PresenceUser = { name: profile.name, color: profile.color, role };
+    const user: PresenceUser = { id: profile.id, name: profile.name, color: profile.color, role };
     publicProvider.setAwarenessField("user", user);
     publicProvider.attach();
     setProvider(publicProvider);

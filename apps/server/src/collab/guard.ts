@@ -40,6 +40,15 @@ function parseWall(value: unknown, key: string): Wall | null {
 
 type Action = "add" | "update" | "delete";
 
+/** Campi di visione di un token, normalizzati (assenti = valori predefiniti) per il confronto. */
+function visionFields(token: Extract<BoardItem, { kind: "token" }> | null): string {
+  return JSON.stringify({
+    vision: token?.vision ?? null,
+    light: token?.light ?? null,
+    owners: token?.owners?.length ? token.owners : null,
+  });
+}
+
 /** Un giocatore può creare, modificare o cancellare solo oggetti che potrebbe toccare dall'interfaccia. */
 export function isAllowedPlayerItemChange(
   action: Action,
@@ -53,7 +62,13 @@ export function isAllowedPlayerItemChange(
   if (action !== "add" && before && !canModify(before, "player")) return false;
   if (action === "delete") return true;
   if (!after || !canModify(after, "player")) return false;
-  return !before || before.kind === after.kind;
+  if (before && before.kind !== after.kind) return false;
+  // Visione, luce portata e assegnazione dei token le decide il GM: un giocatore non può darsi
+  // scurovisione o prendersi il token di un altro.
+  if (after.kind === "token") {
+    return visionFields(before?.kind === "token" ? before : null) === visionFields(after);
+  }
+  return true;
 }
 
 /**

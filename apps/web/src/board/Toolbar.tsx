@@ -1,3 +1,4 @@
+import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { DRAW_COLORS, type Role, STROKE_WIDTHS } from "@scryboard/shared";
 import { useRef, useSyncExternalStore } from "react";
 import { COLOR_NAMES } from "./colors";
@@ -13,6 +14,7 @@ import {
   TOOL_ICONS,
   UndoIcon,
 } from "./icons";
+import { LightPanel } from "./LightPanel";
 import { PathPanel } from "./PathPanel";
 import type { BoardStore } from "./store";
 import { TerrainPanel } from "./TerrainPanel";
@@ -35,6 +37,7 @@ const TOOLS: { tool: Tool; label: string; key: string }[] = [
 const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
   { tool: "terrain", label: "Terreno", key: "B" },
   { tool: "path", label: "Percorso", key: "J" },
+  { tool: "light", label: "Luce", key: "I" },
   { tool: "wall", label: "Muri", key: "W" },
   { tool: "fog", label: "Nebbia", key: "F" },
 ];
@@ -43,6 +46,7 @@ const DRAWING_TOOLS: Tool[] = ["pen", "line", "rect", "ellipse", "text"];
 
 interface Props {
   store: BoardStore;
+  provider: HocuspocusProvider;
   role: Role;
   roomId: string;
   onUpload: (files: File[]) => void;
@@ -50,7 +54,7 @@ interface Props {
   viewportSize: { width: number; height: number };
 }
 
-export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: Props) {
+export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewportSize }: Props) {
   const { tool, color, strokeWidth, filled, viewport, tokenDraft, gridPanelOpen, createHidden } =
     useBoardUi();
   const {
@@ -165,6 +169,7 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
       {tool === "fog" && role === "gm" && <FogPanel store={store} />}
       {tool === "terrain" && role === "gm" && <TerrainPanel store={store} />}
       {tool === "path" && role === "gm" && <PathPanel />}
+      {tool === "light" && role === "gm" && <LightPanel store={store} provider={provider} />}
       {tool === "wall" && role === "gm" && <WallPanel store={store} />}
 
       {tool === "calibrate" && (

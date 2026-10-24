@@ -10,7 +10,13 @@ import type {
   TokenItem,
   Wall,
 } from "@scryboard/shared";
-import { canModify, canPlayerToggleDoor, canSelect, isDoorFogged } from "@scryboard/shared";
+import {
+  canModify,
+  canPlayerToggleDoor,
+  canSelect,
+  isDoorFogged,
+  LIGHT_PRESETS,
+} from "@scryboard/shared";
 import type Konva from "konva";
 import {
   type DragEvent as ReactDragEvent,
@@ -36,6 +42,11 @@ import { PathShape } from "../paths/PathShape";
 import { usePathDrawing } from "../paths/usePathDrawing";
 import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
+import { ExploredMap } from "../vision/explored";
+import { drawVisibleArea } from "../vision/render";
+import { isDoorSeen } from "../vision/sources";
+import { useVision } from "../vision/useVision";
+import { VisionLayer } from "../vision/VisionLayer";
 import { movementFraction, wallSegments } from "../walls/geometry";
 import { useWallDrawing } from "../walls/useWallDrawing";
 import { WallHandles } from "../walls/WallHandles";
@@ -144,6 +155,7 @@ export function Board({ store, provider, roomId, role }: Props) {
   const fog = useSyncExternalStore(store.subscribe, store.getFog);
   const terrain = useSyncExternalStore(store.subscribe, store.getTerrain);
   const walls = useSyncExternalStore(store.subscribe, store.getWalls);
+  const lighting = useSyncExternalStore(store.subscribe, store.getLighting);
   const collisionSegments = useMemo(() => wallSegments(walls), [walls]);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
@@ -226,7 +238,33 @@ export function Board({ store, provider, roomId, role }: Props) {
   const dragLastRef = useRef<Map<string, Point> | null>(null);
   const gmToken = useAssetAuth();
 
-  const fitToContent = useCallback(() => {
+  // Visione: il giocatore guarda dai suoi token; il GM vede tutto o, in anteprima, come un giocatore.
+  const visionPreview = useBoardUi((s) => s.visionPreview);
+  const viewerId = role === "player" ? store.userId : visionPreview;
+  // L'anteprima del GM ignora ciò che i giocatori non ricevono (oggetti nascosti).
+  const viewerItems = useMemo(
+    () => (role === "gm" && visionPreview ? items.filter((i) => !store.isHidden(i.id)) : items),
+    [items, role, visionPreview, store],
+  );
+  const vision = useVision({ items: viewerItems, walls, grid, lighting, viewerId });
+  const [exploredVersion, setExploredVersion] = useState(0);
+  const explored = useMemo(
+    () =>
+      role === "player" && lighting.enabled
+        ? new ExploredMap(
+            `scryboard:explored:${roomId}:${store.userId}:${lighting.explorationEpoch}`,
+            () => setExploredVersion((v) => v + 1),
+          )
+        : null,
+    [role, lighting.enabled, lighting.explorationEpoch, roomId, store.userId],
+  );
+  useEffect(() => {
+    explored?.load();
+    return () => explored?.dispose();
+  }, [explored]);
+
+  /** Riquadro di tutto il contenuto (oggetti, terreno, muri visibili a chi guarda). */
+  const contentBounds = useCallback(() => {
     const itemBox = unionBounds(store.getSnapshot(), store.getGrid().size);
     const terrainBox = terrainBounds(store.getTerrain());
     // I giocatori adattano la vista soltanto alle porte, uniche barriere visibili nel loro client.
@@ -246,8 +284,42 @@ export function Board({ store, provider, roomId, role }: Props) {
             const bottom = Math.max(...boxes.map((b) => b.y + b.height));
             return { x, y, width: right - x, height: bottom - y };
           })();
+    return bounds;
+  }, [store, role]);
+
+  const fitToContent = useCallback(() => {
+    const bounds = contentBounds();
     if (bounds && size.width > 0) setViewport(fitBounds(bounds, size));
-  }, [store, role, size, setViewport]);
+  }, [contentBounds, size, setViewport]);
+
+  // Ciò che il giocatore vede entra nella memoria delle zone esplorate (entro la mappa: con la
+  // vista illimitata il poligono arriva lontanissimo).
+  useEffect(() => {
+    if (!explored || !vision.active || vision.visions.length === 0) return;
+    const bounds = contentBounds();
+    if (!bounds) return;
+    const margin = 1000;
+    const box = {
+      x: bounds.x - margin,
+      y: bounds.y - margin,
+      width: bounds.width + 2 * margin,
+      height: bounds.height + 2 * margin,
+    };
+    explored.paint(box, (ctx) => {
+      ctx.beginPath();
+      ctx.rect(box.x, box.y, box.width, box.height);
+      ctx.clip();
+      drawVisibleArea(ctx, vision.visions, vision.lights, vision.polygons, lighting.ambient);
+    });
+  }, [
+    explored,
+    vision.active,
+    vision.visions,
+    vision.lights,
+    vision.polygons,
+    lighting.ambient,
+    contentBounds,
+  ]);
 
   useBoardShortcuts({ store, role, canEdit, fitToContent, viewportSize: size });
 
@@ -460,6 +532,20 @@ export function Board({ store, provider, roomId, role }: Props) {
       case "wall":
         wallDrawing.down(p.world, viewport.scale, e.evt.altKey);
         return;
+      case "light": {
+        const preset =
+          LIGHT_PRESETS.find((l) => l.id === useBoardUi.getState().lightPreset) ?? LIGHT_PRESETS[1];
+        addItems([
+          {
+            ...base("map", p.world),
+            kind: "light",
+            bright: preset.bright,
+            dim: preset.dim,
+            color: preset.color,
+          },
+        ]);
+        return;
+      }
     }
   }
 
@@ -689,7 +775,12 @@ export function Board({ store, provider, roomId, role }: Props) {
   }
 
   function toggleDoor(door: Door) {
-    if (role === "player" && (!canPlayerToggleDoor(door) || isDoorFogged(door, fog))) return;
+    if (
+      role === "player" &&
+      (!canPlayerToggleDoor(door) || isDoorFogged(door, fog) || !isDoorSeen(door, vision.isVisible))
+    ) {
+      return;
+    }
     // Per il GM il clic sblocca e apre anche una porta chiusa a chiave.
     store.updateWall(door.id, { door: door.door === "open" ? "closed" : "open" });
   }
@@ -891,7 +982,7 @@ export function Board({ store, provider, roomId, role }: Props) {
   // I giocatori non vedono le linee dei muri, ma solo le icone delle porte; la nebbia copre tutto
   // tranne i disegni.
   const pathItems = items.filter((i) => i.layer === "paths");
-  const mapItems = items.filter((i) => i.layer === "map");
+  const mapItems = items.filter((i) => i.layer === "map" && (role === "gm" || i.kind !== "light"));
   const tokenItems = items.filter((i) => i.layer === "token");
   const drawItems = items.filter((i) => i.layer === "draw");
   const drawnWalls = walls.map((wall) =>
@@ -1001,6 +1092,7 @@ export function Board({ store, provider, roomId, role }: Props) {
             <WallLayer
               walls={drawnWalls}
               fog={fog}
+              isDoorVisible={(door) => isDoorSeen(door, vision.isVisible)}
               role={role}
               scale={viewport.scale}
               selectedWallId={selectedWallId}
@@ -1009,6 +1101,20 @@ export function Board({ store, provider, roomId, role }: Props) {
             />
             {tokenItems.map(renderItem)}
           </Layer>
+          {lighting.enabled && (vision.active || role === "gm") && (
+            <VisionLayer
+              mode={vision.active ? "view" : "glow"}
+              translucent={role === "gm"}
+              visions={vision.visions}
+              lights={vision.lights}
+              polygons={vision.polygons}
+              lighting={lighting}
+              explored={explored}
+              exploredVersion={exploredVersion}
+              visible={visibleWorld}
+              size={size}
+            />
+          )}
           <FogLayer ops={fog} translucent={role === "gm"} />
           <Layer>{drawItems.map(renderItem)}</Layer>
           <Layer>
@@ -1213,11 +1319,19 @@ export function Board({ store, provider, roomId, role }: Props) {
         />
       )}
       {tool === "select" && selectedIds.length > 0 && (
-        <SelectionPanel store={store} role={role} roomId={roomId} />
+        <SelectionPanel store={store} role={role} roomId={roomId} provider={provider} />
       )}
       {tool === "select" && selectedWallId && <WallSelectionPanel store={store} />}
-      <TokenList items={items} grid={grid} isHidden={(id) => store.isHidden(id)} />
+      <TokenList
+        // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
+        items={
+          vision.active ? items.filter((i) => i.kind !== "token" || vision.isVisible(i)) : items
+        }
+        grid={grid}
+        isHidden={(id) => store.isHidden(id)}
+      />
       <Toolbar
+        provider={provider}
         store={store}
         role={role}
         roomId={roomId}

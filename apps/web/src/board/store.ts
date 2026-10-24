@@ -3,6 +3,7 @@ import {
   boardItemSchema,
   compareItems,
   DEFAULT_GRID,
+  DEFAULT_LIGHTING,
   FOG_MAP,
   type FogOp,
   fogOpSchema,
@@ -10,6 +11,8 @@ import {
   gridSettingsSchema,
   ITEMS_MAP,
   type Layer,
+  type LightingSettings,
+  lightingSettingsSchema,
   SETTINGS_MAP,
   TERRAIN_MAP,
   type TerrainOp,
@@ -48,6 +51,7 @@ export class BoardStore {
   private readonly terrainMap: Y.Map<unknown>;
   private readonly wallsMap: Y.Map<unknown>;
   private grid: GridSettings = DEFAULT_GRID;
+  private lighting: LightingSettings = DEFAULT_LIGHTING;
   private fog: FogOp[] = [];
   private terrain: TerrainOp[] = [];
   private walls: Wall[] = [];
@@ -121,6 +125,10 @@ export class BoardStore {
   private loadSettings() {
     const parsed = gridSettingsSchema.safeParse(this.settings.get("grid"));
     this.grid = parsed.success ? parsed.data : DEFAULT_GRID;
+    const lighting = lightingSettingsSchema.safeParse(this.settings.get("lighting"));
+    const next = lighting.success ? lighting.data : DEFAULT_LIGHTING;
+    // Stesso oggetto se non cambia nulla: lo snapshot per React resta stabile.
+    if (JSON.stringify(next) !== JSON.stringify(this.lighting)) this.lighting = next;
   }
 
   private loadFog() {
@@ -173,6 +181,7 @@ export class BoardStore {
 
   getSnapshot = (): BoardItem[] => this.sorted;
   getGrid = (): GridSettings => this.grid;
+  getLighting = (): LightingSettings => this.lighting;
   getFog = (): FogOp[] => this.fog;
   getTerrain = (): TerrainOp[] => this.terrain;
   getWalls = (): Wall[] => this.walls;
@@ -316,6 +325,12 @@ export class BoardStore {
       this.byId.set(item.id, { ...item, z });
     }
     this.update(patches);
+  }
+
+  updateLighting(patch: Partial<LightingSettings>) {
+    const next = { ...this.lighting, ...patch };
+    if (!lightingSettingsSchema.safeParse(next).success) return;
+    this.action(() => this.transact(this.pub, () => this.settings.set("lighting", next)));
   }
 
   updateGrid(patch: Partial<GridSettings>) {
