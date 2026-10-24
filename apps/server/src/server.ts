@@ -7,6 +7,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { WebSocketServer } from "ws";
+import { LocalAssetStore } from "./assets/store";
 import { createCollab } from "./collab/hocuspocus";
 import type { Config } from "./config";
 import { openDatabase } from "./db/client";
@@ -27,7 +28,7 @@ export async function startServer(config: Config): Promise<RunningServer> {
 
   const app = new Hono();
   if (process.env.NODE_ENV !== "test") app.use(logger());
-  app.route("/api", createApi(rooms));
+  app.route("/api", createApi(rooms, new LocalAssetStore(config.assetsDir)));
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
   if (config.webDistDir) {

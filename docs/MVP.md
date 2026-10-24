@@ -75,20 +75,20 @@ export PNG/PDF, fog dinamico con muri, plugin, account utente.
 
 ## Stack tecnico
 
-| Area             | Scelta                                                                    | Motivo                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Linguaggio       | **TypeScript** ovunque                                                    | Tipi condivisi tra client e server (modello dati, messaggi)                                               |
-| Monorepo         | **pnpm workspaces**                                                       | `apps/web`, `apps/server`, `packages/shared`                                                              |
-| Frontend         | **React 19 + Vite**                                                       | Ecosistema maturo, avvio rapido                                                                           |
-| Canvas           | **Konva (react-konva)**                                                   | Canvas 2D con livelli, hit detection, trasformazioni e caching; licenza MIT                               |
-| Stato UI         | **Zustand**                                                               | Strumento attivo, selezione, preferenze locali                                                            |
-| Sincronizzazione | **Yjs** (CRDT)                                                            | Merge automatico delle modifiche concorrenti, annulla/ripeti per utente, funziona anche con riconnessioni |
-| Server realtime  | **Hocuspocus** (Node)                                                     | Server WebSocket per Yjs con hook di autenticazione e persistenza                                         |
-| API HTTP         | **Hono** sullo stesso processo Node                                       | Creazione stanze, upload immagini                                                                         |
-| Database         | **SQLite** (via Drizzle ORM), migrabile a Postgres                        | Metadati stanze e snapshot Yjs; zero manutenzione all'inizio                                              |
-| Immagini         | Storage **S3-compatibile** (Cloudflare R2 in produzione, MinIO in locale) | Le immagini non passano dal canale realtime; URL firmati                                                  |
-| Test             | **Vitest** + **Playwright** (multi-browser)                               | Unit sul modello dati, E2E con GM e giocatore in parallelo                                                |
-| Deploy           | Un container Docker su **Fly.io** o una VPS Hetzner                       | Un solo processo stateful, costo di pochi euro al mese                                                    |
+| Area             | Scelta                                                                                      | Motivo                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Linguaggio       | **TypeScript** ovunque                                                                      | Tipi condivisi tra client e server (modello dati, messaggi)                                               |
+| Monorepo         | **pnpm workspaces**                                                                         | `apps/web`, `apps/server`, `packages/shared`                                                              |
+| Frontend         | **React 19 + Vite**                                                                         | Ecosistema maturo, avvio rapido                                                                           |
+| Canvas           | **Konva (react-konva)**                                                                     | Canvas 2D con livelli, hit detection, trasformazioni e caching; licenza MIT                               |
+| Stato UI         | **Zustand**                                                                                 | Strumento attivo, selezione, preferenze locali                                                            |
+| Sincronizzazione | **Yjs** (CRDT)                                                                              | Merge automatico delle modifiche concorrenti, annulla/ripeti per utente, funziona anche con riconnessioni |
+| Server realtime  | **Hocuspocus** (Node)                                                                       | Server WebSocket per Yjs con hook di autenticazione e persistenza                                         |
+| API HTTP         | **Hono** sullo stesso processo Node                                                         | Creazione stanze, upload immagini                                                                         |
+| Database         | **SQLite** (via Drizzle ORM), migrabile a Postgres                                          | Metadati stanze e snapshot Yjs; zero manutenzione all'inizio                                              |
+| Immagini         | Su disco del server (cartella `ASSETS_DIR`); storage **S3-compatibile** (R2) quando servirà | Le immagini non passano dal canale realtime; id = hash del contenuto, cache immutabile                    |
+| Test             | **Vitest** + **Playwright** (multi-browser)                                                 | Unit sul modello dati, E2E con GM e giocatore in parallelo                                                |
+| Deploy           | Un container Docker su **Fly.io** o una VPS Hetzner                                         | Un solo processo stateful, costo di pochi euro al mese                                                    |
 
 ### Alternative scartate
 
@@ -181,12 +181,16 @@ vengono scartati.
 
 ## Piano di lavoro
 
-| Milestone             | Contenuto                                                       | Stima           |
-| --------------------- | --------------------------------------------------------------- | --------------- |
-| M0 – Fondamenta ✅    | Monorepo, CI, Hocuspocus + Hono, creazione stanza e link        | 3–4 giorni      |
-| M1 – Canvas condiviso | Pan/zoom, upload immagini, disegno, testo, cursori, persistenza | 1–1,5 settimane |
-| M2 – Token e griglia  | Token, griglia, calibrazione, snap, blocco                      | 4–5 giorni      |
-| M3 – Visibilità       | Doppio documento, nascondi/rivela, fog statico, permessi server | 1–1,5 settimane |
-| M4 – Rifinitura       | Annulla/ripeti, ping, scorciatoie, test E2E, deploy             | 1 settimana     |
+Note sulla M1: annulla/ripeti e i test E2E (Playwright) sono stati anticipati dalla M4; le immagini
+per ora si salvano sul disco del server, con un'interfaccia (`AssetStore`) pronta per uno storage
+S3. Il server non valida ancora i contenuti dei documenti: arriva con i permessi nella M3.
+
+| Milestone                | Contenuto                                                                                 | Stima           |
+| ------------------------ | ----------------------------------------------------------------------------------------- | --------------- |
+| M0 – Fondamenta ✅       | Monorepo, CI, Hocuspocus + Hono, creazione stanza e link                                  | 3–4 giorni      |
+| M1 – Canvas condiviso ✅ | Pan/zoom, upload immagini, disegno, testo, cursori, persistenza, annulla/ripeti, test E2E | 1–1,5 settimane |
+| M2 – Token e griglia     | Token, griglia, calibrazione, snap, blocco                                                | 4–5 giorni      |
+| M3 – Visibilità          | Doppio documento, nascondi/rivela, fog statico, permessi server                           | 1–1,5 settimane |
+| M4 – Rifinitura          | Ping, selezione a riquadro, rifiniture, deploy                                            | 1 settimana     |
 
 Totale indicativo: **5–6 settimane** di lavoro per una persona.

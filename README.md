@@ -41,6 +41,25 @@ database di sviluppo finisce in `apps/server/data/`.
 Dopo aver modificato `apps/server/src/db/schema.ts`, genera la migrazione con
 `pnpm --filter @scryboard/server db:generate`.
 
+Per i test end-to-end serve Chromium, da installare una volta con
+`pnpm exec playwright install chromium`.
+
+## Scorciatoie della lavagna
+
+| Tasto                   | Azione                                                            |
+| ----------------------- | ----------------------------------------------------------------- |
+| V H P L R O T E         | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma |
+| Spazio (tenuto premuto) | Sposta la vista con qualsiasi strumento                           |
+| Rotella / pinch         | Zoom                                                              |
+| Shift+1 / Shift+0       | Adatta al contenuto / zoom 100%                                   |
+| Canc / Backspace        | Elimina la selezione                                              |
+| ] / [                   | Porta in primo piano / sullo sfondo                               |
+| Ctrl+Z / Ctrl+Shift+Z   | Annulla / ripeti                                                  |
+| Esc                     | Deseleziona, chiude l'editor di testo                             |
+
+Le immagini si aggiungono con il pulsante della barra, trascinandole sulla lavagna o incollandole.
+Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificare.
+
 ## Produzione
 
 ```bash

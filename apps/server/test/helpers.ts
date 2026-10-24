@@ -1,6 +1,6 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import type { CreateRoomResponse } from "@scryboard/shared";
 import * as Y from "yjs";
@@ -21,7 +21,13 @@ export function tempDatabasePath(): { path: string; cleanup: () => void } {
 }
 
 export async function startTestServer(databasePath: string): Promise<TestServer> {
-  const config = { ...loadConfig({}), port: 0, host: "127.0.0.1", databasePath };
+  const config = {
+    ...loadConfig({}),
+    port: 0,
+    host: "127.0.0.1",
+    databasePath,
+    assetsDir: join(dirname(databasePath), "assets"),
+  };
   const server = await startServer(config);
   return { ...server, baseUrl: `http://127.0.0.1:${server.port}`, databasePath };
 }

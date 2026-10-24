@@ -1,4 +1,4 @@
-import type { CreateRoomResponse, RoomInfo } from "@scryboard/shared";
+import type { CreateRoomResponse, RoomInfo, UploadAssetResponse } from "@scryboard/shared";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -29,6 +29,8 @@ export function describeApiError(error: unknown): string {
     return "Il server di Scryboard non risponde. Controlla che sia avviato e riprova.";
   }
   if (error.status === 400) return "Dati non validi: controlla quello che hai inserito.";
+  if (error.status === 413) return "Il file è troppo grande (massimo 20 MB).";
+  if (error.status === 415) return "Formato non supportato: usa PNG, JPEG, WebP o GIF.";
   return `Il server ha risposto con un errore (${error.status}). Riprova.`;
 }
 
@@ -41,4 +43,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ token }),
     }).then((r) => r.valid),
+  uploadAsset: (roomId: string, file: Blob) =>
+    request<UploadAssetResponse>(`/rooms/${encodeURIComponent(roomId)}/assets`, {
+      method: "POST",
+      body: file,
+      headers: { "content-type": file.type || "application/octet-stream" },
+    }),
 };

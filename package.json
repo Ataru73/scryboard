@@ -11,12 +11,15 @@
     "build": "pnpm --recursive build",
     "start": "pnpm --filter @scryboard/server start",
     "test": "pnpm --recursive test",
-    "typecheck": "pnpm --recursive typecheck",
+    "typecheck": "pnpm --recursive typecheck && tsc -p tsconfig.json",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "e2e": "pnpm build && playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.2",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
   }
 }

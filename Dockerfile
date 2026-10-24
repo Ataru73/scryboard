@@ -8,7 +8,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile && pnpm build
 
 FROM base AS runtime
-ENV NODE_ENV=production PORT=3000 DATABASE_PATH=/data/scryboard.db WEB_DIST_DIR=/app/apps/web/dist
+ENV NODE_ENV=production PORT=3000 DATABASE_PATH=/data/scryboard.db ASSETS_DIR=/data/assets WEB_DIST_DIR=/app/apps/web/dist
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/

@@ -28,6 +28,7 @@ function collabUrl(): string {
 export function useRoomConnection({ roomId, gmToken, profile }: Options) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [users, setUsers] = useState<ConnectedUser[]>([]);
+  const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
 
   useEffect(() => {
     const socket = new HocuspocusProviderWebsocket({ url: collabUrl() });
@@ -43,23 +44,30 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
       onAuthenticationFailed: () => setStatus("denied"),
       onAwarenessChange: ({ states }) => {
         const selfId = publicProvider.awareness?.clientID;
-        setUsers(
-          states
-            .filter((s) => s.user)
-            .map((s) => ({
-              ...(s.user as PresenceUser),
-              clientId: s.clientId,
-              isSelf: s.clientId === selfId,
-            }))
-            .sort(
-              (a, b) =>
-                Number(b.role === "gm") - Number(a.role === "gm") || a.name.localeCompare(b.name),
-            ),
-        );
+        const next = states
+          .filter((s) => s.user)
+          .map((s) => ({
+            ...(s.user as PresenceUser),
+            clientId: s.clientId,
+            isSelf: s.clientId === selfId,
+          }))
+          .sort(
+            (a, b) =>
+              Number(b.role === "gm") - Number(a.role === "gm") || a.name.localeCompare(b.name),
+          );
+        // L'awareness cambia a ogni movimento dei cursori: aggiorna solo se la lista è diversa.
+        const key = JSON.stringify(next);
+        if (key !== usersKey) {
+          usersKey = key;
+          setUsers(next);
+        }
       },
     });
-    publicProvider.setAwarenessField("user", { ...profile, role } satisfies PresenceUser);
+    let usersKey = "";
+    const user: PresenceUser = { name: profile.name, color: profile.color, role };
+    publicProvider.setAwarenessField("user", user);
     publicProvider.attach();
+    setProvider(publicProvider);
 
     const gmProvider = gmToken
       ? new HocuspocusProvider({
@@ -72,11 +80,12 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
     gmProvider?.attach();
 
     return () => {
+      setProvider(null);
       publicProvider.destroy();
       gmProvider?.destroy();
       socket.destroy();
     };
   }, [roomId, gmToken, profile]);
 
-  return { status, users };
+  return { status, users, provider };
 }

@@ -1,9 +1,11 @@
 import type { RoomInfo } from "@scryboard/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Board } from "../board/Board";
+import { BoardStore } from "../board/store";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
 import { ApiRequestError, api } from "../lib/api";
 import { gmLink, gmTokenFromHash, playerLink } from "../lib/links";
-import { storage } from "../lib/storage";
+import { type Profile, storage } from "../lib/storage";
 import { ProfileForm } from "./ProfileForm";
 
 type Load =
@@ -94,9 +96,14 @@ function Room({
 }: {
   room: RoomInfo;
   gmToken: string | null;
-  profile: { name: string; color: string };
+  profile: Profile;
 }) {
-  const { status, users } = useRoomConnection({ roomId: room.id, gmToken, profile });
+  const { status, users, provider } = useRoomConnection({ roomId: room.id, gmToken, profile });
+  const store = useMemo(
+    () => (provider ? new BoardStore(provider.document, profile.id) : null),
+    [provider, profile.id],
+  );
+  useEffect(() => () => store?.destroy(), [store]);
 
   return (
     <div className="room">
@@ -123,7 +130,18 @@ function Room({
           </ul>
         </section>
       </aside>
-      <main className="board-placeholder muted">La lavagna arriverà con la milestone M1.</main>
+      <main className="board-area">
+        {store && provider ? (
+          <Board
+            store={store}
+            provider={provider}
+            roomId={room.id}
+            role={gmToken ? "gm" : "player"}
+          />
+        ) : (
+          <div className="board-placeholder muted">Connessione alla lavagna…</div>
+        )}
+      </main>
     </div>
   );
 }
@@ -141,6 +159,7 @@ function SharePanel({ roomId, gmToken }: { roomId: string; gmToken: string }) {
 
 function CopyField({ label, value, secret }: { label: string; value: string; secret?: boolean }) {
   const [copied, setCopied] = useState(false);
+  const id = useId();
   async function copy() {
     try {
       await navigator.clipboard.writeText(value);
@@ -152,9 +171,10 @@ function CopyField({ label, value, secret }: { label: string; value: string; sec
   }
   return (
     <div className="field">
-      <span>{label}</span>
+      <label htmlFor={id}>{label}</label>
       <div className="copy-row">
         <input
+          id={id}
           readOnly
           value={value}
           type={secret ? "password" : "text"}
