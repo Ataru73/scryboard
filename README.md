@@ -51,6 +51,7 @@ Per i test end-to-end serve Chromium, da installare una volta con
 | ------------------------------ | ------------------------------------------------------------------------ |
 | V H P L R O T E K              | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token |
 | Alt (trascinando un token)     | Muove il token senza agganciarlo alla griglia                            |
+| B (solo GM)                    | Terreno: dipinge i biomi a pennello o come regioni, con gomma            |
 | F (solo GM)                    | Nebbia: copri o scopri con rettangolo, poligono o pennello               |
 | Shift+H (solo GM)              | Nasconde ai giocatori la selezione, o la rivela                          |
 | Spazio (tenuto premuto)        | Sposta la vista con qualsiasi strumento                                  |
@@ -69,6 +70,10 @@ Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificar
 Il GM attiva la griglia dal pulsante dedicato e la calibra tracciando un riquadro su una casella
 della mappa. I token si agganciano alle caselle; il GM può bloccare qualsiasi oggetto, e finché è
 bloccato nessuno può spostarlo o cancellarlo.
+
+Il GM può dipingere il terreno con 13 biomi (erba, foresta, roccia, sabbia, acqua, lava…), a
+pennello o come regioni dai bordi morbidi; le texture sono generate nel browser e ogni pennellata
+arriva subito ai giocatori.
 
 Il GM può nascondere qualsiasi oggetto ai giocatori (o crearlo già nascosto): gli oggetti nascosti
 e le loro immagini non arrivano proprio ai browser dei giocatori. La nebbia copre mappa e token;

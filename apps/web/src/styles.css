@@ -425,6 +425,31 @@ button.primary {
   color: var(--accent-text);
 }
 
+.terrain-panel {
+  max-width: min(calc(100% - 76px), 40rem);
+}
+
+.biome-palette {
+  display: grid;
+  grid-template-columns: repeat(7, 30px);
+  gap: 4px;
+  padding: 2px;
+}
+
+.biome-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background-size: 90px;
+}
+
+.biome-button[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .fog-hint {
   flex-basis: 100%;
   padding: 0 0.4rem 0.2rem;

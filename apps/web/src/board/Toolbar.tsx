@@ -14,6 +14,7 @@ import {
   UndoIcon,
 } from "./icons";
 import type { BoardStore } from "./store";
+import { TerrainPanel } from "./TerrainPanel";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { type Tool, useBoardUi } from "./tools";
 import { clampScale, zoomAt } from "./viewport";
@@ -30,6 +31,7 @@ const TOOLS: { tool: Tool; label: string; key: string }[] = [
   { tool: "token", label: "Token", key: "K" },
 ];
 const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
+  { tool: "terrain", label: "Terreno", key: "B" },
   { tool: "fog", label: "Nebbia", key: "F" },
 ];
 
@@ -157,6 +159,7 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
       )}
 
       {tool === "fog" && role === "gm" && <FogPanel store={store} />}
+      {tool === "terrain" && role === "gm" && <TerrainPanel store={store} />}
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">

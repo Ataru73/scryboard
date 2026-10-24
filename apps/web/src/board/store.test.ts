@@ -150,6 +150,30 @@ describe("BoardStore", () => {
     expect(store.getFog()).toHaveLength(2);
   });
 
+  it("stores terrain strokes in order, with undo", () => {
+    const store = new BoardStore(new Y.Doc(), null, "gm");
+    store.addTerrain({
+      biome: "grass",
+      mode: "paint",
+      shape: "brush",
+      points: [0, 0, 10, 10],
+      width: 40,
+    });
+    store.addTerrain({
+      biome: "sand",
+      mode: "paint",
+      shape: "region",
+      points: [0, 0, 50, 0, 25, 40],
+    });
+    expect(store.getTerrain().map((op) => op.biome)).toEqual(["grass", "sand"]);
+    store.undo();
+    expect(store.getTerrain()).toHaveLength(1);
+    store.clearTerrain();
+    expect(store.getTerrain()).toEqual([]);
+    store.undo();
+    expect(store.getTerrain()).toHaveLength(1);
+  });
+
   it("syncs between clients and undoes only local changes", () => {
     const [docA, docB] = linkedDocs();
     const alice = new BoardStore(docA, null, "alice");

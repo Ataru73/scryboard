@@ -1,4 +1,4 @@
-import { DRAW_COLORS, STROKE_WIDTHS } from "@scryboard/shared";
+import { type BiomeId, DRAW_COLORS, STROKE_WIDTHS } from "@scryboard/shared";
 import { create } from "zustand";
 import type { Viewport } from "./viewport";
 
@@ -15,7 +15,9 @@ export type Tool =
   /** Solo GM: traccia una casella sulla mappa per calibrare la griglia. */
   | "calibrate"
   /** Solo GM: copre o scopre aree con la nebbia. */
-  | "fog";
+  | "fog"
+  /** Solo GM: dipinge i biomi del terreno. */
+  | "terrain";
 
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
@@ -28,13 +30,17 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   e: "eraser",
   k: "token",
   f: "fog",
+  b: "terrain",
 };
 
 /** Strumenti riservati al GM: le scorciatoie non li attivano per i giocatori. */
-export const GM_TOOLS: Tool[] = ["calibrate", "fog"];
+export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain"];
 
 export type FogMode = "cover" | "reveal";
 export type FogShape = "rect" | "polygon" | "brush";
+export type TerrainMode = "brush" | "region" | "erase";
+/** Larghezze del pennello del terreno, in caselle della griglia. */
+export const TERRAIN_SIZES = [0.5, 1, 2, 4] as const;
 
 /** Impostazioni con cui lo strumento Token piazza i nuovi token. */
 export interface TokenDraft {
@@ -63,6 +69,10 @@ interface BoardUiState {
   fogBrush: number;
   /** Solo GM: i nuovi oggetti nascono nascosti ai giocatori. */
   createHidden: boolean;
+  terrainBiome: BiomeId;
+  terrainMode: TerrainMode;
+  /** In caselle: la larghezza segue la griglia. */
+  terrainSize: number;
   setTool: (tool: Tool) => void;
   setColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
@@ -75,6 +85,9 @@ interface BoardUiState {
   setGridPanelOpen: (open: boolean) => void;
   setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
   setCreateHidden: (on: boolean) => void;
+  setTerrain: (
+    patch: Partial<Pick<BoardUiState, "terrainBiome" | "terrainMode" | "terrainSize">>,
+  ) => void;
 }
 
 export const useBoardUi = create<BoardUiState>((set) => ({
@@ -92,6 +105,9 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   fogShape: "rect",
   fogBrush: 60,
   createHidden: false,
+  terrainBiome: "grass",
+  terrainMode: "brush",
+  terrainSize: 1,
   setTool: (tool) => set({ tool, selectedIds: [], editingTextId: null }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
@@ -104,4 +120,5 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setGridPanelOpen: (gridPanelOpen) => set({ gridPanelOpen }),
   setFog: (patch) => set(patch),
   setCreateHidden: (createHidden) => set({ createHidden }),
+  setTerrain: (patch) => set(patch),
 }));

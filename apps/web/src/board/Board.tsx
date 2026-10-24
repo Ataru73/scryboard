@@ -4,6 +4,7 @@ import type {
   Role,
   ShapeItem,
   StrokeItem,
+  TerrainOp,
   TextItem,
   TokenItem,
 } from "@scryboard/shared";
@@ -20,6 +21,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import { Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
+import { simplify, terrainOpBounds } from "../terrain/geometry";
+import { biomeColor } from "../terrain/textures";
 import { useAssetAuth } from "./assetAuth";
 import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
@@ -30,6 +33,7 @@ import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
 import { type BoardStore, newItemId } from "./store";
+import { TerrainLayer } from "./TerrainLayer";
 import { TextEditor } from "./TextEditor";
 import { TokenList } from "./TokenList";
 import { Toolbar } from "./Toolbar";
@@ -53,7 +57,8 @@ type Interaction =
   | { type: "calibrate"; start: Point; end: Point }
   | { type: "fogRect"; start: Point; end: Point }
   | { type: "fogBrush"; points: number[] }
-  | { type: "marquee"; start: Point; end: Point; additive: boolean };
+  | { type: "marquee"; start: Point; end: Point; additive: boolean }
+  | { type: "terrainBrush"; points: number[]; erase: boolean };
 
 /** Tempo di pressione, senza muoversi, che lancia un ping. */
 const PING_HOLD_MS = 550;
@@ -64,6 +69,17 @@ interface Notice {
 }
 
 const DEFAULT_FONT_SIZE = 24;
+
+/** Riquadro del terreno dipinto, per adattare la vista al contenuto. */
+function terrainBounds(ops: TerrainOp[]) {
+  const paints = ops.filter((op) => op.mode === "paint").map(terrainOpBounds);
+  if (paints.length === 0) return null;
+  const x = Math.min(...paints.map((b) => b.x));
+  const y = Math.min(...paints.map((b) => b.y));
+  const right = Math.max(...paints.map((b) => b.x + b.width));
+  const bottom = Math.max(...paints.map((b) => b.y + b.height));
+  return { x, y, width: right - x, height: bottom - y };
+}
 
 /** Risale dal nodo colpito al gruppo che rappresenta un oggetto della board. */
 function findItemId(node: Konva.Node | null): string | null {
@@ -79,6 +95,7 @@ export function Board({ store, provider, roomId, role }: Props) {
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const fog = useSyncExternalStore(store.subscribe, store.getFog);
+  const terrain = useSyncExternalStore(store.subscribe, store.getTerrain);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
 
@@ -92,7 +109,11 @@ export function Board({ store, provider, roomId, role }: Props) {
     [],
   );
   /** Poligono di nebbia in costruzione: vertici già fissati e posizione del puntatore. */
-  const [polygon, setPolygon] = useState<{ points: number[]; cursor: Point } | null>(null);
+  const [polygon, setPolygon] = useState<{
+    points: number[];
+    cursor: Point;
+    purpose: "fog" | "terrain";
+  } | null>(null);
   const [draftText, setDraftText] = useState<TextItem | null>(null);
   const fittedRef = useRef(false);
 
@@ -108,6 +129,11 @@ export function Board({ store, provider, roomId, role }: Props) {
   const fogShape = useBoardUi((s) => s.fogShape);
   const fogBrush = useBoardUi((s) => s.fogBrush);
   const createHidden = useBoardUi((s) => s.createHidden);
+  const terrainBiome = useBoardUi((s) => s.terrainBiome);
+  const terrainMode = useBoardUi((s) => s.terrainMode);
+  const terrainSize = useBoardUi((s) => s.terrainSize);
+  /** Larghezza del pennello del terreno in pixel del mondo: segue la casella della griglia. */
+  const terrainWidth = terrainSize * grid.size;
   const { select, setViewport, setEditingText, setTool, setGridPanelOpen } = useBoardUi.getState();
 
   const canEdit = useCallback((item: BoardItem | undefined) => canModify(item, role), [role]);
@@ -120,7 +146,19 @@ export function Board({ store, provider, roomId, role }: Props) {
   const gmToken = useAssetAuth();
 
   const fitToContent = useCallback(() => {
-    const bounds = unionBounds(store.getSnapshot(), store.getGrid().size);
+    const itemBox = unionBounds(store.getSnapshot(), store.getGrid().size);
+    const terrainBox = terrainBounds(store.getTerrain());
+    const boxes = [itemBox, terrainBox].filter((b): b is NonNullable<typeof b> => b !== null);
+    const bounds =
+      boxes.length === 0
+        ? null
+        : (() => {
+            const x = Math.min(...boxes.map((b) => b.x));
+            const y = Math.min(...boxes.map((b) => b.y));
+            const right = Math.max(...boxes.map((b) => b.x + b.width));
+            const bottom = Math.max(...boxes.map((b) => b.y + b.height));
+            return { x, y, width: right - x, height: bottom - y };
+          })();
     if (bounds && size.width > 0) setViewport(fitBounds(bounds, size));
   }, [store, size, setViewport]);
 
@@ -302,14 +340,23 @@ export function Board({ store, provider, roomId, role }: Props) {
         if (fogShape === "rect") setInteraction({ type: "fogRect", start: p.world, end: p.world });
         else if (fogShape === "brush")
           setInteraction({ type: "fogBrush", points: [p.world.x, p.world.y] });
-        else addPolygonPoint(p.world);
+        else addPolygonPoint(p.world, "fog");
+        return;
+      case "terrain":
+        if (terrainMode === "region") addPolygonPoint(p.world, "terrain");
+        else
+          setInteraction({
+            type: "terrainBrush",
+            points: [p.world.x, p.world.y],
+            erase: terrainMode === "erase",
+          });
         return;
     }
   }
 
-  function addPolygonPoint(at: Point) {
+  function addPolygonPoint(at: Point, purpose: "fog" | "terrain") {
     if (!polygon) {
-      setPolygon({ points: [at.x, at.y], cursor: at });
+      setPolygon({ points: [at.x, at.y], cursor: at, purpose });
       return;
     }
     const [x0 = 0, y0 = 0] = polygon.points;
@@ -327,12 +374,21 @@ export function Board({ store, provider, roomId, role }: Props) {
       finishPolygon();
       return;
     }
-    setPolygon({ points: [...polygon.points, at.x, at.y], cursor: at });
+    setPolygon({ ...polygon, points: [...polygon.points, at.x, at.y], cursor: at });
   }
 
   function finishPolygon() {
     if (polygon && polygon.points.length >= 6) {
-      store.addFog({ mode: fogMode, shape: "polygon", points: polygon.points });
+      if (polygon.purpose === "fog") {
+        store.addFog({ mode: fogMode, shape: "polygon", points: polygon.points });
+      } else {
+        store.addTerrain({
+          biome: terrainBiome,
+          mode: "paint",
+          shape: "region",
+          points: polygon.points,
+        });
+      }
     }
     setPolygon(null);
   }
@@ -348,8 +404,10 @@ export function Board({ store, provider, roomId, role }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   });
   useEffect(() => {
-    if (tool !== "fog" || fogShape !== "polygon") setPolygon(null);
-  }, [tool, fogShape]);
+    const fogPolygon = tool === "fog" && fogShape === "polygon";
+    const terrainRegion = tool === "terrain" && terrainMode === "region";
+    if (!fogPolygon && !terrainRegion) setPolygon(null);
+  }, [tool, fogShape, terrainMode]);
 
   function placeToken(at: Point) {
     const { tokenDraft } = useBoardUi.getState();
@@ -420,6 +478,14 @@ export function Board({ store, provider, roomId, role }: Props) {
       case "fogBrush":
         setInteraction({ ...interaction, points: [...interaction.points, p.world.x, p.world.y] });
         return;
+      case "terrainBrush": {
+        const n = interaction.points.length;
+        const lastX = interaction.points[n - 2] as number;
+        const lastY = interaction.points[n - 1] as number;
+        if (Math.hypot(p.world.x - lastX, p.world.y - lastY) < terrainWidth / 8) return;
+        setInteraction({ ...interaction, points: [...interaction.points, p.world.x, p.world.y] });
+        return;
+      }
       case "erase":
         eraseAt(p.screen);
         return;
@@ -452,6 +518,15 @@ export function Board({ store, provider, roomId, role }: Props) {
         strokeWidth: strokeWidth / viewport.scale,
       };
       addItems([item]);
+    } else if (current.type === "terrainBrush") {
+      store.addTerrain({
+        biome: terrainBiome,
+        mode: current.erase ? "erase" : "paint",
+        shape: "brush",
+        // Meno punti, stesso aspetto: la pennellata è larga e i bordi già irregolari.
+        points: simplify(current.points, Math.max(0.5, terrainWidth / 20)),
+        width: terrainWidth,
+      });
     } else if (current.type === "fogRect") {
       const box = normalizeBox(current.start, current.end);
       if (box.width * viewport.scale < 3 || box.height * viewport.scale < 3) return;
@@ -699,6 +774,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       aria-label="Lavagna"
       data-item-count={items.length}
       data-fog-count={fog.length}
+      data-terrain-count={terrain.length}
       style={{
         cursor,
         // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.
@@ -727,6 +803,7 @@ export function Board({ store, provider, roomId, role }: Props) {
           }}
           onWheel={onWheel}
         >
+          <TerrainLayer ops={terrain} visible={visibleWorld} scale={viewport.scale} />
           <Layer>
             {mapItems.map(renderItem)}
             <GridLines grid={grid} visible={visibleWorld} scale={viewport.scale} />
@@ -792,6 +869,20 @@ export function Board({ store, provider, roomId, role }: Props) {
                   }}
                 />
               </FogPreview>
+            )}
+            {interaction?.type === "terrainBrush" && (
+              <Line
+                points={
+                  interaction.points.length >= 4
+                    ? interaction.points
+                    : [...interaction.points, ...interaction.points]
+                }
+                stroke={interaction.erase ? "#ffffff" : biomeColor(terrainBiome)}
+                strokeWidth={terrainWidth}
+                opacity={interaction.erase ? 0.4 : 0.7}
+                lineCap="round"
+                lineJoin="round"
+              />
             )}
             {polygon && (
               <Line

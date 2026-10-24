@@ -74,6 +74,12 @@ export const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M3 3l3 3M21 21l-3-3" />
     </Icon>
   ),
+  terrain: (
+    <Icon>
+      <path d="M3 18c3-1 4-5 7-5s4 3 7 3 3-2 4-2" />
+      <path d="M5 10l3-4 3 4M14 9l2-3 3 4" />
+    </Icon>
+  ),
   fog: (
     <Icon>
       <path d="M4 9h11a3 3 0 100-3M3 13h15a3 3 0 110 3M6 17h7" />

@@ -133,13 +133,23 @@ describe("public document guard", () => {
     close();
   });
 
-  it("reserves grid settings and fog to the GM", async () => {
+  it("reserves grid settings, fog and terrain to the GM", async () => {
     const { gm, player, close } = await table();
+    player.getMap("terrain").set("t", {
+      id: "t",
+      seq: 1,
+      biome: "grass",
+      mode: "paint",
+      shape: "brush",
+      points: [0, 0, 10, 10],
+      width: 50,
+    });
     player.getMap("settings").set("grid", { enabled: true, size: 50, offsetX: 0, offsetY: 0 });
     player.getMap("fog").set("f", { id: "f", seq: 1, mode: "cover", shape: "all", points: [] });
     await settle();
     expect(gm.getMap("settings").has("grid")).toBe(false);
     expect(player.getMap("fog").has("f")).toBe(false);
+    expect(gm.getMap("terrain").has("t")).toBe(false);
 
     gm.getMap("fog").set("f", { id: "f", seq: 1, mode: "cover", shape: "all", points: [] });
     await settle();

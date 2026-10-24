@@ -7,6 +7,7 @@ import {
   ITEMS_MAP,
   type Role,
   SETTINGS_MAP,
+  TERRAIN_MAP,
 } from "@scryboard/shared";
 import type * as Y from "yjs";
 
@@ -72,9 +73,10 @@ export function guardPublicDocument(doc: Y.Doc): void {
   watch(items, (action, key, oldValue) =>
     isAllowedPlayerItemChange(action, key, oldValue, items.get(key)),
   );
-  // Impostazioni della board e nebbia sono riservate al GM.
+  // Impostazioni della board, nebbia e terreno sono riservati al GM.
   watch(doc.getMap(SETTINGS_MAP), () => false);
   watch(doc.getMap(FOG_MAP), () => false);
+  watch(doc.getMap(TERRAIN_MAP), () => false);
 
   doc.on("afterTransaction", () => {
     if (reverts.length === 0) return;

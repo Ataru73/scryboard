@@ -11,6 +11,9 @@ import {
   ITEMS_MAP,
   type Layer,
   SETTINGS_MAP,
+  TERRAIN_MAP,
+  type TerrainOp,
+  terrainOpSchema,
 } from "@scryboard/shared";
 import * as Y from "yjs";
 
@@ -36,8 +39,10 @@ export class BoardStore {
   private readonly gm: DocPart | null;
   private readonly settings: Y.Map<unknown>;
   private readonly fogMap: Y.Map<unknown>;
+  private readonly terrainMap: Y.Map<unknown>;
   private grid: GridSettings = DEFAULT_GRID;
   private fog: FogOp[] = [];
+  private terrain: TerrainOp[] = [];
   private readonly byId = new Map<string, BoardItem>();
   private sorted: BoardItem[] = [];
   private readonly listeners = new Set<() => void>();
@@ -53,7 +58,8 @@ export class BoardStore {
   ) {
     this.settings = publicDoc.getMap(SETTINGS_MAP);
     this.fogMap = publicDoc.getMap(FOG_MAP);
-    this.pub = this.part(publicDoc, [this.settings, this.fogMap]);
+    this.terrainMap = publicDoc.getMap(TERRAIN_MAP);
+    this.pub = this.part(publicDoc, [this.settings, this.fogMap, this.terrainMap]);
     this.gm = gmDoc ? this.part(gmDoc, []) : null;
 
     this.loadSettings();
@@ -64,6 +70,11 @@ export class BoardStore {
     this.loadFog();
     this.fogMap.observe(() => {
       this.loadFog();
+      this.emit();
+    });
+    this.loadTerrain();
+    this.terrainMap.observe(() => {
+      this.loadTerrain();
       this.emit();
     });
     this.rebuild();
@@ -106,6 +117,15 @@ export class BoardStore {
     this.fog = ops.sort((a, b) => a.seq - b.seq || (a.id < b.id ? -1 : 1));
   }
 
+  private loadTerrain() {
+    const ops: TerrainOp[] = [];
+    for (const value of this.terrainMap.values()) {
+      const parsed = terrainOpSchema.safeParse(value);
+      if (parsed.success) ops.push(parsed.data);
+    }
+    this.terrain = ops.sort((a, b) => a.seq - b.seq || (a.id < b.id ? -1 : 1));
+  }
+
   private rebuild() {
     this.byId.clear();
     // Se per un attimo un oggetto è in entrambi i documenti, vince quello pubblico.
@@ -127,6 +147,7 @@ export class BoardStore {
   getSnapshot = (): BoardItem[] => this.sorted;
   getGrid = (): GridSettings => this.grid;
   getFog = (): FogOp[] => this.fog;
+  getTerrain = (): TerrainOp[] => this.terrain;
 
   get(id: string): BoardItem | undefined {
     return this.byId.get(id);
@@ -271,9 +292,28 @@ export class BoardStore {
     this.action(() => this.transact(this.pub, () => this.settings.set("grid", next)));
   }
 
+  /** seq crescente anche tra client diversi: l'orologio basta, il contatore separa i pari merito. */
+  private nextSeq(): number {
+    return Date.now() + (this.seq++ % 1000) / 1000;
+  }
+
+  addTerrain(op: Omit<TerrainOp, "id" | "seq">) {
+    const full: TerrainOp = { ...op, id: newItemId(), seq: this.nextSeq() };
+    if (!terrainOpSchema.safeParse(full).success) return;
+    this.action(() => this.transact(this.pub, () => this.terrainMap.set(full.id, full)));
+  }
+
+  clearTerrain() {
+    if (this.terrainMap.size === 0) return;
+    this.action(() =>
+      this.transact(this.pub, () => {
+        for (const key of [...this.terrainMap.keys()]) this.terrainMap.delete(key);
+      }),
+    );
+  }
+
   addFog(op: Omit<FogOp, "id" | "seq">) {
-    // seq crescente anche tra client diversi: l'orologio basta, il contatore separa i pari merito.
-    const full: FogOp = { ...op, id: newItemId(), seq: Date.now() + (this.seq++ % 1000) / 1000 };
+    const full: FogOp = { ...op, id: newItemId(), seq: this.nextSeq() };
     if (!fogOpSchema.safeParse(full).success) return;
     this.action(() => this.transact(this.pub, () => this.fogMap.set(full.id, full)));
   }
