@@ -5,6 +5,7 @@ import {
   cellAt,
   nextTokenName,
   normalizeOffset,
+  snapGridCorner,
   snapTokenCenter,
   tokenInitials,
   visibleGridLines,
@@ -22,6 +23,13 @@ describe("grid", () => {
   it("snaps even-sized tokens to grid intersections", () => {
     expect(snapTokenCenter({ x: 50, y: 60 }, 2, grid)).toEqual({ x: 60, y: 70 });
     expect(snapTokenCenter({ x: -30, y: -25 }, 4, grid)).toEqual({ x: -40, y: -30 });
+  });
+
+  it("snaps wall vertices to grid corners, including negative coordinates", () => {
+    expect(snapGridCorner({ x: 34, y: 44 }, grid)).toEqual({ x: 10, y: 20 });
+    expect(snapGridCorner({ x: 35, y: 45 }, grid)).toEqual({ x: 60, y: 70 });
+    expect(snapGridCorner({ x: -16, y: -6 }, grid)).toEqual({ x: -40, y: -30 });
+    expect(snapGridCorner({ x: 35, y: 45 }, { ...grid, enabled: false })).toEqual({ x: 60, y: 70 });
   });
 
   it("finds the cell under a point", () => {

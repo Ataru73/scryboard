@@ -19,6 +19,7 @@ import { TerrainPanel } from "./TerrainPanel";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { type Tool, useBoardUi } from "./tools";
 import { clampScale, zoomAt } from "./viewport";
+import { WallPanel } from "./WallPanel";
 
 const TOOLS: { tool: Tool; label: string; key: string }[] = [
   { tool: "select", label: "Seleziona", key: "V" },
@@ -34,6 +35,7 @@ const TOOLS: { tool: Tool; label: string; key: string }[] = [
 const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
   { tool: "terrain", label: "Terreno", key: "B" },
   { tool: "path", label: "Percorso", key: "J" },
+  { tool: "wall", label: "Muri", key: "W" },
   { tool: "fog", label: "Nebbia", key: "F" },
 ];
 
@@ -163,6 +165,7 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
       {tool === "fog" && role === "gm" && <FogPanel store={store} />}
       {tool === "terrain" && role === "gm" && <TerrainPanel store={store} />}
       {tool === "path" && role === "gm" && <PathPanel />}
+      {tool === "wall" && role === "gm" && <WallPanel store={store} />}
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">

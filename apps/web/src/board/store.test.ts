@@ -174,6 +174,48 @@ describe("BoardStore", () => {
     expect(store.getTerrain()).toHaveLength(1);
   });
 
+  it("syncs walls and treats generated batches and door changes as single actions", () => {
+    const [docA, docB] = linkedDocs();
+    const gm = new BoardStore(docA, null, "gm");
+    const player = new BoardStore(docB, null, "player");
+    const created = gm.addWalls([
+      { kind: "wall", points: [0, 0, 70, 0, 70, 70] },
+      { kind: "door", points: [70, 70, 0, 70], door: "closed" },
+    ]);
+    const door = created[1];
+    expect(created).toHaveLength(2);
+    expect(door?.kind).toBe("door");
+    expect(player.getWalls()).toHaveLength(2);
+    expect(player.getWall(door?.id ?? "")).toMatchObject({ kind: "door", door: "closed" });
+
+    gm.undo();
+    expect(player.getWalls()).toEqual([]);
+    gm.redo();
+    expect(player.getWalls()).toHaveLength(2);
+    if (!door) throw new Error("porta mancante");
+    gm.updateWall(door.id, { door: "open", points: [70, 70, 0, 70] });
+    expect(player.getWall(door.id)).toMatchObject({ kind: "door", door: "open" });
+    gm.undo();
+    expect(player.getWall(door.id)).toMatchObject({ door: "closed" });
+
+    gm.removeWalls(created.map((wall) => wall.id));
+    expect(player.getWalls()).toEqual([]);
+    gm.undo();
+    expect(player.getWalls()).toHaveLength(2);
+  });
+
+  it("ignores invalid walls written by other clients", () => {
+    const doc = new Y.Doc();
+    const store = new BoardStore(doc, null, "gm");
+    doc.getMap("walls").set("bad", { id: "bad", kind: "wall", points: [0, 0, 1] });
+    doc.getMap("walls").set("mismatch", {
+      id: "other",
+      kind: "wall",
+      points: [0, 0, 10, 10],
+    });
+    expect(store.getWalls()).toEqual([]);
+  });
+
   it("syncs between clients and undoes only local changes", () => {
     const [docA, docB] = linkedDocs();
     const alice = new BoardStore(docA, null, "alice");

@@ -14,11 +14,17 @@ import {
   TERRAIN_MAP,
   type TerrainOp,
   terrainOpSchema,
+  WALLS_MAP,
+  type Wall,
+  type WallDraft,
+  wallSchema,
 } from "@scryboard/shared";
 import * as Y from "yjs";
 
 /** Modifica parziale di un oggetto: non si può cambiare tipo né id. */
 export type ItemPatch = Partial<Omit<BoardItem, "id" | "kind">> & Record<string, unknown>;
+/** Modifica di un muro: il tipo non cambia; lo stato porta esiste solo sulle porte. */
+export type WallPatch = { points?: number[]; door?: "open" | "closed" | "locked" };
 
 interface DocPart {
   doc: Y.Doc;
@@ -40,9 +46,12 @@ export class BoardStore {
   private readonly settings: Y.Map<unknown>;
   private readonly fogMap: Y.Map<unknown>;
   private readonly terrainMap: Y.Map<unknown>;
+  private readonly wallsMap: Y.Map<unknown>;
   private grid: GridSettings = DEFAULT_GRID;
   private fog: FogOp[] = [];
   private terrain: TerrainOp[] = [];
+  private walls: Wall[] = [];
+  private readonly wallsById = new Map<string, Wall>();
   private readonly byId = new Map<string, BoardItem>();
   private sorted: BoardItem[] = [];
   private readonly listeners = new Set<() => void>();
@@ -59,7 +68,8 @@ export class BoardStore {
     this.settings = publicDoc.getMap(SETTINGS_MAP);
     this.fogMap = publicDoc.getMap(FOG_MAP);
     this.terrainMap = publicDoc.getMap(TERRAIN_MAP);
-    this.pub = this.part(publicDoc, [this.settings, this.fogMap, this.terrainMap]);
+    this.wallsMap = publicDoc.getMap(WALLS_MAP);
+    this.pub = this.part(publicDoc, [this.settings, this.fogMap, this.terrainMap, this.wallsMap]);
     this.gm = gmDoc ? this.part(gmDoc, []) : null;
 
     this.loadSettings();
@@ -75,6 +85,11 @@ export class BoardStore {
     this.loadTerrain();
     this.terrainMap.observe(() => {
       this.loadTerrain();
+      this.emit();
+    });
+    this.loadWalls();
+    this.wallsMap.observe(() => {
+      this.loadWalls();
       this.emit();
     });
     this.rebuild();
@@ -126,6 +141,18 @@ export class BoardStore {
     this.terrain = ops.sort((a, b) => a.seq - b.seq || (a.id < b.id ? -1 : 1));
   }
 
+  private loadWalls() {
+    const walls: Wall[] = [];
+    this.wallsById.clear();
+    for (const [key, value] of this.wallsMap.entries()) {
+      const parsed = wallSchema.safeParse(value);
+      if (!parsed.success || parsed.data.id !== key) continue;
+      walls.push(parsed.data);
+      this.wallsById.set(key, parsed.data);
+    }
+    this.walls = walls.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+
   private rebuild() {
     this.byId.clear();
     // Se per un attimo un oggetto è in entrambi i documenti, vince quello pubblico.
@@ -148,6 +175,11 @@ export class BoardStore {
   getGrid = (): GridSettings => this.grid;
   getFog = (): FogOp[] => this.fog;
   getTerrain = (): TerrainOp[] => this.terrain;
+  getWalls = (): Wall[] => this.walls;
+
+  getWall(id: string): Wall | undefined {
+    return this.wallsById.get(id);
+  }
 
   get(id: string): BoardItem | undefined {
     return this.byId.get(id);
@@ -310,6 +342,45 @@ export class BoardStore {
         for (const key of [...this.terrainMap.keys()]) this.terrainMap.delete(key);
       }),
     );
+  }
+
+  /** Aggiunge muri o tutti i contorni generati come una sola azione di annulla. */
+  addWalls(drafts: WallDraft[]): Wall[] {
+    const full = drafts.map((draft) => ({ ...draft, id: newItemId() }) as Wall);
+    const valid = full.filter((wall) => wallSchema.safeParse(wall).success);
+    if (valid.length === 0) return [];
+    this.action(() =>
+      this.transact(this.pub, () => {
+        for (const wall of valid) this.wallsMap.set(wall.id, wall);
+      }),
+    );
+    return valid;
+  }
+
+  addWall(draft: WallDraft): Wall | undefined {
+    return this.addWalls([draft])[0];
+  }
+
+  updateWall(id: string, patch: WallPatch) {
+    const current = this.wallsById.get(id);
+    if (!current || (current.kind !== "door" && patch.door !== undefined)) return;
+    const next = { ...current, ...patch, id } as Wall;
+    if (!wallSchema.safeParse(next).success) return;
+    this.action(() => this.transact(this.pub, () => this.wallsMap.set(id, next)));
+  }
+
+  removeWalls(ids: Iterable<string>) {
+    const list = [...ids].filter((id) => this.wallsMap.has(id));
+    if (list.length === 0) return;
+    this.action(() =>
+      this.transact(this.pub, () => {
+        for (const id of list) this.wallsMap.delete(id);
+      }),
+    );
+  }
+
+  clearWalls() {
+    this.removeWalls([...this.wallsMap.keys()]);
   }
 
   addFog(op: Omit<FogOp, "id" | "seq">) {

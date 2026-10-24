@@ -110,13 +110,33 @@ convivere (per esempio un edificio importato su un prato dipinto).
   rive e i cigli.
 - Test unitari sulla geometria (offset, assottigliamento, casi degeneri come curve strette).
 
-### F3 — Muri e porte (≈ 1,5 settimane)
+### F3 — Muri e porte (≈ 1,5 settimane) ✅
+
+**Stato**: completata. Note rispetto al piano:
+- Una porta è un singolo segmento, mentre gli altri tipi sono polilinee. I giocatori possono
+  aprire e chiudere le porte non chiuse a chiave; apertura, chiusura e blocco sono sempre
+  disponibili al GM dal pannello di selezione.
+- Una porta coperta dalla nebbia non esiste per i giocatori: la sua icona non si mostra e il
+  clic non la apre; il server annulla comunque l'apertura di una porta coperta (il centro della
+  porta è il punto di riferimento).
+- "Crea muri dai bordi" salta i contorni già presenti: rigenerare dallo stesso terreno non crea
+  doppioni.
+- I muri stanno sempre nel documento pubblico, perché devono bloccare il movimento dei giocatori
+  e alimentare la visione di F4: come per il terreno, "Crea nascosti" non si applica. I giocatori
+  non ne vedono comunque le linee, solo le icone delle porte; per preparare una zona in segreto il
+  GM la copre con la nebbia.
+- Dallo strumento Seleziona il GM può trascinare i vertici, cambiare lo stato delle porte ed
+  eliminare i muri. La generazione dai bordi crea tutti i contorni come un'unica azione di
+  annulla/ripeti.
+- Il blocco considera il percorso del centro dei token e l'intera selezione trascinata si ferma al
+  primo impatto. Alt ignora i muri solo per il GM; per i giocatori continua soltanto a disattivare
+  l'aggancio alla griglia.
 
 **Cosa vede l'utente**
 - Strumento **Muri** (solo GM, tasto `W`): polilinee che si agganciano agli angoli della
   griglia; tipi muro, porta, finestra (blocca il movimento ma non la vista), muro invisibile.
 - Le porte hanno stato **aperta / chiusa / chiusa a chiave**; il GM le apre con un clic, i
-  giocatori solo se non sono chiuse a chiave (da decidere).
+  giocatori possono aprirle e chiuderle solo se non sono chiuse a chiave.
 - **Generazione automatica**: "crea muri dai bordi del bioma" (es. il contorno della roccia di
   una caverna), come fa Zephyrex.
 - I giocatori non vedono i muri disegnati, solo i loro effetti (le porte appaiono come icona).
@@ -180,7 +200,7 @@ sono la parte più costosa.
 ## Decisioni da prendere
 
 1. **Priorità**: prima la pittura (F1–F2) o prima muri e visione (F3–F4)?
-2. **Porte**: i giocatori possono aprire le porte non chiuse a chiave?
+2. **Porte**: deciso in F3: i giocatori possono aprire e chiudere le porte non chiuse a chiave.
 3. **Visione dinamica**: va bene la versione calcolata nel browser (semplice, ma aggirabile da
    chi usa gli strumenti di sviluppo) per il gioco tra amici?
 4. **Texture**: procedurali (zero dipendenze, stile più semplice) o texture CC0 incluse

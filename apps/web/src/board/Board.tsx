@@ -1,14 +1,16 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type {
   BoardItem,
+  Door,
   Role,
   ShapeItem,
   StrokeItem,
   TerrainOp,
   TextItem,
   TokenItem,
+  Wall,
 } from "@scryboard/shared";
-import { canModify, canSelect } from "@scryboard/shared";
+import { canModify, canPlayerToggleDoor, canSelect, isDoorFogged } from "@scryboard/shared";
 import type Konva from "konva";
 import {
   type DragEvent as ReactDragEvent,
@@ -16,6 +18,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -33,11 +36,15 @@ import { PathShape } from "../paths/PathShape";
 import { usePathDrawing } from "../paths/usePathDrawing";
 import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
+import { movementFraction, wallSegments } from "../walls/geometry";
+import { useWallDrawing } from "../walls/useWallDrawing";
+import { WallHandles } from "../walls/WallHandles";
+import { WallLayer } from "../walls/WallLayer";
 import { useAssetAuth } from "./assetAuth";
 import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
 import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
-import { calibrateFromBox, nextTokenName, snapTokenCenter } from "./grid";
+import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
 import { ItemNode, SELECTION_COLOR } from "./ItemNode";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { SelectionPanel } from "./SelectionPanel";
@@ -51,6 +58,7 @@ import { useBoardUi } from "./tools";
 import { isSupportedImage, UploadError, uploadImage } from "./upload";
 import { useBoardShortcuts } from "./useBoardShortcuts";
 import { fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
+import { WallSelectionPanel } from "./WallPanel";
 
 interface Props {
   store: BoardStore;
@@ -91,6 +99,25 @@ function terrainBounds(ops: TerrainOp[]) {
   return { x, y, width: right - x, height: bottom - y };
 }
 
+/** Riquadro occupato da tutti i muri, per adattare la vista al contenuto. */
+function wallsBounds(walls: Wall[]) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const wall of walls) {
+    for (let i = 0; i + 1 < wall.points.length; i += 2) {
+      const x = wall.points[i] as number;
+      const y = wall.points[i + 1] as number;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  return walls.length === 0 ? null : { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
 /** Risale dal nodo colpito al gruppo che rappresenta un oggetto della board. */
 function findItemId(node: Konva.Node | null): string | null {
   let current: Konva.Node | null = node;
@@ -101,11 +128,23 @@ function findItemId(node: Konva.Node | null): string | null {
   return null;
 }
 
+/** Risale dal nodo colpito al gruppo di un muro (visibile e selezionabile solo dal GM). */
+function findWallId(node: Konva.Node | null): string | null {
+  let current: Konva.Node | null = node;
+  while (current) {
+    if (current.hasName("wall")) return current.id();
+    current = current.getParent();
+  }
+  return null;
+}
+
 export function Board({ store, provider, roomId, role }: Props) {
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const fog = useSyncExternalStore(store.subscribe, store.getFog);
   const terrain = useSyncExternalStore(store.subscribe, store.getTerrain);
+  const walls = useSyncExternalStore(store.subscribe, store.getWalls);
+  const collisionSegments = useMemo(() => wallSegments(walls), [walls]);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
 
@@ -146,6 +185,21 @@ export function Board({ store, provider, roomId, role }: Props) {
   const terrainWidth = terrainSize * grid.size;
   const pathStyle = useBoardUi((s) => s.pathStyle);
   const pathPoint = useBoardUi((s) => s.pathPoint);
+  const wallKind = useBoardUi((s) => s.wallKind);
+  const selectedWallId = useBoardUi((s) => s.selectedWallId);
+  /** Punti di un muro mentre se ne trascina una maniglia (non ancora salvati). */
+  const [wallEdit, setWallEdit] = useState<{ id: string; points: number[] } | null>(null);
+  const snapWallPoint = (point: Point) => (grid.enabled ? snapGridCorner(point, grid) : point);
+  const wallDrawing = useWallDrawing({
+    active: tool === "wall" && role === "gm",
+    kind: wallKind,
+    snap: snapWallPoint,
+    onCreate: (points) => {
+      store.addWall(
+        wallKind === "door" ? { kind: "door", points, door: "closed" } : { kind: wallKind, points },
+      );
+    },
+  });
   /** Punti di un percorso mentre se ne trascina una maniglia (non ancora salvati). */
   const [pathEdit, setPathEdit] = useState<{ id: string; points: number[] } | null>(null);
   const pathDrawing = usePathDrawing({
@@ -160,21 +214,28 @@ export function Board({ store, provider, roomId, role }: Props) {
       ]);
     },
   });
-  const { select, setViewport, setEditingText, setTool, setGridPanelOpen } = useBoardUi.getState();
+  const { select, selectWall, setViewport, setEditingText, setTool, setGridPanelOpen } =
+    useBoardUi.getState();
 
   const canEdit = useCallback((item: BoardItem | undefined) => canModify(item, role), [role]);
   const panMode = tool === "hand" || spacePan;
   const broadcastCursor = useAwarenessBroadcast<Point>(provider, "cursor");
   const broadcastDraft = useAwarenessBroadcast<DraftStroke>(provider, "draft");
   const pressRef = useRef<{ timer: ReturnType<typeof setTimeout>; screen: Point } | null>(null);
-  /** Posizioni iniziali degli oggetti selezionati durante un trascinamento. */
-  const dragStartRef = useRef<Map<string, Point> | null>(null);
+  /** Ultime posizioni sicure degli oggetti durante il trascinamento (inizialmente quelle di partenza). */
+  const dragLastRef = useRef<Map<string, Point> | null>(null);
   const gmToken = useAssetAuth();
 
   const fitToContent = useCallback(() => {
     const itemBox = unionBounds(store.getSnapshot(), store.getGrid().size);
     const terrainBox = terrainBounds(store.getTerrain());
-    const boxes = [itemBox, terrainBox].filter((b): b is NonNullable<typeof b> => b !== null);
+    // I giocatori adattano la vista soltanto alle porte, uniche barriere visibili nel loro client.
+    const wallBox = wallsBounds(
+      role === "gm" ? store.getWalls() : store.getWalls().filter((wall) => wall.kind === "door"),
+    );
+    const boxes = [itemBox, terrainBox, wallBox].filter(
+      (b): b is NonNullable<typeof b> => b !== null,
+    );
     const bounds =
       boxes.length === 0
         ? null
@@ -186,7 +247,7 @@ export function Board({ store, provider, roomId, role }: Props) {
             return { x, y, width: right - x, height: bottom - y };
           })();
     if (bounds && size.width > 0) setViewport(fitBounds(bounds, size));
-  }, [store, size, setViewport]);
+  }, [store, role, size, setViewport]);
 
   useBoardShortcuts({ store, role, canEdit, fitToContent, viewportSize: size });
 
@@ -246,6 +307,11 @@ export function Board({ store, provider, roomId, role }: Props) {
     if (existing.length !== selectedIds.length) select(existing);
   }, [items, selectedIds, store, select]);
 
+  // Deseleziona un muro cancellato da un altro client.
+  useEffect(() => {
+    if (selectedWallId && !walls.some((wall) => wall.id === selectedWallId)) selectWall(null);
+  }, [walls, selectedWallId, selectWall]);
+
   function pointer(): { screen: Point; world: Point } | null {
     const screen = stageRef.current?.getPointerPosition();
     if (!screen) return null;
@@ -300,11 +366,19 @@ export function Board({ store, provider, roomId, role }: Props) {
     if (e.evt.button !== 0) return;
     const targetId = findItemId(e.target);
     const target = targetId ? store.get(targetId) : undefined;
+    const targetWallId = role === "gm" ? findWallId(e.target) : null;
+    const targetWall = targetWallId ? store.getWall(targetWallId) : undefined;
 
     switch (tool) {
       case "select": {
+        if (targetWall) {
+          setWallEdit(null);
+          selectWall(targetWall.id);
+          return;
+        }
         if (!canSelect(target, role)) {
           // Su uno spazio vuoto: selezione a riquadro, oppure ping se si resta fermi.
+          if (selectedWallId) selectWall(null);
           if (!e.evt.shiftKey) select([]);
           setInteraction({
             type: "marquee",
@@ -383,6 +457,9 @@ export function Board({ store, provider, roomId, role }: Props) {
       case "path":
         pathDrawing.down(p.world, p.screen, viewport.scale);
         return;
+      case "wall":
+        wallDrawing.down(p.world, viewport.scale, e.evt.altKey);
+        return;
     }
   }
 
@@ -460,11 +537,12 @@ export function Board({ store, provider, roomId, role }: Props) {
     ]);
   }
 
-  function onPointerMove() {
+  function onPointerMove(e: Konva.KonvaEventObject<PointerEvent>) {
     const p = pointer();
     if (!p) return;
     broadcastCursor(p.world);
     if (tool === "path") pathDrawing.move(p.world, p.screen);
+    if (tool === "wall") wallDrawing.move(p.world, e.evt.altKey);
     if (
       pressRef.current &&
       Math.hypot(p.screen.x - pressRef.current.screen.x, p.screen.y - pressRef.current.screen.y) > 5
@@ -610,6 +688,12 @@ export function Board({ store, provider, roomId, role }: Props) {
     setViewport(zoomAt(viewport, p.screen, factor));
   }
 
+  function toggleDoor(door: Door) {
+    if (role === "player" && (!canPlayerToggleDoor(door) || isDoorFogged(door, fog))) return;
+    // Per il GM il clic sblocca e apre anche una porta chiusa a chiave.
+    store.updateWall(door.id, { door: door.door === "open" ? "closed" : "open" });
+  }
+
   /** I token si agganciano alla griglia durante il trascinamento (Alt per muoverli liberi). */
   /** Nodi degli oggetti selezionati che si muovono insieme a quello trascinato. */
   function selectedNodes(dragged: Konva.Node): Konva.Node[] {
@@ -623,32 +707,60 @@ export function Board({ store, provider, roomId, role }: Props) {
 
   function onItemDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     cancelPress();
-    dragStartRef.current = new Map(selectedNodes(e.target).map((n) => [n.id(), n.position()]));
+    dragLastRef.current = new Map(selectedNodes(e.target).map((n) => [n.id(), n.position()]));
   }
 
-  function onItemDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+  function applyItemDrag(e: Konva.KonvaEventObject<DragEvent>) {
     const dragged = e.target;
     const item = store.get(dragged.id());
     // I token si agganciano alla griglia (Alt per muoverli liberi).
     if (item?.kind === "token" && grid.enabled && !e.evt.altKey) {
       dragged.position(snapTokenCenter(dragged.position(), item.size, grid));
     }
-    // Gli altri oggetti selezionati (token compresi, che il Transformer non gestisce) seguono.
-    const starts = dragStartRef.current;
-    const origin = starts?.get(dragged.id());
-    if (!starts || !origin) return;
-    const dx = dragged.x() - origin.x;
-    const dy = dragged.y() - origin.y;
-    for (const node of selectedNodes(dragged)) {
-      const start = starts.get(node.id());
-      if (node !== dragged && start) node.position({ x: start.x + dx, y: start.y + dy });
+    const lastPositions = dragLastRef.current;
+    const lastDragged = lastPositions?.get(dragged.id());
+    if (!lastPositions || !lastDragged) return;
+    const nodes = selectedNodes(dragged);
+    let dx = dragged.x() - lastDragged.x;
+    let dy = dragged.y() - lastDragged.y;
+
+    // Controlla ogni passo dall'ultima posizione accettata: anche aggirare un vertice con una
+    // curva non deve permettere di attraversare il muro fra due eventi consecutivi del puntatore.
+    // Tutti i token seguono lo stesso delta e l'intera selezione si ferma al primo impatto.
+    // Soltanto il GM può ignorare il blocco con Alt; per i giocatori Alt disattiva solo lo snap.
+    if (role !== "gm" || !e.evt.altKey) {
+      let fraction = 1;
+      for (const node of nodes) {
+        const start = lastPositions.get(node.id());
+        if (store.get(node.id())?.kind !== "token" || !start) continue;
+        fraction = Math.min(
+          fraction,
+          movementFraction(start, { x: start.x + dx, y: start.y + dy }, collisionSegments),
+        );
+        if (fraction === 0) break;
+      }
+      dx *= fraction;
+      dy *= fraction;
     }
+
+    // Gli altri oggetti selezionati (token compresi, che il Transformer non gestisce) seguono.
+    for (const node of nodes) {
+      const start = lastPositions.get(node.id());
+      if (!start) continue;
+      const next = { x: start.x + dx, y: start.y + dy };
+      node.position(next);
+      lastPositions.set(node.id(), next);
+    }
+  }
+
+  function onItemDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+    applyItemDrag(e);
   }
 
   function onItemDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
     const patches: Record<string, { x: number; y: number }> = {};
     for (const node of selectedNodes(e.target)) patches[node.id()] = { x: node.x(), y: node.y() };
-    dragStartRef.current = null;
+    dragLastRef.current = null;
     store.update(patches);
   }
 
@@ -775,12 +887,16 @@ export function Board({ store, provider, roomId, role }: Props) {
 
   const editingItem = editingTextId ? store.get(editingTextId) : undefined;
 
-  // Ordine dal basso: terreno, percorsi, mappa, griglia, token, nebbia, disegni. La nebbia copre
-  // tutto tranne i disegni.
+  // Ordine dal basso: terreno, percorsi, mappa, griglia, muri/porte, token, nebbia, disegni.
+  // I giocatori non vedono le linee dei muri, ma solo le icone delle porte; la nebbia copre tutto
+  // tranne i disegni.
   const pathItems = items.filter((i) => i.layer === "paths");
   const mapItems = items.filter((i) => i.layer === "map");
   const tokenItems = items.filter((i) => i.layer === "token");
   const drawItems = items.filter((i) => i.layer === "draw");
+  const drawnWalls = walls.map((wall) =>
+    wallEdit?.id === wall.id ? { ...wall, points: wallEdit.points } : wall,
+  );
   const visibleWorld = {
     ...screenToWorld(viewport, { x: 0, y: 0 }),
     width: size.width / viewport.scale,
@@ -816,6 +932,13 @@ export function Board({ store, provider, roomId, role }: Props) {
     return pathEdit?.id === item.id ? { ...item, points: pathEdit.points } : item;
   })();
 
+  const editableWall = (() => {
+    if (tool !== "select" || role !== "gm" || !selectedWallId) return null;
+    const wall = store.getWall(selectedWallId);
+    if (!wall) return null;
+    return wallEdit?.id === wall.id ? { ...wall, points: wallEdit.points } : wall;
+  })();
+
   /** Doppio clic su un percorso selezionato: aggiunge un punto di controllo lì. */
   function onDoubleClick() {
     const p = pointer();
@@ -840,6 +963,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       data-item-count={items.length}
       data-fog-count={fog.length}
       data-terrain-count={terrain.length}
+      data-wall-count={walls.length}
       style={{
         cursor,
         // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.
@@ -874,6 +998,15 @@ export function Board({ store, provider, roomId, role }: Props) {
             {pathItems.map(renderItem)}
             {mapItems.map(renderItem)}
             <GridLines grid={grid} visible={visibleWorld} scale={viewport.scale} />
+            <WallLayer
+              walls={drawnWalls}
+              fog={fog}
+              role={role}
+              scale={viewport.scale}
+              selectedWallId={selectedWallId}
+              interactive={tool === "select" && !panMode}
+              onToggleDoor={toggleDoor}
+            />
             {tokenItems.map(renderItem)}
           </Layer>
           <FogLayer ops={fog} translucent={role === "gm"} />
@@ -891,6 +1024,21 @@ export function Board({ store, provider, roomId, role }: Props) {
                     store.update({ [editablePath.id]: { points } });
                   } else {
                     setPathEdit({ id: editablePath.id, points });
+                  }
+                }}
+              />
+            )}
+            {editableWall && (
+              <WallHandles
+                wall={editableWall}
+                scale={viewport.scale}
+                snap={snapWallPoint}
+                onChange={(points, commit) => {
+                  if (commit) {
+                    setWallEdit(null);
+                    store.updateWall(editableWall.id, { points });
+                  } else {
+                    setWallEdit({ id: editableWall.id, points });
                   }
                 }}
               />
@@ -1000,6 +1148,31 @@ export function Board({ store, provider, roomId, role }: Props) {
                 <PathShape points={toFlat(pathDrawing.preview)} style={pathStyle} />
               </Group>
             )}
+            {wallDrawing.preview && (
+              <Line
+                name="wall-draft"
+                points={wallDrawing.preview}
+                stroke={SELECTION_COLOR}
+                strokeWidth={4 / viewport.scale}
+                dash={
+                  wallKind === "invisible" ? [9 / viewport.scale, 6 / viewport.scale] : undefined
+                }
+                lineCap="round"
+                lineJoin="round"
+              />
+            )}
+            {wallDrawing.vertices?.map((point, index) => (
+              <Circle
+                // biome-ignore lint/suspicious/noArrayIndexKey: i vertici della bozza non hanno id.
+                key={index}
+                x={point.x}
+                y={point.y}
+                radius={4 / viewport.scale}
+                fill="#ffffff"
+                stroke={SELECTION_COLOR}
+                strokeWidth={1.5 / viewport.scale}
+              />
+            ))}
             {pathDrawing.preview?.slice(0, -1).map((pt, i) => (
               <Circle
                 // biome-ignore lint/suspicious/noArrayIndexKey: i punti della bozza non hanno id.
@@ -1042,6 +1215,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       {tool === "select" && selectedIds.length > 0 && (
         <SelectionPanel store={store} role={role} roomId={roomId} />
       )}
+      {tool === "select" && selectedWallId && <WallSelectionPanel store={store} />}
       <TokenList items={items} grid={grid} isHidden={(id) => store.isHidden(id)} />
       <Toolbar
         store={store}

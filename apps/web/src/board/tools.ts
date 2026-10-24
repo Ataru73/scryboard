@@ -4,6 +4,7 @@ import {
   PATH_STYLES,
   type PathStyleId,
   STROKE_WIDTHS,
+  type WallKind,
 } from "@scryboard/shared";
 import { create } from "zustand";
 import type { Viewport } from "./viewport";
@@ -25,7 +26,9 @@ export type Tool =
   /** Solo GM: dipinge i biomi del terreno. */
   | "terrain"
   /** Solo GM: strade e fiumi. */
-  | "path";
+  | "path"
+  /** Solo GM: muri, porte, finestre e barriere invisibili. */
+  | "wall";
 
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
@@ -40,10 +43,11 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   f: "fog",
   b: "terrain",
   j: "path",
+  w: "wall",
 };
 
 /** Strumenti riservati al GM: le scorciatoie non li attivano per i giocatori. */
-export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain", "path"];
+export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain", "path", "wall"];
 
 /** Larghezze dei percorsi, in caselle della griglia. */
 export const PATH_WIDTHS = [0.5, 1, 1.5, 2, 3] as const;
@@ -90,6 +94,11 @@ interface BoardUiState {
   pathStyle: PathStyleId;
   /** Larghezza dei nuovi punti del percorso, in caselle. */
   pathWidth: number;
+  wallKind: WallKind;
+  /** Bioma usato per generare automaticamente i muri dal suo contorno. */
+  wallBiome: BiomeId;
+  /** Muri selezionati con lo strumento Seleziona (separati dagli oggetti board). */
+  selectedWallId: string | null;
   setTool: (tool: Tool) => void;
   setColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
@@ -106,6 +115,8 @@ interface BoardUiState {
   /** Cambiando stile si riparte dalla sua larghezza tipica. */
   setPathStyle: (style: PathStyleId) => void;
   setPathWidth: (width: number) => void;
+  setWall: (patch: Partial<Pick<BoardUiState, "wallKind" | "wallBiome">>) => void;
+  selectWall: (id: string | null) => void;
   setTerrain: (
     patch: Partial<Pick<BoardUiState, "terrainBiome" | "terrainMode" | "terrainSize">>,
   ) => void;
@@ -132,11 +143,15 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   terrainSize: 1,
   pathStyle: "dirt-road",
   pathWidth: 1,
-  setTool: (tool) => set({ tool, selectedIds: [], pathPoint: null, editingTextId: null }),
+  wallKind: "wall",
+  wallBiome: "rock",
+  selectedWallId: null,
+  setTool: (tool) =>
+    set({ tool, selectedIds: [], pathPoint: null, selectedWallId: null, editingTextId: null }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
   setFilled: (filled) => set({ filled }),
-  select: (selectedIds) => set({ selectedIds, pathPoint: null }),
+  select: (selectedIds) => set({ selectedIds, pathPoint: null, selectedWallId: null }),
   setPathPoint: (pathPoint) => set({ pathPoint }),
   setEditingText: (editingTextId) => set({ editingTextId }),
   setViewport: (viewport) => set({ viewport }),
@@ -149,4 +164,6 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setPathStyle: (pathStyle) =>
     set({ pathStyle, pathWidth: PATH_STYLES.find((s) => s.id === pathStyle)?.width ?? 1 }),
   setPathWidth: (pathWidth) => set({ pathWidth: Math.min(8, Math.max(0.25, pathWidth)) }),
+  setWall: (patch) => set(patch),
+  selectWall: (selectedWallId) => set({ selectedWallId, selectedIds: [], pathPoint: null }),
 }));

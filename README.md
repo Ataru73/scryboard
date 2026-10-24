@@ -50,9 +50,10 @@ Per i test end-to-end serve Chromium, da installare una volta con
 | Tasto                                  | Azione                                                                       |
 | -------------------------------------- | ---------------------------------------------------------------------------- |
 | V H P L R O T E K                      | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token     |
-| Alt (trascinando un token)             | Muove il token senza agganciarlo alla griglia                                |
+| Alt (trascinando un token)             | Muove senza griglia; solo il GM ignora anche i muri                          |
 | B (solo GM)                            | Terreno: dipinge i biomi a pennello o come regioni, con gomma                |
 | J (solo GM)                            | Percorso: strade e fiumi a clic o a mano libera; [ e ] cambiano la larghezza |
+| W (solo GM)                            | Muri, porte, finestre e barriere invisibili agganciati alla griglia          |
 | Doppio clic su un percorso selezionato | Aggiunge un punto di controllo                                               |
 | F (solo GM)                            | Nebbia: copri o scopri con rettangolo, poligono o pennello                   |
 | Shift+H (solo GM)                      | Nasconde ai giocatori la selezione, o la rivela                              |
@@ -80,6 +81,11 @@ arriva subito ai giocatori.
 Con lo strumento Percorso il GM traccia sentieri, strade sterrate o lastricate, ruscelli e fiumi:
 la curva passa per i punti cliccati, ogni punto ha la sua larghezza e i corsi d'acqua si
 assottigliano alle estremità. Selezionando un percorso se ne trascinano i punti.
+
+Con lo strumento Muri il GM disegna polilinee agganciate agli incroci della griglia (Alt le lascia
+libere), porte, finestre e muri invisibili. Può anche generare i muri dal contorno di un bioma.
+I muri fermano i token trascinati; i giocatori vedono solo le icone delle porte e possono aprire o
+chiudere quelle non chiuse a chiave. Selezionando un muro il GM ne modifica i vertici o lo elimina.
 
 Il GM può nascondere qualsiasi oggetto ai giocatori (o crearlo già nascosto): gli oggetti nascosti
 e le loro immagini non arrivano proprio ai browser dei giocatori. La nebbia copre mappa e token;

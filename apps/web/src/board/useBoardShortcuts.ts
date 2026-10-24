@@ -76,7 +76,11 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
       switch (e.key) {
         case "Delete":
         case "Backspace":
-          if (editable.length > 0) {
+          if (ui.selectedWallId && role === "gm") {
+            e.preventDefault();
+            store.removeWalls([ui.selectedWallId]);
+            ui.selectWall(null);
+          } else if (editable.length > 0) {
             e.preventDefault();
             store.remove(editable);
             ui.select([]);
@@ -84,7 +88,7 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
           return;
         case "Escape":
           if (ui.tool === "calibrate") ui.setTool("select");
-          else ui.select([]);
+          else ui.selectWall(null);
           return;
         case "]":
           store.bringToFront(editable);

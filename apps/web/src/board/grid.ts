@@ -14,6 +14,13 @@ export function snapTokenCenter(p: Point, tokenSize: number, grid: GridSettings)
   return { x: snap(p.x, grid.offsetX), y: snap(p.y, grid.offsetY) };
 }
 
+/** Aggancia un punto agli incroci della griglia, inclusi offset e coordinate negative. */
+export function snapGridCorner(p: Point, grid: GridSettings): Point {
+  const snap = (value: number, offset: number) =>
+    Math.round((value - offset) / grid.size) * grid.size + offset;
+  return { x: snap(p.x, grid.offsetX), y: snap(p.y, grid.offsetY) };
+}
+
 /** Casella che contiene il punto (colonna e riga possono essere negative). */
 export function cellAt(p: Point, grid: GridSettings): { col: number; row: number } {
   return {
