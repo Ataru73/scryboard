@@ -65,7 +65,6 @@ Lo script costruisce l'immagine con Cloud Build e aggiorna il servizio `scryboar
 
 Il servizio è pubblico, su una sola istanza (`--max-instances 1`: lo stato vive nel processo) e
 si spegne quando non serve. Due differenze rispetto a Fly.io:
-
 - Niente volume: database e immagini stanno nel filesystem effimero del container, quindi a
   ogni riavvio o redeploy si riparte da un database vuoto. Va bene per demo e test; per i
   dati veri servono Fly.io o una VPS. Un bucket GCS montato con gcsfuse non è un'alternativa

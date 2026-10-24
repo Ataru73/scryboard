@@ -23,12 +23,12 @@ inserisce nell'app una propria chiave API di **Gemini** può generare un'immagin
 
 ## Fonte delle immagini
 
-| Opzione                                        | Pro                                                                | Contro                                                                       |
-| ---------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| **Sagome SVG di game-icons.net** (CC BY 3.0)   | Migliaia di icone fantasy, stile uniforme, nitide a ogni zoom, pochi KB l'una, si colorano col colore del token | Monocromatiche, niente ritratti; richiedono l'attribuzione agli autori       |
-| Ritratti a colori di pacchetti per VTT         | Belli, "da tavolo"                                                 | Quasi sempre con licenze che vietano la ridistribuzione in un'app (es. Forgotten Adventures, 2-Minute Tabletop) |
-| Ritratti CC0 raccolti da varie fonti           | Nessun obbligo di attribuzione                                     | Stili e qualità diversi tra loro, catalogo piccolo, molto lavoro di selezione |
-| Immagini generate con l'IA                     | Stile su misura                                                    | Licenza e provenienza discutibili, qualità da controllare a mano            |
+| Opzione                                      | Pro                                                                                                             | Contro                                                                                                          |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Sagome SVG di game-icons.net** (CC BY 3.0) | Migliaia di icone fantasy, stile uniforme, nitide a ogni zoom, pochi KB l'una, si colorano col colore del token | Monocromatiche, niente ritratti; richiedono l'attribuzione agli autori                                          |
+| Ritratti a colori di pacchetti per VTT       | Belli, "da tavolo"                                                                                              | Quasi sempre con licenze che vietano la ridistribuzione in un'app (es. Forgotten Adventures, 2-Minute Tabletop) |
+| Ritratti CC0 raccolti da varie fonti         | Nessun obbligo di attribuzione                                                                                  | Stili e qualità diversi tra loro, catalogo piccolo, molto lavoro di selezione                                   |
+| Immagini generate con l'IA                   | Stile su misura                                                                                                 | Licenza e provenienza discutibili, qualità da controllare a mano                                                |
 
 **Proposta**: partire dalle **sagome di game-icons.net**. Si sposano con il token attuale (cerchio
 del colore scelto, sagoma bianca al posto delle iniziali), quindi lo stesso goblin in rosso o in
@@ -172,13 +172,13 @@ l'app non mostra nulla di questa funzione.
 
 ## Ordine e stime
 
-| Fase | Contenuto              | Stima         | Dipende da |
-| ---- | ---------------------- | ------------- | ---------- |
-| T1   | Catalogo e importazione | ≈ 2–3 giorni  | —          |
-| T2   | Modello e disegno      | ≈ 1–2 giorni  | T1         |
-| T3   | Selettore              | ≈ 2–3 giorni  | T2         |
-| T4   | Rifiniture             | ≈ 1 giorno    | T3         |
-| T5   | Generazione con Gemini | ≈ 3–4 giorni  | T3 (pannello Libreria) |
+| Fase | Contenuto               | Stima        | Dipende da             |
+| ---- | ----------------------- | ------------ | ---------------------- |
+| T1   | Catalogo e importazione | ≈ 2–3 giorni | —                      |
+| T2   | Modello e disegno       | ≈ 1–2 giorni | T1                     |
+| T3   | Selettore               | ≈ 2–3 giorni | T2                     |
+| T4   | Rifiniture              | ≈ 1 giorno   | T3                     |
+| T5   | Generazione con Gemini  | ≈ 3–4 giorni | T3 (pannello Libreria) |
 
 Totale indicativo: **circa 1,5 settimane** per una persona, esclusi gli eventuali ritratti a
 colori; **circa 2,5 settimane** con la generazione tramite Gemini.
