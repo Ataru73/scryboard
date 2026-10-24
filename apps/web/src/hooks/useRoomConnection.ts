@@ -29,6 +29,7 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [users, setUsers] = useState<ConnectedUser[]>([]);
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
+  const [gmProvider, setGmProvider] = useState<HocuspocusProvider | null>(null);
 
   useEffect(() => {
     const socket = new HocuspocusProviderWebsocket({ url: collabUrl() });
@@ -78,14 +79,16 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
         })
       : null;
     gmProvider?.attach();
+    setGmProvider(gmProvider);
 
     return () => {
       setProvider(null);
+      setGmProvider(null);
       publicProvider.destroy();
       gmProvider?.destroy();
       socket.destroy();
     };
   }, [roomId, gmToken, profile]);
 
-  return { status, users, provider };
+  return { status, users, provider, gmProvider };
 }

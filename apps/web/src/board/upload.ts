@@ -14,7 +14,11 @@ export function isSupportedImage(file: File): boolean {
 }
 
 /** Legge le dimensioni dell'immagine nel browser e la carica sul server. */
-export async function uploadImage(roomId: string, file: File): Promise<UploadedImage> {
+export async function uploadImage(
+  roomId: string,
+  file: File,
+  gmToken: string | null,
+): Promise<UploadedImage> {
   if (!isSupportedImage(file)) {
     throw new UploadError(`"${file.name}": formato non supportato (usa PNG, JPEG, WebP o GIF).`);
   }
@@ -31,7 +35,7 @@ export async function uploadImage(roomId: string, file: File): Promise<UploadedI
     throw new UploadError(`"${file.name}" non sembra un'immagine valida.`);
   }
   try {
-    const { assetId } = await api.uploadAsset(roomId, file);
+    const { assetId } = await api.uploadAsset(roomId, file, gmToken);
     return { assetId, width, height };
   } catch (error) {
     throw new UploadError(`Caricamento di "${file.name}" fallito. ${describeApiError(error)}`);

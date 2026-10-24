@@ -135,3 +135,24 @@ export function compareItems(a: BoardItem, b: BoardItem): number {
     (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
   );
 }
+
+/** Nome della Y.Map con le operazioni di nebbia (documento pubblico, scrivibile solo dal GM). */
+export const FOG_MAP = "fog";
+
+/**
+ * Operazione di nebbia: copre o scopre un'area. Le operazioni si applicano in ordine di `seq`;
+ * sono in una Y.Map (id → op) invece che in un array perché il server deve poter annullare le
+ * modifiche non autorizzate, e con le mappe conosce sempre il valore precedente.
+ */
+export const fogOpSchema = z.object({
+  id: z.string().min(1).max(64),
+  seq: z.number(),
+  mode: z.enum(["cover", "reveal"]),
+  /** "all" copre o scopre tutto, senza punti. */
+  shape: z.enum(["rect", "polygon", "brush", "all"]),
+  /** rect: [x, y, w, h]; polygon e brush: [x0, y0, x1, y1, ...]. */
+  points: z.array(z.number()).max(20000),
+  /** Spessore del pennello, in pixel del mondo. */
+  width: z.number().positive().optional(),
+});
+export type FogOp = z.infer<typeof fogOpSchema>;

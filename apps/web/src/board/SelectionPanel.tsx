@@ -1,7 +1,7 @@
 import type { BoardItem, Role } from "@scryboard/shared";
+import { canModify } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
-import { LockIcon, TrashIcon, UnlockIcon } from "./icons";
-import { canModify } from "./permissions";
+import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
 import type { BoardStore } from "./store";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { useBoardUi } from "./tools";
@@ -25,6 +25,7 @@ export function SelectionPanel({ store, role, roomId }: Props) {
 
   const single = selected.length === 1 ? selected[0] : undefined;
   const allLocked = selected.every((i) => i.locked);
+  const allHidden = selected.every((i) => store.isHidden(i.id));
   const removable = selected.filter((i) => canModify(i, role));
 
   return (
@@ -39,6 +40,23 @@ export function SelectionPanel({ store, role, roomId }: Props) {
           />
           <span className="toolbar-separator" />
         </>
+      )}
+      {role === "gm" && store.canHide && (
+        <button
+          type="button"
+          className="icon-button"
+          aria-pressed={allHidden}
+          aria-label={allHidden ? "Rivela" : "Nascondi"}
+          title={allHidden ? "Rivela ai giocatori (Shift+H)" : "Nascondi ai giocatori (Shift+H)"}
+          onClick={() =>
+            store.setHidden(
+              selected.map((i) => i.id),
+              !allHidden,
+            )
+          }
+        >
+          {allHidden ? EyeOffIcon : EyeIcon}
+        </button>
       )}
       {role === "gm" && (
         <button

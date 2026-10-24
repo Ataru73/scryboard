@@ -5,7 +5,15 @@ import { cellAt } from "./grid";
  * Elenco testuale dei token per chi usa uno screen reader (il canvas non è accessibile):
  * nome e casella occupata.
  */
-export function TokenList({ items, grid }: { items: BoardItem[]; grid: GridSettings }) {
+export function TokenList({
+  items,
+  grid,
+  isHidden,
+}: {
+  items: BoardItem[];
+  grid: GridSettings;
+  isHidden: (id: string) => boolean;
+}) {
   const tokens = items.filter((i): i is TokenItem => i.kind === "token");
   return (
     <ul className="visually-hidden" aria-label="Token sulla lavagna">
@@ -16,6 +24,7 @@ export function TokenList({ items, grid }: { items: BoardItem[]; grid: GridSetti
             {t.name || "Token senza nome"}
             {grid.enabled && `, colonna ${cell.col + 1}, riga ${cell.row + 1}`}
             {t.locked && ", bloccato"}
+            {isHidden(t.id) && ", nascosto"}
           </li>
         );
       })}

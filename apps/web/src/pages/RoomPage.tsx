@@ -1,5 +1,6 @@
 import type { RoomInfo } from "@scryboard/shared";
 import { useEffect, useId, useMemo, useState } from "react";
+import { AssetAuthContext } from "../board/assetAuth";
 import { Board } from "../board/Board";
 import { BoardStore } from "../board/store";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
@@ -98,10 +99,19 @@ function Room({
   gmToken: string | null;
   profile: Profile;
 }) {
-  const { status, users, provider } = useRoomConnection({ roomId: room.id, gmToken, profile });
+  const { status, users, provider, gmProvider } = useRoomConnection({
+    roomId: room.id,
+    gmToken,
+    profile,
+  });
+  // Il GM aspetta anche il documento degli oggetti nascosti, così lo store nasce completo.
+  const ready = provider !== null && (gmToken === null || gmProvider !== null);
   const store = useMemo(
-    () => (provider ? new BoardStore(provider.document, profile.id) : null),
-    [provider, profile.id],
+    () =>
+      ready && provider
+        ? new BoardStore(provider.document, gmProvider?.document ?? null, profile.id)
+        : null,
+    [ready, provider, gmProvider, profile.id],
   );
   useEffect(() => () => store?.destroy(), [store]);
 
@@ -132,12 +142,14 @@ function Room({
       </aside>
       <main className="board-area">
         {store && provider ? (
-          <Board
-            store={store}
-            provider={provider}
-            roomId={room.id}
-            role={gmToken ? "gm" : "player"}
-          />
+          <AssetAuthContext.Provider value={gmToken}>
+            <Board
+              store={store}
+              provider={provider}
+              roomId={room.id}
+              role={gmToken ? "gm" : "player"}
+            />
+          </AssetAuthContext.Provider>
         ) : (
           <div className="board-placeholder muted">Connessione alla lavagna…</div>
         )}

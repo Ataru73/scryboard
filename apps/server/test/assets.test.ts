@@ -1,6 +1,7 @@
+import { roomDocumentName } from "@scryboard/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { detectImageType } from "../src/assets/store";
-import { createRoom, startTestServer, type TestServer, tempDatabasePath } from "./helpers";
+import { connect, createRoom, startTestServer, type TestServer, tempDatabasePath } from "./helpers";
 
 // PNG 1x1 trasparente.
 const PNG = Buffer.from(
@@ -84,5 +85,71 @@ describe("assets API", () => {
     expect(
       (await fetch(`${server.baseUrl}/api/rooms/${roomA.id}/assets/..%2F..%2Fscryboard.db`)).status,
     ).toBe(404);
+  });
+});
+
+describe("hidden assets", () => {
+  let server: TestServer;
+  let cleanup: () => void;
+
+  beforeAll(async () => {
+    const db = tempDatabasePath();
+    cleanup = db.cleanup;
+    server = await startTestServer(db.path);
+  });
+  afterAll(async () => {
+    await server.stop();
+    cleanup();
+  });
+
+  const url = (roomId: string, assetId: string) =>
+    `${server.baseUrl}/api/rooms/${roomId}/assets/${assetId}`;
+
+  it("keeps GM uploads private until an item using them is public", async () => {
+    const room = await createRoom(server);
+    const gmHeaders = { authorization: `Bearer ${room.gmToken}` };
+    const res = await fetch(`${server.baseUrl}/api/rooms/${room.id}/assets`, {
+      method: "POST",
+      headers: gmHeaders,
+      body: PNG,
+    });
+    const { assetId } = (await res.json()) as { assetId: string };
+
+    expect((await fetch(url(room.id, assetId))).status).toBe(404);
+    expect(
+      (await fetch(url(room.id, assetId), { headers: { authorization: "Bearer wrong" } })).status,
+    ).toBe(404);
+    expect((await fetch(url(room.id, assetId), { headers: gmHeaders })).status).toBe(200);
+
+    // Il GM rivela un oggetto che usa l'immagine: da quel momento la vedono tutti.
+    const gm = await connect(server, roomDocumentName(room.id, "public"), room.gmToken);
+    if (gm.status !== "synced") throw new Error("not synced");
+    gm.doc.getMap("items").set("i", {
+      id: "i",
+      kind: "image",
+      layer: "map",
+      x: 0,
+      y: 0,
+      rotation: 0,
+      z: 0,
+      locked: false,
+      createdBy: "gm",
+      assetId,
+      width: 1,
+      height: 1,
+    });
+    await new Promise((r) => setTimeout(r, 100));
+    expect((await fetch(url(room.id, assetId))).status).toBe(200);
+    gm.provider.destroy();
+  });
+
+  it("makes player uploads public", async () => {
+    const room = await createRoom(server);
+    const res = await fetch(`${server.baseUrl}/api/rooms/${room.id}/assets`, {
+      method: "POST",
+      body: PNG,
+    });
+    const { assetId } = (await res.json()) as { assetId: string };
+    expect((await fetch(url(room.id, assetId))).status).toBe(200);
   });
 });

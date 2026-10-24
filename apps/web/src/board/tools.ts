@@ -13,7 +13,9 @@ export type Tool =
   | "eraser"
   | "token"
   /** Solo GM: traccia una casella sulla mappa per calibrare la griglia. */
-  | "calibrate";
+  | "calibrate"
+  /** Solo GM: copre o scopre aree con la nebbia. */
+  | "fog";
 
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
@@ -25,7 +27,14 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   t: "text",
   e: "eraser",
   k: "token",
+  f: "fog",
 };
+
+/** Strumenti riservati al GM: le scorciatoie non li attivano per i giocatori. */
+export const GM_TOOLS: Tool[] = ["calibrate", "fog"];
+
+export type FogMode = "cover" | "reveal";
+export type FogShape = "rect" | "polygon" | "brush";
 
 /** Impostazioni con cui lo strumento Token piazza i nuovi token. */
 export interface TokenDraft {
@@ -48,6 +57,12 @@ interface BoardUiState {
   spacePan: boolean;
   tokenDraft: TokenDraft;
   gridPanelOpen: boolean;
+  fogMode: FogMode;
+  fogShape: FogShape;
+  /** Spessore del pennello della nebbia, in pixel dello schermo. */
+  fogBrush: number;
+  /** Solo GM: i nuovi oggetti nascono nascosti ai giocatori. */
+  createHidden: boolean;
   setTool: (tool: Tool) => void;
   setColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
@@ -58,6 +73,8 @@ interface BoardUiState {
   setSpacePan: (on: boolean) => void;
   setTokenDraft: (patch: Partial<TokenDraft>) => void;
   setGridPanelOpen: (open: boolean) => void;
+  setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
+  setCreateHidden: (on: boolean) => void;
 }
 
 export const useBoardUi = create<BoardUiState>((set) => ({
@@ -71,6 +88,10 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   spacePan: false,
   tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null },
   gridPanelOpen: false,
+  fogMode: "cover",
+  fogShape: "rect",
+  fogBrush: 60,
+  createHidden: false,
   setTool: (tool) => set({ tool, selectedIds: [], editingTextId: null }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
@@ -81,4 +102,6 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setSpacePan: (spacePan) => set({ spacePan }),
   setTokenDraft: (patch) => set((s) => ({ tokenDraft: { ...s.tokenDraft, ...patch } })),
   setGridPanelOpen: (gridPanelOpen) => set({ gridPanelOpen }),
+  setFog: (patch) => set(patch),
+  setCreateHidden: (createHidden) => set({ createHidden }),
 }));

@@ -1,4 +1,5 @@
-import type { BoardItem, Role } from "@scryboard/shared";
+import type { BoardItem } from "./board";
+import type { Role } from "./documents";
 
 /**
  * Chi può selezionare un oggetto: il GM sempre (anche bloccato, per sbloccarlo); i giocatori

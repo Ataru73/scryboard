@@ -18,7 +18,10 @@ interface Props {
   roomId: string;
   cellSize: number;
   draggable: boolean;
-  hidden: boolean;
+  /** Testo in modifica: lo copre la textarea. */
+  editing: boolean;
+  /** Nascosto ai giocatori: il GM lo vede semitrasparente. */
+  concealed: boolean;
   /** Evidenzia la selezione dei token, che non usano il Transformer. */
   selected: boolean;
   onDragMove?: (event: Konva.KonvaEventObject<DragEvent>) => void;
@@ -30,7 +33,8 @@ export const ItemNode = memo(function ItemNode({
   roomId,
   cellSize,
   draggable,
-  hidden,
+  editing,
+  concealed,
   selected,
   onDragMove,
   onDragEnd,
@@ -43,7 +47,7 @@ export const ItemNode = memo(function ItemNode({
       y={item.y}
       rotation={item.rotation}
       draggable={draggable}
-      opacity={hidden ? 0 : 1}
+      opacity={editing ? 0 : concealed ? 0.4 : 1}
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { documents } from "../db/schema";
 import type { RoomService } from "../rooms/service";
+import { guardPublicDocument } from "./guard";
 
 export interface ConnectionContext {
   roomId: string;
@@ -25,6 +26,10 @@ export function createCollab(db: Db, rooms: RoomService): Hocuspocus<ConnectionC
       // Il documento del GM contiene gli oggetti nascosti: i giocatori non devono mai riceverlo.
       if (parsed.scope === "gm" && !isGm) throw new Error("Accesso negato");
       return { roomId: parsed.roomId, role: isGm ? "gm" : "player" };
+    },
+
+    async afterLoadDocument({ document, documentName }) {
+      if (parseRoomDocumentName(documentName)?.scope === "public") guardPublicDocument(document);
     },
 
     extensions: [

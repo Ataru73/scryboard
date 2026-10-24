@@ -1,4 +1,4 @@
-import { blob, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const rooms = sqliteTable("rooms", {
   id: text("id").primaryKey(),
@@ -14,3 +14,19 @@ export const documents = sqliteTable("documents", {
   state: blob("state", { mode: "buffer" }).notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+/**
+ * Visibilità delle immagini caricate. Quelle del GM nascono private e diventano pubbliche quando
+ * un oggetto che le usa compare nel documento pubblico. Gli asset senza riga (caricati prima di
+ * questa tabella) sono considerati pubblici.
+ */
+export const assets = sqliteTable(
+  "assets",
+  {
+    roomId: text("room_id").notNull(),
+    assetId: text("asset_id").notNull(),
+    public: integer("public", { mode: "boolean" }).notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.roomId, t.assetId] })],
+);

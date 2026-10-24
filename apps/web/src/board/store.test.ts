@@ -32,8 +32,8 @@ function linkedDocs(): [Y.Doc, Y.Doc] {
 
 describe("BoardStore", () => {
   it("adds, updates and removes items, keeping a sorted snapshot", () => {
-    const store = new BoardStore(new Y.Doc(), "u1");
-    store.add(text("b", 2), text("a", 1), text("m", 9, "map"));
+    const store = new BoardStore(new Y.Doc(), null, "u1");
+    store.add([text("b", 2), text("a", 1), text("m", 9, "map")]);
     expect(store.getSnapshot().map((i) => i.id)).toEqual(["m", "a", "b"]);
 
     store.update({ a: { x: 10, text: "ciao" } });
@@ -44,8 +44,8 @@ describe("BoardStore", () => {
   });
 
   it("returns the same snapshot until something changes", () => {
-    const store = new BoardStore(new Y.Doc(), "u1");
-    store.add(text("a"));
+    const store = new BoardStore(new Y.Doc(), null, "u1");
+    store.add([text("a")]);
     const first = store.getSnapshot();
     expect(store.getSnapshot()).toBe(first);
     store.update({ a: { x: 1 } });
@@ -54,15 +54,15 @@ describe("BoardStore", () => {
 
   it("ignores invalid items written by other clients", () => {
     const doc = new Y.Doc();
-    const store = new BoardStore(doc, "u1");
+    const store = new BoardStore(doc, null, "u1");
     doc.getMap("items").set("bad", { id: "bad", kind: "text" });
     doc.getMap("items").set("mismatch", text("other"));
     expect(store.getSnapshot()).toEqual([]);
   });
 
   it("brings items to front and sends them to back within their layer", () => {
-    const store = new BoardStore(new Y.Doc(), "u1");
-    store.add(text("a", 1), text("b", 2), text("c", 3), text("m", 1, "map"));
+    const store = new BoardStore(new Y.Doc(), null, "u1");
+    store.add([text("a", 1), text("b", 2), text("c", 3), text("m", 1, "map")]);
     store.bringToFront(["a"]);
     expect(store.getSnapshot().map((i) => i.id)).toEqual(["m", "b", "c", "a"]);
     store.sendToBack(["c", "a"]);
@@ -70,9 +70,9 @@ describe("BoardStore", () => {
   });
 
   it("undoes each action separately, even when they happen in quick succession", () => {
-    const store = new BoardStore(new Y.Doc(), "u1");
-    store.add(text("a"));
-    store.add(text("b"));
+    const store = new BoardStore(new Y.Doc(), null, "u1");
+    store.add([text("a")]);
+    store.add([text("b")]);
     store.remove(["a"]);
     store.undo();
     expect(store.getSnapshot().map((i) => i.id)).toEqual(["a", "b"]);
@@ -82,8 +82,8 @@ describe("BoardStore", () => {
 
   it("shares grid settings and undoes them like any other action", () => {
     const [docA, docB] = linkedDocs();
-    const gm = new BoardStore(docA, "gm");
-    const player = new BoardStore(docB, "player");
+    const gm = new BoardStore(docA, null, "gm");
+    const player = new BoardStore(docB, null, "player");
     expect(player.getGrid().enabled).toBe(false);
 
     gm.updateGrid({ enabled: true, size: 50 });
@@ -96,13 +96,67 @@ describe("BoardStore", () => {
     expect(player.getGrid().enabled).toBe(false);
   });
 
+  it("hides and reveals items by moving them between documents, as one undo step", () => {
+    const publicDoc = new Y.Doc();
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, gmDoc, "gm");
+    store.add([text("a"), text("b")]);
+    store.setHidden(["a"], true);
+
+    expect(store.isHidden("a")).toBe(true);
+    expect(publicDoc.getMap("items").has("a")).toBe(false);
+    expect(gmDoc.getMap("items").has("a")).toBe(true);
+    expect(store.getSnapshot().map((i) => i.id)).toEqual(["a", "b"]);
+
+    // Le modifiche a un oggetto nascosto restano nel documento del GM.
+    store.update({ a: { x: 42 } });
+    expect(gmDoc.getMap("items").get("a")).toMatchObject({ x: 42 });
+    expect(publicDoc.getMap("items").has("a")).toBe(false);
+
+    store.undo(); // annulla lo spostamento
+    store.undo(); // annulla il nascondimento
+    expect(store.isHidden("a")).toBe(false);
+    expect(publicDoc.getMap("items").get("a")).toMatchObject({ x: 0 });
+    expect(gmDoc.getMap("items").has("a")).toBe(false);
+
+    store.redo();
+    expect(store.isHidden("a")).toBe(true);
+  });
+
+  it("creates hidden items directly in the GM document", () => {
+    const publicDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, new Y.Doc(), "gm");
+    store.add([text("secret")], { hidden: true });
+    expect(store.isHidden("secret")).toBe(true);
+    expect(publicDoc.getMap("items").size).toBe(0);
+  });
+
+  it("ignores hiding without a GM document", () => {
+    const store = new BoardStore(new Y.Doc(), null, "player");
+    store.add([text("a")]);
+    store.setHidden(["a"], true);
+    expect(store.isHidden("a")).toBe(false);
+    expect(store.canHide).toBe(false);
+  });
+
+  it("applies fog operations in order and clears them", () => {
+    const store = new BoardStore(new Y.Doc(), null, "gm");
+    store.addFog({ mode: "cover", shape: "all", points: [] });
+    store.addFog({ mode: "reveal", shape: "rect", points: [0, 0, 10, 10] });
+    expect(store.getFog().map((op) => op.mode)).toEqual(["cover", "reveal"]);
+    store.clearFog();
+    expect(store.getFog()).toEqual([]);
+    store.undo();
+    expect(store.getFog()).toHaveLength(2);
+  });
+
   it("syncs between clients and undoes only local changes", () => {
     const [docA, docB] = linkedDocs();
-    const alice = new BoardStore(docA, "alice");
-    const bob = new BoardStore(docB, "bob");
+    const alice = new BoardStore(docA, null, "alice");
+    const bob = new BoardStore(docB, null, "bob");
 
-    alice.add(text("a"));
-    bob.add(text("b"));
+    alice.add([text("a")]);
+    bob.add([text("b")]);
     expect(bob.getSnapshot().map((i) => i.id)).toEqual(["a", "b"]);
 
     alice.undo();

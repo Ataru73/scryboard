@@ -1,5 +1,5 @@
-import type { BoardItem } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
+import type { BoardItem } from "./board";
 import { canModify, canSelect } from "./permissions";
 
 const token = (layer: BoardItem["layer"], locked: boolean) =>

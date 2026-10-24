@@ -408,6 +408,34 @@ button.primary {
   border-radius: 4px;
 }
 
+.text-button {
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 0.85rem;
+}
+
+.text-button:hover {
+  background: var(--surface-2);
+}
+
+.text-button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.fog-hint {
+  flex-basis: 100%;
+  padding: 0 0.4rem 0.2rem;
+}
+
+.board-notice .text-button {
+  margin-left: 0.6rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .zoom-level {
   min-width: 4rem;
   padding: 0.3rem 0.4rem;

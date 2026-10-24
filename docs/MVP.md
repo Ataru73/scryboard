@@ -49,7 +49,7 @@ informazioni e decide in ogni momento cosa vedono i giocatori.
 
 - Ogni oggetto del GM può essere **nascosto** o **visibile**. Gli oggetti nascosti sono mostrati
   al GM semitrasparenti e **non vengono inviati ai giocatori**.
-- Rivelare / nascondere con un clic o una scorciatoia (H).
+- Rivelare / nascondere con un clic o una scorciatoia (Shift+H; H è lo strumento mano).
 - **Fog of war statico**: il GM copre aree (rettangolo, poligono, pennello) e le rivela con gli
   stessi strumenti. Il GM vede la nebbia semitrasparente, i giocatori opaca.
 - Pulsante "copri tutta la mappa" all'importazione.
@@ -119,8 +119,10 @@ export PNG/PDF, fog dinamico con muri, plugin, account utente.
   rifiuta l'accesso al documento GM senza il token GM.
 - Un oggetto nascosto vive nel documento GM. **Rivelarlo** = spostarlo nel documento pubblico;
   **nasconderlo** = l'operazione inversa. Il client del GM mostra l'unione dei due documenti.
-- Le immagini degli oggetti nascosti usano URL firmati emessi solo al GM; l'URL viene dato ai
-  giocatori al momento della rivelazione.
+- Le immagini caricate dal GM nascono private: il GM le scarica con il suo token nell'header
+  `Authorization`, i giocatori solo quando un oggetto che le usa è nel documento pubblico (il
+  server controlla il documento al momento della richiesta). Quelle caricate dai giocatori sono
+  pubbliche.
 - Limite noto: il fog statico copre la mappa solo visivamente, e un giocatore esperto potrebbe
   scaricare l'immagine completa della mappa. Accettabile per l'MVP; più avanti il server potrà
   generare una versione mascherata della mappa.
@@ -175,9 +177,12 @@ dall'_awareness_ di Yjs e non vengono salvati.
 
 ### Permessi lato server
 
-Hocuspocus valida ogni aggiornamento in `beforeHandleMessage`: un giocatore non può modificare
-il livello Mappa, il fog, le impostazioni o gli oggetti bloccati. Gli aggiornamenti non validi
-vengono scartati.
+Un giocatore non può modificare il livello Mappa, la nebbia, le impostazioni o gli oggetti
+bloccati. Un aggiornamento Yjs non si può rifiutare senza chiudere la connessione (e il client lo
+rimanderebbe a ogni riconnessione), quindi il server lo applica e subito dopo ripristina i valori
+precedenti con una propria transazione (`apps/server/src/collab/guard.ts`): tutti i client
+convergono allo stato corretto. Per questo la nebbia è una Y.Map (id → operazione) e non un
+array: con le mappe il server conosce sempre il valore precedente.
 
 ## Piano di lavoro
 
@@ -190,12 +195,16 @@ i token hanno l'origine nel centro e il diametro in caselle, così seguono la gr
 ricalibra; un elenco testuale nascosto dei token con la loro casella rende la lavagna usabile
 anche con uno screen reader.
 
+Note sulla M3: il GM può creare oggetti già nascosti (pulsante con l'occhio nella barra); l'annulla
+copre anche le azioni che toccano entrambi i documenti, come nascondere un oggetto; dopo il
+caricamento di una mappa il GM può coprirla di nebbia con un clic.
+
 | Milestone                | Contenuto                                                                                 | Stima           |
 | ------------------------ | ----------------------------------------------------------------------------------------- | --------------- |
 | M0 – Fondamenta ✅       | Monorepo, CI, Hocuspocus + Hono, creazione stanza e link                                  | 3–4 giorni      |
 | M1 – Canvas condiviso ✅ | Pan/zoom, upload immagini, disegno, testo, cursori, persistenza, annulla/ripeti, test E2E | 1–1,5 settimane |
 | M2 – Token e griglia ✅  | Token, griglia, calibrazione, snap, blocco                                                | 4–5 giorni      |
-| M3 – Visibilità          | Doppio documento, nascondi/rivela, fog statico, permessi server                           | 1–1,5 settimane |
+| M3 – Visibilità ✅       | Doppio documento, nascondi/rivela, fog statico, permessi server                           | 1–1,5 settimane |
 | M4 – Rifinitura          | Ping, selezione a riquadro, rifiniture, deploy                                            | 1 settimana     |
 
 Totale indicativo: **5–6 settimane** di lavoro per una persona.

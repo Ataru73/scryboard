@@ -7,9 +7,11 @@ import type {
   TextItem,
   TokenItem,
 } from "@scryboard/shared";
+import { canModify, canSelect } from "@scryboard/shared";
 import type Konva from "konva";
 import {
   type DragEvent as ReactDragEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -17,13 +19,14 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Layer, Line, Rect, Stage, Transformer } from "react-konva";
+import { Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
+import { useAssetAuth } from "./assetAuth";
 import { Cursors, useCursorBroadcast } from "./Cursors";
+import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
 import { bakeScale, normalizeBox, unionBounds } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapTokenCenter } from "./grid";
 import { ItemNode, SELECTION_COLOR } from "./ItemNode";
-import { canModify, canSelect } from "./permissions";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
 import { type BoardStore, newItemId } from "./store";
@@ -47,7 +50,14 @@ type Interaction =
   | { type: "stroke"; origin: Point; points: number[] }
   | { type: "shape"; shape: ShapeItem["shape"]; start: Point; end: Point }
   | { type: "erase" }
-  | { type: "calibrate"; start: Point; end: Point };
+  | { type: "calibrate"; start: Point; end: Point }
+  | { type: "fogRect"; start: Point; end: Point }
+  | { type: "fogBrush"; points: number[] };
+
+interface Notice {
+  text: string;
+  action?: { label: string; run: () => void };
+}
 
 const DEFAULT_FONT_SIZE = 24;
 
@@ -64,13 +74,21 @@ function findItemId(node: Konva.Node | null): string | null {
 export function Board({ store, provider, roomId, role }: Props) {
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
+  const fog = useSyncExternalStore(store.subscribe, store.getFog);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
-  const contentLayerRef = useRef<Konva.Layer>(null);
+
   const transformerRef = useRef<Konva.Transformer>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [interaction, setInteraction] = useState<Interaction | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNoticeState] = useState<Notice | null>(null);
+  const setNotice = useCallback(
+    (text: string | null, action?: Notice["action"]) =>
+      setNoticeState(text ? { text, action } : null),
+    [],
+  );
+  /** Poligono di nebbia in costruzione: vertici già fissati e posizione del puntatore. */
+  const [polygon, setPolygon] = useState<{ points: number[]; cursor: Point } | null>(null);
   const [draftText, setDraftText] = useState<TextItem | null>(null);
   const fittedRef = useRef(false);
 
@@ -82,18 +100,27 @@ export function Board({ store, provider, roomId, role }: Props) {
   const editingTextId = useBoardUi((s) => s.editingTextId);
   const viewport = useBoardUi((s) => s.viewport);
   const spacePan = useBoardUi((s) => s.spacePan);
+  const fogMode = useBoardUi((s) => s.fogMode);
+  const fogShape = useBoardUi((s) => s.fogShape);
+  const fogBrush = useBoardUi((s) => s.fogBrush);
+  const createHidden = useBoardUi((s) => s.createHidden);
   const { select, setViewport, setEditingText, setTool, setGridPanelOpen } = useBoardUi.getState();
 
   const canEdit = useCallback((item: BoardItem | undefined) => canModify(item, role), [role]);
   const panMode = tool === "hand" || spacePan;
   const broadcastCursor = useCursorBroadcast(provider);
+  const gmToken = useAssetAuth();
 
   const fitToContent = useCallback(() => {
     const bounds = unionBounds(store.getSnapshot(), store.getGrid().size);
     if (bounds && size.width > 0) setViewport(fitBounds(bounds, size));
   }, [store, size, setViewport]);
 
-  useBoardShortcuts({ store, canEdit, fitToContent, viewportSize: size });
+  useBoardShortcuts({ store, role, canEdit, fitToContent, viewportSize: size });
+
+  /** Il GM può creare gli oggetti già nascosti ai giocatori. */
+  const addItems = (newItems: BoardItem[]) =>
+    store.add(newItems, { hidden: role === "gm" && createHidden });
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -125,14 +152,14 @@ export function Board({ store, provider, roomId, role }: Props) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: i nodi Konva cambiano con `items`.
   useEffect(() => {
     const transformer = transformerRef.current;
-    const layer = contentLayerRef.current;
-    if (!transformer || !layer) return;
+    const stage = stageRef.current;
+    if (!transformer || !stage) return;
     const nodes = selectedIds
       // I token hanno un loro indicatore di selezione e la taglia si cambia dal pannello.
       .filter(
         (id) => canEdit(store.get(id)) && store.get(id)?.kind !== "token" && id !== editingTextId,
       )
-      .map((id) => layer.findOne((node: Konva.Node) => node.hasName("item") && node.id() === id))
+      .map((id) => stage.findOne((node: Konva.Node) => node.hasName("item") && node.id() === id))
       .filter((n): n is Konva.Node => n !== undefined);
     transformer.nodes(nodes);
   }, [selectedIds, items, store, canEdit, editingTextId]);
@@ -151,7 +178,7 @@ export function Board({ store, provider, roomId, role }: Props) {
   }
 
   function eraseAt(screen: Point) {
-    const id = findItemId(contentLayerRef.current?.getIntersection(screen) ?? null);
+    const id = findItemId(stageRef.current?.getIntersection(screen) ?? null);
     if (id && canEdit(store.get(id))) store.remove([id]);
   }
 
@@ -235,8 +262,58 @@ export function Board({ store, provider, roomId, role }: Props) {
       case "calibrate":
         setInteraction({ type: "calibrate", start: p.world, end: p.world });
         return;
+      case "fog":
+        if (fogShape === "rect") setInteraction({ type: "fogRect", start: p.world, end: p.world });
+        else if (fogShape === "brush")
+          setInteraction({ type: "fogBrush", points: [p.world.x, p.world.y] });
+        else addPolygonPoint(p.world);
+        return;
     }
   }
+
+  function addPolygonPoint(at: Point) {
+    if (!polygon) {
+      setPolygon({ points: [at.x, at.y], cursor: at });
+      return;
+    }
+    const [x0 = 0, y0 = 0] = polygon.points;
+    const n = polygon.points.length;
+    // Clic vicino al primo vertice: chiude il poligono.
+    if (n >= 6 && Math.hypot(at.x - x0, at.y - y0) * viewport.scale < 10) {
+      finishPolygon();
+      return;
+    }
+    // Un secondo clic sull'ultimo vertice è il doppio clic che chiude il poligono. (Il dblclick
+    // di Konva non va bene: scatta anche con due clic rapidi in punti diversi.)
+    const lastX = polygon.points[n - 2] as number;
+    const lastY = polygon.points[n - 1] as number;
+    if (Math.hypot(at.x - lastX, at.y - lastY) * viewport.scale < 4) {
+      finishPolygon();
+      return;
+    }
+    setPolygon({ points: [...polygon.points, at.x, at.y], cursor: at });
+  }
+
+  function finishPolygon() {
+    if (polygon && polygon.points.length >= 6) {
+      store.addFog({ mode: fogMode, shape: "polygon", points: polygon.points });
+    }
+    setPolygon(null);
+  }
+
+  // Invio chiude il poligono, Esc lo annulla; cambiando strumento si perde.
+  useEffect(() => {
+    if (!polygon) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Enter") finishPolygon();
+      else if (e.key === "Escape") setPolygon(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+  useEffect(() => {
+    if (tool !== "fog" || fogShape !== "polygon") setPolygon(null);
+  }, [tool, fogShape]);
 
   function placeToken(at: Point) {
     const { tokenDraft } = useBoardUi.getState();
@@ -245,20 +322,23 @@ export function Board({ store, provider, roomId, role }: Props) {
       .filter((i): i is TokenItem => i.kind === "token")
       .map((t) => t.name);
     const center = grid.enabled ? snapTokenCenter(at, tokenDraft.size, grid) : at;
-    store.add({
-      ...base("token", center),
-      kind: "token",
-      name: nextTokenName(tokenDraft.name, existing),
-      color: tokenDraft.color,
-      size: tokenDraft.size,
-      assetId: tokenDraft.assetId,
-    });
+    addItems([
+      {
+        ...base("token", center),
+        kind: "token",
+        name: nextTokenName(tokenDraft.name, existing),
+        color: tokenDraft.color,
+        size: tokenDraft.size,
+        assetId: tokenDraft.assetId,
+      },
+    ]);
   }
 
   function onPointerMove() {
     const p = pointer();
     if (!p) return;
     broadcastCursor(p.world);
+    if (polygon) setPolygon({ ...polygon, cursor: p.world });
     if (!interaction) return;
     switch (interaction.type) {
       case "pan":
@@ -281,7 +361,11 @@ export function Board({ store, provider, roomId, role }: Props) {
       }
       case "shape":
       case "calibrate":
+      case "fogRect":
         setInteraction({ ...interaction, end: p.world });
+        return;
+      case "fogBrush":
+        setInteraction({ ...interaction, points: [...interaction.points, p.world.x, p.world.y] });
         return;
       case "erase":
         eraseAt(p.screen);
@@ -303,7 +387,15 @@ export function Board({ store, provider, roomId, role }: Props) {
         color,
         strokeWidth: strokeWidth / viewport.scale,
       };
-      store.add(item);
+      addItems([item]);
+    } else if (current.type === "fogRect") {
+      const box = normalizeBox(current.start, current.end);
+      if (box.width * viewport.scale < 3 || box.height * viewport.scale < 3) return;
+      store.addFog({ mode: fogMode, shape: "rect", points: [box.x, box.y, box.width, box.height] });
+    } else if (current.type === "fogBrush") {
+      const points =
+        current.points.length >= 4 ? current.points : [...current.points, ...current.points];
+      store.addFog({ mode: fogMode, shape: "brush", points, width: fogBrush / viewport.scale });
     } else if (current.type === "calibrate") {
       const calibration = calibrateFromBox(normalizeBox(current.start, current.end));
       if (!calibration) {
@@ -332,7 +424,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         strokeWidth: strokeWidth / viewport.scale,
         fill: filled && current.shape !== "line" ? color : null,
       };
-      store.add(item);
+      addItems([item]);
     }
   }
 
@@ -378,23 +470,25 @@ export function Board({ store, provider, roomId, role }: Props) {
     store.update(patches);
   }
 
-  const addImages = useCallback(
-    async (files: File[], at: Point) => {
-      const images = files.filter(isSupportedImage);
-      if (images.length === 0) {
-        if (files.length > 0) setNotice("Formato non supportato: usa PNG, JPEG, WebP o GIF.");
-        return;
-      }
-      // Le immagini del GM vanno sul livello mappa; quelle dei giocatori sopra, tra i disegni.
-      const layer = role === "gm" ? "map" : "draw";
-      setNotice(
-        images.length === 1 ? "Caricamento immagine…" : `Caricamento di ${images.length} immagini…`,
-      );
-      let offset = 0;
-      for (const file of images) {
-        try {
-          const { assetId, width, height } = await uploadImage(roomId, file);
-          store.add({
+  async function addImages(files: File[], at: Point) {
+    const images = files.filter(isSupportedImage);
+    if (images.length === 0) {
+      if (files.length > 0) setNotice("Formato non supportato: usa PNG, JPEG, WebP o GIF.");
+      return;
+    }
+    // Le immagini del GM vanno sul livello mappa; quelle dei giocatori sopra, tra i disegni.
+    const layer = role === "gm" ? "map" : "draw";
+    setNotice(
+      images.length === 1 ? "Caricamento immagine…" : `Caricamento di ${images.length} immagini…`,
+    );
+    let offset = 0;
+    const placed: { x: number; y: number; width: number; height: number }[] = [];
+    for (const file of images) {
+      try {
+        const { assetId, width, height } = await uploadImage(roomId, file, gmToken);
+        placed.push({ x: at.x - width / 2 + offset, y: at.y - height / 2 + offset, width, height });
+        addItems([
+          {
             id: newItemId(),
             layer,
             x: at.x - width / 2 + offset,
@@ -407,24 +501,37 @@ export function Board({ store, provider, roomId, role }: Props) {
             assetId,
             width,
             height,
-          });
-          offset += 24 / viewport.scale;
-        } catch (error) {
-          setNotice(error instanceof UploadError ? error.message : "Caricamento non riuscito.");
-          return;
-        }
+          },
+        ]);
+        offset += 24 / viewport.scale;
+      } catch (error) {
+        setNotice(error instanceof UploadError ? error.message : "Caricamento non riuscito.");
+        return;
       }
+    }
+    if (layer === "map") {
+      // Una mappa nuova di solito va scoperta poco alla volta.
+      setNotice(images.length === 1 ? "Mappa caricata." : "Mappe caricate.", {
+        label: "Coprila con la nebbia",
+        run: () => {
+          for (const b of placed) {
+            store.addFog({ mode: "cover", shape: "rect", points: [b.x, b.y, b.width, b.height] });
+          }
+        },
+      });
+    } else {
       setNotice(null);
-    },
-    [role, roomId, store, viewport.scale],
-  );
+    }
+  }
 
   const viewportCenter = useCallback(
     () => screenToWorld(viewport, { x: size.width / 2, y: size.height / 2 }),
     [viewport, size],
   );
 
-  // Incolla immagini dagli appunti.
+  // Incolla immagini dagli appunti. Il listener legge sempre la versione corrente di addImages.
+  const addImagesRef = useRef(addImages);
+  addImagesRef.current = addImages;
   useEffect(() => {
     function onPaste(event: ClipboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -432,11 +539,11 @@ export function Board({ store, provider, roomId, role }: Props) {
       const files = Array.from(event.clipboardData?.files ?? []);
       if (files.length === 0) return;
       event.preventDefault();
-      void addImages(files, viewportCenter());
+      void addImagesRef.current(files, viewportCenter());
     }
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, [addImages, viewportCenter]);
+  }, [viewportCenter]);
 
   function onDrop(event: ReactDragEvent) {
     event.preventDefault();
@@ -450,10 +557,10 @@ export function Board({ store, provider, roomId, role }: Props) {
   }
 
   useEffect(() => {
-    if (!notice || notice.startsWith("Caricamento")) return;
-    const timer = setTimeout(() => setNotice(null), 5000);
+    if (!notice || notice.text.startsWith("Caricamento")) return;
+    const timer = setTimeout(() => setNotice(null), notice.action ? 10000 : 5000);
     return () => clearTimeout(timer);
-  }, [notice]);
+  }, [notice, setNotice]);
 
   const cursor =
     interaction?.type === "pan"
@@ -470,9 +577,10 @@ export function Board({ store, provider, roomId, role }: Props) {
 
   const editingItem = editingTextId ? store.get(editingTextId) : undefined;
 
-  const firstOther = items.findIndex((i) => i.layer !== "map");
-  const mapItems = firstOther === -1 ? items : items.slice(0, firstOther);
-  const otherItems = firstOther === -1 ? [] : items.slice(firstOther);
+  // Ordine dal basso: mappa, griglia, token, nebbia, disegni. La nebbia copre mappa e token.
+  const mapItems = items.filter((i) => i.layer === "map");
+  const tokenItems = items.filter((i) => i.layer === "token");
+  const drawItems = items.filter((i) => i.layer === "draw");
   const visibleWorld = {
     ...screenToWorld(viewport, { x: 0, y: 0 }),
     width: size.width / viewport.scale,
@@ -485,7 +593,8 @@ export function Board({ store, provider, roomId, role }: Props) {
       roomId={roomId}
       cellSize={grid.size}
       draggable={tool === "select" && !panMode && canEdit(item)}
-      hidden={item.id === editingTextId}
+      editing={item.id === editingTextId}
+      concealed={store.isHidden(item.id)}
       selected={selectedIds.includes(item.id)}
       onDragMove={item.kind === "token" ? onItemDragMove : undefined}
       onDragEnd={onItemDragEnd}
@@ -499,6 +608,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       role="application"
       aria-label="Lavagna"
       data-item-count={items.length}
+      data-fog-count={fog.length}
       style={{
         cursor,
         // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.
@@ -524,11 +634,13 @@ export function Board({ store, provider, roomId, role }: Props) {
           onPointerLeave={() => broadcastCursor(null)}
           onWheel={onWheel}
         >
-          <Layer ref={contentLayerRef}>
+          <Layer>
             {mapItems.map(renderItem)}
             <GridLines grid={grid} visible={visibleWorld} scale={viewport.scale} />
-            {otherItems.map(renderItem)}
+            {tokenItems.map(renderItem)}
           </Layer>
+          <FogLayer ops={fog} translucent={role === "gm"} />
+          <Layer>{drawItems.map(renderItem)}</Layer>
           <Layer>
             <Transformer
               ref={transformerRef}
@@ -563,6 +675,41 @@ export function Board({ store, provider, roomId, role }: Props) {
                 fill="rgba(142, 124, 240, 0.15)"
               />
             )}
+            {interaction?.type === "fogRect" && (
+              <FogPreview>
+                <FogShape
+                  op={{
+                    mode: "cover",
+                    shape: "rect",
+                    points: (({ x, y, width, height }) => [x, y, width, height])(
+                      normalizeBox(interaction.start, interaction.end),
+                    ),
+                  }}
+                />
+              </FogPreview>
+            )}
+            {interaction?.type === "fogBrush" && (
+              <FogPreview>
+                <FogShape
+                  op={{
+                    mode: "cover",
+                    shape: "brush",
+                    points: interaction.points,
+                    width: fogBrush / viewport.scale,
+                  }}
+                />
+              </FogPreview>
+            )}
+            {polygon && (
+              <Line
+                points={[...polygon.points, polygon.cursor.x, polygon.cursor.y]}
+                stroke={SELECTION_COLOR}
+                strokeWidth={2 / viewport.scale}
+                dash={[6 / viewport.scale, 4 / viewport.scale]}
+                fill="rgba(142, 124, 240, 0.2)"
+                closed
+              />
+            )}
             {interaction?.type === "shape" && (
               <ShapePreview
                 shape={interaction.shape}
@@ -583,7 +730,7 @@ export function Board({ store, provider, roomId, role }: Props) {
           item={draftText}
           viewport={viewport}
           onCommit={(text) => {
-            if (text.trim() !== "") store.add({ ...draftText, text });
+            if (text.trim() !== "") addItems([{ ...draftText, text }]);
             setDraftText(null);
           }}
         />
@@ -603,7 +750,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       {tool === "select" && selectedIds.length > 0 && (
         <SelectionPanel store={store} role={role} roomId={roomId} />
       )}
-      <TokenList items={items} grid={grid} />
+      <TokenList items={items} grid={grid} isHidden={(id) => store.isHidden(id)} />
       <Toolbar
         store={store}
         role={role}
@@ -612,7 +759,33 @@ export function Board({ store, provider, roomId, role }: Props) {
         onFit={fitToContent}
         viewportSize={size}
       />
-      {notice && <div className="board-notice">{notice}</div>}
+      {notice && (
+        <div className="board-notice" role="status">
+          {notice.text}
+          {notice.action && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                notice.action?.run();
+                setNotice(null);
+              }}
+            >
+              {notice.action.label}
+            </button>
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+/** Anteprima di un'operazione di nebbia: viola per coprire, tratteggio per scoprire. */
+function FogPreview({ children }: { children: ReactNode }) {
+  const mode = useBoardUi((s) => s.fogMode);
+  return (
+    <Group opacity={mode === "cover" ? 0.45 : 0.25} listening={false}>
+      {children}
+    </Group>
   );
 }

@@ -1,11 +1,12 @@
-import type { BoardItem } from "@scryboard/shared";
+import type { BoardItem, Role } from "@scryboard/shared";
 import { useEffect } from "react";
 import type { BoardStore } from "./store";
-import { TOOL_SHORTCUTS, useBoardUi } from "./tools";
+import { GM_TOOLS, TOOL_SHORTCUTS, useBoardUi } from "./tools";
 import { zoomAt } from "./viewport";
 
 interface Options {
   store: BoardStore;
+  role: Role;
   canEdit: (item: BoardItem | undefined) => boolean;
   fitToContent: () => void;
   viewportSize: { width: number; height: number };
@@ -29,7 +30,7 @@ function isTyping(target: EventTarget | null): boolean {
   return target.closest("textarea, select, [contenteditable]") !== null;
 }
 
-export function useBoardShortcuts({ store, canEdit, fitToContent, viewportSize }: Options) {
+export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewportSize }: Options) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (isTyping(e.target)) return;
@@ -66,6 +67,12 @@ export function useBoardShortcuts({ store, canEdit, fitToContent, viewportSize }
       }
 
       const editable = ui.selectedIds.filter((id) => canEdit(store.get(id)));
+      if (e.shiftKey && key === "h" && role === "gm" && ui.selectedIds.length > 0) {
+        // Shift+H: nasconde la selezione, o la rivela se è già tutta nascosta.
+        const allHidden = ui.selectedIds.every((id) => store.isHidden(id));
+        store.setHidden(ui.selectedIds, !allHidden);
+        return;
+      }
       switch (e.key) {
         case "Delete":
         case "Backspace":
@@ -87,7 +94,7 @@ export function useBoardShortcuts({ store, canEdit, fitToContent, viewportSize }
           return;
       }
       const tool = TOOL_SHORTCUTS[key];
-      if (tool && !e.shiftKey) ui.setTool(tool);
+      if (tool && !e.shiftKey && (role === "gm" || !GM_TOOLS.includes(tool))) ui.setTool(tool);
     }
 
     function onKeyUp(e: KeyboardEvent) {
@@ -107,5 +114,5 @@ export function useBoardShortcuts({ store, canEdit, fitToContent, viewportSize }
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [store, canEdit, fitToContent, viewportSize]);
+  }, [store, role, canEdit, fitToContent, viewportSize]);
 }

@@ -1,8 +1,18 @@
 import { DRAW_COLORS, type Role, STROKE_WIDTHS } from "@scryboard/shared";
 import { useRef, useSyncExternalStore } from "react";
 import { COLOR_NAMES } from "./colors";
+import { FogPanel } from "./FogPanel";
 import { GridPanel } from "./GridPanel";
-import { FitIcon, GridIcon, ImageIcon, RedoIcon, TOOL_ICONS, UndoIcon } from "./icons";
+import {
+  EyeIcon,
+  EyeOffIcon,
+  FitIcon,
+  GridIcon,
+  ImageIcon,
+  RedoIcon,
+  TOOL_ICONS,
+  UndoIcon,
+} from "./icons";
 import type { BoardStore } from "./store";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { type Tool, useBoardUi } from "./tools";
@@ -19,6 +29,9 @@ const TOOLS: { tool: Tool; label: string; key: string }[] = [
   { tool: "eraser", label: "Gomma", key: "E" },
   { tool: "token", label: "Token", key: "K" },
 ];
+const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
+  { tool: "fog", label: "Nebbia", key: "F" },
+];
 
 const DRAWING_TOOLS: Tool[] = ["pen", "line", "rect", "ellipse", "text"];
 
@@ -32,7 +45,8 @@ interface Props {
 }
 
 export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: Props) {
-  const { tool, color, strokeWidth, filled, viewport, tokenDraft, gridPanelOpen } = useBoardUi();
+  const { tool, color, strokeWidth, filled, viewport, tokenDraft, gridPanelOpen, createHidden } =
+    useBoardUi();
   const {
     setTool,
     setColor,
@@ -41,6 +55,7 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
     setViewport,
     setTokenDraft,
     setGridPanelOpen,
+    setCreateHidden,
   } = useBoardUi.getState();
   const canUndo = useSyncExternalStore(store.subscribe, () => store.canUndo());
   const canRedo = useSyncExternalStore(store.subscribe, () => store.canRedo());
@@ -50,7 +65,7 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
   return (
     <>
       <div className="toolbar toolbar-tools" role="toolbar" aria-label="Strumenti">
-        {TOOLS.map((t) => (
+        {[...TOOLS, ...(role === "gm" ? GM_ONLY : [])].map((t) => (
           <button
             key={t.tool}
             type="button"
@@ -73,6 +88,22 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
         >
           {ImageIcon}
         </button>
+        {role === "gm" && (
+          <button
+            type="button"
+            className="icon-button"
+            aria-pressed={createHidden}
+            aria-label="Crea nascosti"
+            title={
+              createHidden
+                ? "I nuovi oggetti sono nascosti ai giocatori (clic per crearli visibili)"
+                : "I nuovi oggetti sono visibili (clic per crearli nascosti)"
+            }
+            onClick={() => setCreateHidden(!createHidden)}
+          >
+            {createHidden ? EyeOffIcon : EyeIcon}
+          </button>
+        )}
         {role === "gm" && (
           <button
             type="button"
@@ -124,6 +155,8 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
           <TokenStyleFields value={tokenDraft} roomId={roomId} onChange={setTokenDraft} liveName />
         </div>
       )}
+
+      {tool === "fog" && role === "gm" && <FogPanel store={store} />}
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">

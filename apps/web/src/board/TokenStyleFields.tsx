@@ -1,5 +1,6 @@
 import { DRAW_COLORS, TOKEN_SIZES } from "@scryboard/shared";
 import { useId, useRef, useState } from "react";
+import { useAssetAuth } from "./assetAuth";
 import { COLOR_NAMES } from "./colors";
 import type { TokenDraft } from "./tools";
 import { UploadError, uploadImage } from "./upload";
@@ -20,6 +21,7 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const gmToken = useAssetAuth();
   const nameId = useId();
   const sizeId = useId();
 
@@ -32,7 +34,7 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
     setUploading(true);
     setError(null);
     try {
-      const { assetId } = await uploadImage(roomId, file);
+      const { assetId } = await uploadImage(roomId, file, gmToken);
       onChange({ assetId });
     } catch (e) {
       setError(e instanceof UploadError ? e.message : "Caricamento non riuscito.");
