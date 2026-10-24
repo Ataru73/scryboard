@@ -13,3 +13,6 @@ coverage/
 e2e/.data/
 test-results/
 playwright-report/
+
+# Cartella locale di Claude Code (worktree delle attività in background)
+.claude/

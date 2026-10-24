@@ -72,3 +72,35 @@ describe("grid", () => {
     expect(nextTokenName("  ", ["x"])).toBe("");
   });
 });
+
+describe("grid functions on hex grids", () => {
+  const hex = {
+    ...DEFAULT_GRID,
+    enabled: true,
+    type: "hex-pointy" as const,
+    size: 60,
+    offsetX: 0,
+    offsetY: 0,
+  };
+
+  it("snaps tokens to hex centres of any size and walls to hex corners", () => {
+    expect(snapTokenCenter({ x: 55, y: 8 }, 2, hex)).toEqual({ x: 60, y: 0 });
+    const corner = snapGridCorner({ x: 1, y: -33 }, hex);
+    expect(corner.x).toBeCloseTo(0);
+    expect(corner.y).toBeCloseTo(-60 / Math.sqrt(3));
+  });
+
+  it("labels cells with hex offset coordinates", () => {
+    expect(cellAt({ x: 60, y: 0 }, hex)).toEqual({ col: 1, row: 0 });
+  });
+
+  it("calibrates a hex grid from a box around one hex", () => {
+    // Esagono a punta da 70: largo 70, alto 70 · 2/√3 ≈ 80,8, centrato in (200, 300).
+    const h = (70 * 2) / Math.sqrt(3);
+    const cal = calibrateFromBox({ x: 165, y: 300 - h / 2, width: 70, height: h }, "hex-pointy");
+    expect(cal?.size).toBe(70);
+    const grid = { ...hex, ...cal } as typeof hex;
+    expect(snapTokenCenter({ x: 203, y: 297 }, 1, grid).x).toBeCloseTo(200, 0);
+    expect(snapTokenCenter({ x: 203, y: 297 }, 1, grid).y).toBeCloseTo(300, 0);
+  });
+});

@@ -921,7 +921,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         current.points.length >= 4 ? current.points : [...current.points, ...current.points];
       store.addFog({ mode: fogMode, shape: "brush", points, width: fogBrush / viewport.scale });
     } else if (current.type === "calibrate") {
-      const calibration = calibrateFromBox(normalizeBox(current.start, current.end));
+      const calibration = calibrateFromBox(normalizeBox(current.start, current.end), grid.type);
       if (!calibration) {
         setNotice("Riquadro troppo piccolo: traccia il bordo di una casella della mappa.");
         return;

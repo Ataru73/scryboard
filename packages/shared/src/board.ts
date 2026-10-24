@@ -219,17 +219,36 @@ export const TOKEN_SIZES = [
 /** Nome della Y.Map con le impostazioni della board (documento pubblico). */
 export const SETTINGS_MAP = "settings";
 
+/** Tipi di griglia: quadrata o esagonale, con un vertice in alto (a punta) o un lato (piatta). */
+export const GRID_TYPES = [
+  { id: "square", label: "Quadrata" },
+  { id: "hex-pointy", label: "Esagonale a punta" },
+  { id: "hex-flat", label: "Esagonale piatta" },
+] as const;
+export type GridType = (typeof GRID_TYPES)[number]["id"];
+
 export const gridSettingsSchema = z.object({
   enabled: z.boolean(),
-  /** Lato di una casella, in pixel del mondo. */
+  /** Le griglie salvate prima degli esagoni sono quadrate. */
+  type: z.enum(["square", "hex-pointy", "hex-flat"]).default("square"),
+  /**
+   * Larghezza di una casella in pixel del mondo: il lato del quadrato, oppure la distanza tra due
+   * lati opposti dell'esagono (cioè tra i centri di due esagoni vicini).
+   */
   size: z.number().min(8).max(1000),
-  /** Spostamento della griglia, in [0, size). */
+  /** Spostamento della griglia: per gli esagoni, il centro dell'esagono di riferimento. */
   offsetX: z.number(),
   offsetY: z.number(),
 });
 export type GridSettings = z.infer<typeof gridSettingsSchema>;
 
-export const DEFAULT_GRID: GridSettings = { enabled: false, size: 70, offsetX: 0, offsetY: 0 };
+export const DEFAULT_GRID: GridSettings = {
+  enabled: false,
+  type: "square",
+  size: 70,
+  offsetX: 0,
+  offsetY: 0,
+};
 
 /**
  * Visione dinamica: se attiva, i giocatori vedono solo ciò che vedono i loro token. Di giorno

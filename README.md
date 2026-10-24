@@ -73,8 +73,8 @@ Per i test end-to-end serve Chromium, da installare una volta con
 Le immagini si aggiungono con il pulsante della barra, trascinandole sulla lavagna o incollandole.
 Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificare.
 
-Il GM attiva la griglia dal pulsante dedicato e la calibra tracciando un riquadro su una casella
-della mappa. I token si agganciano alle caselle; il GM può bloccare qualsiasi oggetto, e finché è
+Il GM attiva la griglia dal pulsante dedicato, sceglie se quadrata o esagonale (a punta o piatta)
+e la calibra tracciando un riquadro su una casella della mappa (o attorno a un esagono). I token si agganciano alle caselle; il GM può bloccare qualsiasi oggetto, e finché è
 bloccato nessuno può spostarlo o cancellarlo.
 
 Il GM può dipingere il terreno con 13 biomi (erba, foresta, roccia, sabbia, acqua, lava…), a

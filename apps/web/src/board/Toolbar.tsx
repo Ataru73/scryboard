@@ -69,6 +69,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     setGridPanelOpen,
     setCreateHidden,
   } = useBoardUi.getState();
+  const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const canUndo = useSyncExternalStore(store.subscribe, () => store.canUndo());
   const canRedo = useSyncExternalStore(store.subscribe, () => store.canRedo());
   const fileInput = useRef<HTMLInputElement>(null);
@@ -177,7 +178,10 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">
-          Trascina un riquadro sul bordo di una casella della mappa. Esc per annullare.
+          {grid.type === "square"
+            ? "Trascina un riquadro sul bordo di una casella della mappa."
+            : "Trascina un riquadro attorno a un esagono della mappa."}{" "}
+          Esc per annullare.
         </div>
       )}
 
