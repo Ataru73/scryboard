@@ -42,11 +42,13 @@ export function fitBounds(
   bounds: Box,
   size: { width: number; height: number },
   padding = 48,
+  /** Ingrandimento massimo: 1 evita di ingrandire il contenuto piccolo. */
+  maxScale = 1,
 ): Viewport {
   const availW = Math.max(1, size.width - padding * 2);
   const availH = Math.max(1, size.height - padding * 2);
   const scale = clampScale(
-    Math.min(1, availW / Math.max(1, bounds.width), availH / Math.max(1, bounds.height)),
+    Math.min(maxScale, availW / Math.max(1, bounds.width), availH / Math.max(1, bounds.height)),
   );
   return {
     scale,

@@ -105,6 +105,9 @@ interface StampDraft {
   variant: number;
 }
 
+/** Ingrandimento massimo di "Adatta al contenuto": oltre si perde il contesto attorno. */
+const FIT_VIEW_MAX_SCALE = 2;
+
 /** Tempo di pressione, senza muoversi, che lancia un ping. */
 const PING_HOLD_MS = 550;
 
@@ -320,6 +323,18 @@ export function Board({ store, provider, roomId, role }: Props) {
     if (bounds && size.width > 0) setViewport(fitBounds(bounds, size));
   }, [contentBounds, size, setViewport]);
 
+  /**
+   * "Adatta al contenuto" chiesto dall'utente (pulsante o Shift+1): ingrandisce anche i contenuti
+   * piccoli e, a lavagna vuota, riporta la vista all'origine, così si vede sempre un effetto.
+   */
+  const fitView = useCallback(() => {
+    if (size.width === 0) return;
+    const bounds = contentBounds();
+    setViewport(
+      bounds ? fitBounds(bounds, size, 48, FIT_VIEW_MAX_SCALE) : { x: 0, y: 0, scale: 1 },
+    );
+  }, [contentBounds, size, setViewport]);
+
   // Ciò che il giocatore vede entra nella memoria delle zone esplorate (entro la mappa: con la
   // vista illimitata il poligono arriva lontanissimo).
   useEffect(() => {
@@ -349,7 +364,7 @@ export function Board({ store, provider, roomId, role }: Props) {
     contentBounds,
   ]);
 
-  useBoardShortcuts({ store, role, canEdit, fitToContent, viewportSize: size });
+  useBoardShortcuts({ store, role, canEdit, fitToContent: fitView, viewportSize: size });
 
   /** Il GM può creare gli oggetti già nascosti ai giocatori. */
   const addItems = (newItems: BoardItem[]) =>
@@ -1583,7 +1598,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         role={role}
         roomId={roomId}
         onUpload={(files) => void addImages(files, viewportCenter())}
-        onFit={fitToContent}
+        onFit={fitView}
         viewportSize={size}
       />
       {notice && (

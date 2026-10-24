@@ -36,4 +36,13 @@ describe("viewport", () => {
     const small = fitBounds({ x: 10, y: 10, width: 20, height: 20 }, { width: 1000, height: 600 });
     expect(small.scale).toBe(1);
   });
+
+  it("can enlarge small content up to the requested maximum", () => {
+    const size = { width: 1000, height: 600 };
+    const box = { x: 10, y: 10, width: 20, height: 20 };
+    expect(fitBounds(box, size, 48, 2).scale).toBe(2);
+    // Il contenuto grande resta limitato dallo schermo, non dal massimo.
+    const big = { x: 0, y: 0, width: 4000, height: 2000 };
+    expect(fitBounds(big, size, 0, 2).scale).toBeCloseTo(0.25);
+  });
 });
