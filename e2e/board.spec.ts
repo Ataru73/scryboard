@@ -37,8 +37,9 @@ test("GM and player draw together on a shared board", async ({ browser }) => {
   const player = await (await browser.newContext()).newPage();
   await player.goto(gm.playerLink);
   await joinAs(player, "Arwen");
-  // Nell'elenco "Al tavolo" (i nomi compaiono anche tra i destinatari dei messaggi).
-  const atTable = (page: Page) => page.getByRole("complementary").getByRole("listitem");
+  // Nell'elenco "Al tavolo": i nomi compaiono anche tra i destinatari e le conversazioni dei messaggi.
+  const atTable = (page: Page) =>
+    page.getByRole("list", { name: "Al tavolo" }).getByRole("listitem");
   await expect(atTable(player).filter({ hasText: "Master" })).toBeVisible();
   await expect(atTable(gm.page).filter({ hasText: "Arwen" })).toBeVisible();
 

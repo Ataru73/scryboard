@@ -129,7 +129,7 @@ function Room({
         {gmToken && <SharePanel roomId={room.id} gmToken={gmToken} />}
         <section>
           <h2>Al tavolo ({users.length})</h2>
-          <ul className="users">
+          <ul className="users" aria-label="Al tavolo">
             {users.map((u) => (
               <li key={u.clientId}>
                 <span className="dot" style={{ background: u.color }} />
