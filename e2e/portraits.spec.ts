@@ -112,3 +112,21 @@ test("a selected token can change its library image", async ({ browser }) => {
   // Il nome scelto dal GM non viene sovrascritto.
   await expect(tokenList(player).getByRole("listitem")).toContainText("Boss");
 });
+
+test("credits list the icon authors from the home page and from the room", async ({
+  browser,
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Crediti" }).click();
+  const credits = page.getByRole("dialog", { name: "Crediti" });
+  await expect(credits).toContainText("Creative Commons Attribution 3.0");
+  await expect(credits.getByRole("listitem").filter({ hasText: "Lorc" })).toHaveCount(1);
+  await expect(credits.getByRole("listitem").filter({ hasText: "Delapouite" })).toHaveCount(1);
+  await credits.getByRole("button", { name: "Chiudi" }).click();
+  await expect(credits).toBeHidden();
+
+  const { gm } = await setupTable(browser);
+  await gm.getByRole("button", { name: "Crediti" }).click();
+  await expect(gm.getByRole("dialog", { name: "Crediti" })).toContainText("game-icons.net");
+});

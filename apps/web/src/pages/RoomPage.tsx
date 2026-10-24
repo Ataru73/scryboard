@@ -8,6 +8,7 @@ import { ApiRequestError, api } from "../lib/api";
 import { gmLink, gmTokenFromHash, playerLink } from "../lib/links";
 import { type Profile, storage } from "../lib/storage";
 import { MessagesPanel } from "../messages/MessagesPanel";
+import { CreditsButton } from "./Credits";
 import { ProfileForm } from "./ProfileForm";
 
 type Load =
@@ -124,6 +125,7 @@ function Room({
         </a>
         <h1>{room.name}</h1>
         <span className={`status status-${status}`}>{STATUS_LABEL[status]}</span>
+        <CreditsButton className="link-button" />
       </header>
       <aside className="sidebar">
         {gmToken && <SharePanel roomId={room.id} gmToken={gmToken} />}

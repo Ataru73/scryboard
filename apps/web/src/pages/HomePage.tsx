@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { api, describeApiError } from "../lib/api";
 import { gmLink } from "../lib/links";
 import { navigate } from "../lib/router";
+import { CreditsButton } from "./Credits";
 
 export function HomePage() {
   const [name, setName] = useState("");
@@ -48,7 +49,9 @@ export function HomePage() {
           </button>
           {error && <p className="error">{error}</p>}
         </form>
-        <p className="muted small attribution">Powered by Doc</p>
+        <p className="muted small attribution">
+          Powered by Doc · <CreditsButton className="link-button" />
+        </p>
       </div>
     </main>
   );

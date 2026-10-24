@@ -908,3 +908,18 @@ button.danger {
   width: 1rem;
   height: 1rem;
 }
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
+.credits-list {
+  columns: 2;
+  margin: 0;
+  padding-left: 1.25rem;
+}
