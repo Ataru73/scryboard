@@ -155,6 +155,11 @@ function findItemId(node: Konva.Node | null): string | null {
   return null;
 }
 
+/** Ancore, rotazione e bordo del Transformer: le gestisce Konva, non sono spazio vuoto. */
+function isTransformerPart(node: Konva.Node | null): boolean {
+  return node?.getParent()?.className === "Transformer";
+}
+
 /** Risale dal nodo colpito al gruppo di un muro (visibile e selezionabile solo dal GM). */
 function findWallId(node: Konva.Node | null): string | null {
   let current: Konva.Node | null = node;
@@ -458,6 +463,8 @@ export function Board({ store, provider, roomId, role }: Props) {
       return;
     }
     if (e.evt.button !== 0) return;
+    // Trascinare un'ancora ridimensiona la selezione: non deve deselezionarla né avviare un ping.
+    if (isTransformerPart(e.target)) return;
     const targetId = findItemId(e.target);
     const target = targetId ? store.get(targetId) : undefined;
     const targetWallId = role === "gm" ? findWallId(e.target) : null;
