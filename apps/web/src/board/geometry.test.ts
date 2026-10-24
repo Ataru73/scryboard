@@ -1,6 +1,6 @@
 import type { ShapeItem, StrokeItem } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
-import { bakeScale, itemBounds, normalizeBox, unionBounds } from "./geometry";
+import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
 
 const base = { layer: "draw" as const, z: 0, rotation: 0, locked: false, createdBy: "u" };
 const rect: ShapeItem = {
@@ -58,5 +58,12 @@ describe("geometry", () => {
   it("bakes transformer scale into item dimensions", () => {
     expect(bakeScale(rect, 2, 0.5)).toEqual({ width: 200, height: 25 });
     expect(bakeScale(stroke, 2, 3)).toEqual({ points: [0, 0, 20, 60] });
+  });
+
+  it("detects box intersections", () => {
+    const a = { x: 0, y: 0, width: 10, height: 10 };
+    expect(boxesIntersect(a, { x: 5, y: 5, width: 10, height: 10 })).toBe(true);
+    expect(boxesIntersect(a, { x: 10, y: 0, width: 5, height: 5 })).toBe(true);
+    expect(boxesIntersect(a, { x: 11, y: 0, width: 5, height: 5 })).toBe(false);
   });
 });

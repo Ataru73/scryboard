@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import type { CreateRoomResponse } from "@scryboard/shared";
 import * as Y from "yjs";
-import { loadConfig } from "../src/config";
+import { type Config, loadConfig } from "../src/config";
 import { type RunningServer, startServer } from "../src/server";
 
 export interface TestServer extends RunningServer {
@@ -20,9 +20,13 @@ export function tempDatabasePath(): { path: string; cleanup: () => void } {
   };
 }
 
-export async function startTestServer(databasePath: string): Promise<TestServer> {
-  const config = {
+export async function startTestServer(
+  databasePath: string,
+  overrides: Partial<Config> = {},
+): Promise<TestServer> {
+  const config: Config = {
     ...loadConfig({}),
+    ...overrides,
     port: 0,
     host: "127.0.0.1",
     databasePath,

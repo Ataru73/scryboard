@@ -31,7 +31,13 @@ export async function startServer(config: Config): Promise<RunningServer> {
   const app = new Hono();
   if (process.env.NODE_ENV !== "test") app.use(logger());
   const access = new AssetAccess(db, publicReferenceCheck(collab, db));
-  app.route("/api", createApi(rooms, new LocalAssetStore(config.assetsDir), access));
+  app.route(
+    "/api",
+    createApi(rooms, new LocalAssetStore(config.assetsDir), access, {
+      limits: config.limits,
+      trustProxy: config.trustProxy,
+    }),
+  );
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 
   if (config.webDistDir) {

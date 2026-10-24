@@ -1,0 +1,15 @@
+# Per una VPS: `docker compose up -d --build`. Mettere davanti un reverse proxy con HTTPS
+# (Caddy, nginx, Traefik) che inoltri anche i WebSocket; vedi docs/DEPLOY.md.
+services:
+  scryboard:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      TRUST_PROXY: "true"
+    volumes:
+      - scryboard-data:/data
+
+volumes:
+  scryboard-data:

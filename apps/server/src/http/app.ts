@@ -9,9 +9,34 @@ import { bodyLimit } from "hono/body-limit";
 import type { AssetAccess } from "../assets/access";
 import { type AssetStore, UnsupportedAssetError } from "../assets/store";
 import type { RoomService } from "../rooms/service";
+import { rateLimit } from "./rateLimit";
 
-export function createApi(rooms: RoomService, assets: AssetStore, access: AssetAccess): Hono {
+export interface ApiOptions {
+  limits: { rooms: number; uploads: number };
+  trustProxy: boolean;
+}
+
+const TEN_MINUTES = 10 * 60 * 1000;
+
+export function createApi(
+  rooms: RoomService,
+  assets: AssetStore,
+  access: AssetAccess,
+  options: ApiOptions,
+): Hono {
   const api = new Hono();
+  const limitRooms = rateLimit({
+    max: options.limits.rooms,
+    windowMs: TEN_MINUTES,
+    trustProxy: options.trustProxy,
+    message: "Troppe stanze create in poco tempo: riprova tra qualche minuto.",
+  });
+  const limitUploads = rateLimit({
+    max: options.limits.uploads,
+    windowMs: TEN_MINUTES,
+    trustProxy: options.trustProxy,
+    message: "Troppi caricamenti in poco tempo: riprova tra qualche minuto.",
+  });
 
   const findRoom = (id: string) => (ROOM_ID_PATTERN.test(id) ? rooms.get(id) : null);
   // Il GM si identifica con il suo token nell'header Authorization.
@@ -22,7 +47,7 @@ export function createApi(rooms: RoomService, assets: AssetStore, access: AssetA
 
   api.get("/health", (c) => c.json({ ok: true }));
 
-  api.post("/rooms", async (c) => {
+  api.post("/rooms", limitRooms, async (c) => {
     const body = await c.req.json().catch(() => null);
     const parsed = createRoomRequestSchema.safeParse(body);
     if (!parsed.success) return c.json({ error: "Nome della stanza non valido" }, 400);
@@ -45,6 +70,7 @@ export function createApi(rooms: RoomService, assets: AssetStore, access: AssetA
   // Il corpo della richiesta è il file stesso, non multipart.
   api.post(
     "/rooms/:id/assets",
+    limitUploads,
     bodyLimit({
       maxSize: MAX_ASSET_BYTES,
       onError: (c) => c.json({ error: "Immagine troppo grande (max 20 MB)" }, 413),

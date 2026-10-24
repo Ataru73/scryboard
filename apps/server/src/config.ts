@@ -7,6 +7,10 @@ export interface Config {
   assetsDir: string;
   migrationsDir: string;
   webDistDir: string | null;
+  /** Richieste consentite per IP ogni 10 minuti. */
+  limits: { rooms: number; uploads: number };
+  /** Dietro un proxy (Fly.io, nginx) l'IP del client arriva negli header. */
+  trustProxy: boolean;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -18,5 +22,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // Sia src/config.ts sia dist/index.js stanno un livello sotto la root del pacchetto.
     migrationsDir: fileURLToPath(new URL("../drizzle", import.meta.url)),
     webDistDir: env.WEB_DIST_DIR ?? null,
+    limits: {
+      rooms: Number(env.ROOMS_PER_10_MIN ?? 20),
+      uploads: Number(env.UPLOADS_PER_10_MIN ?? 200),
+    },
+    trustProxy: env.TRUST_PROXY === "true",
   };
 }

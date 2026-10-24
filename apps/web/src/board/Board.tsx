@@ -21,12 +21,12 @@ import {
 } from "react";
 import { Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
 import { useAssetAuth } from "./assetAuth";
-import { Cursors, useCursorBroadcast } from "./Cursors";
 import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
-import { bakeScale, normalizeBox, unionBounds } from "./geometry";
+import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapTokenCenter } from "./grid";
 import { ItemNode, SELECTION_COLOR } from "./ItemNode";
+import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
 import { type BoardStore, newItemId } from "./store";
@@ -52,7 +52,11 @@ type Interaction =
   | { type: "erase" }
   | { type: "calibrate"; start: Point; end: Point }
   | { type: "fogRect"; start: Point; end: Point }
-  | { type: "fogBrush"; points: number[] };
+  | { type: "fogBrush"; points: number[] }
+  | { type: "marquee"; start: Point; end: Point; additive: boolean };
+
+/** Tempo di pressione, senza muoversi, che lancia un ping. */
+const PING_HOLD_MS = 550;
 
 interface Notice {
   text: string;
@@ -108,7 +112,11 @@ export function Board({ store, provider, roomId, role }: Props) {
 
   const canEdit = useCallback((item: BoardItem | undefined) => canModify(item, role), [role]);
   const panMode = tool === "hand" || spacePan;
-  const broadcastCursor = useCursorBroadcast(provider);
+  const broadcastCursor = useAwarenessBroadcast<Point>(provider, "cursor");
+  const broadcastDraft = useAwarenessBroadcast<DraftStroke>(provider, "draft");
+  const pressRef = useRef<{ timer: ReturnType<typeof setTimeout>; screen: Point } | null>(null);
+  /** Posizioni iniziali degli oggetti selezionati durante un trascinamento. */
+  const dragStartRef = useRef<Map<string, Point> | null>(null);
   const gmToken = useAssetAuth();
 
   const fitToContent = useCallback(() => {
@@ -195,11 +203,31 @@ export function Board({ store, provider, roomId, role }: Props) {
     };
   }
 
+  function cancelPress() {
+    if (pressRef.current) clearTimeout(pressRef.current.timer);
+    pressRef.current = null;
+  }
+
+  /** Clic prolungato senza muoversi: un ping animato visibile a tutti per un paio di secondi. */
+  function startPress(p: { screen: Point; world: Point }) {
+    cancelPress();
+    pressRef.current = {
+      screen: p.screen,
+      timer: setTimeout(() => {
+        pressRef.current = null;
+        setInteraction(null);
+        provider.setAwarenessField("ping", { id: newItemId(), x: p.world.x, y: p.world.y });
+      }, PING_HOLD_MS),
+    };
+  }
+
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
     const p = pointer();
     if (!p) return;
+    cancelPress();
     if (e.evt.button === 1 || (e.evt.button === 0 && panMode)) {
       setInteraction({ type: "pan", start: p.screen, viewport });
+      if (e.evt.button === 0) startPress(p);
       return;
     }
     if (e.evt.button !== 0) return;
@@ -209,7 +237,15 @@ export function Board({ store, provider, roomId, role }: Props) {
     switch (tool) {
       case "select": {
         if (!canSelect(target, role)) {
-          select([]);
+          // Su uno spazio vuoto: selezione a riquadro, oppure ping se si resta fermi.
+          if (!e.evt.shiftKey) select([]);
+          setInteraction({
+            type: "marquee",
+            start: p.world,
+            end: p.world,
+            additive: e.evt.shiftKey,
+          });
+          startPress(p);
           return;
         }
         if (e.evt.shiftKey) {
@@ -338,6 +374,12 @@ export function Board({ store, provider, roomId, role }: Props) {
     const p = pointer();
     if (!p) return;
     broadcastCursor(p.world);
+    if (
+      pressRef.current &&
+      Math.hypot(p.screen.x - pressRef.current.screen.x, p.screen.y - pressRef.current.screen.y) > 5
+    ) {
+      cancelPress();
+    }
     if (polygon) setPolygon({ ...polygon, cursor: p.world });
     if (!interaction) return;
     switch (interaction.type) {
@@ -356,12 +398,23 @@ export function Board({ store, provider, roomId, role }: Props) {
         const lastY = points[points.length - 1] as number;
         // Scarta i punti troppo vicini: tratti più leggeri, stesso aspetto.
         if (Math.hypot(x - lastX, y - lastY) * viewport.scale < 2) return;
-        setInteraction({ ...interaction, points: [...points, x, y] });
+        const next = [...points, x, y];
+        setInteraction({ ...interaction, points: next });
+        // Gli altri vedono il tratto mentre lo si disegna (non se è un oggetto nascosto del GM).
+        if (!(role === "gm" && createHidden)) {
+          broadcastDraft({
+            origin,
+            points: next,
+            color,
+            strokeWidth: strokeWidth / viewport.scale,
+          });
+        }
         return;
       }
       case "shape":
       case "calibrate":
       case "fogRect":
+      case "marquee":
         setInteraction({ ...interaction, end: p.world });
         return;
       case "fogBrush":
@@ -374,10 +427,21 @@ export function Board({ store, provider, roomId, role }: Props) {
   }
 
   function onPointerUp() {
+    cancelPress();
     const current = interaction;
     setInteraction(null);
     if (!current) return;
+    if (current.type === "marquee") {
+      const box = normalizeBox(current.start, current.end);
+      if (box.width * viewport.scale < 4 && box.height * viewport.scale < 4) return;
+      const inside = items
+        .filter((i) => canSelect(i, role) && boxesIntersect(itemBounds(i, grid.size), box))
+        .map((i) => i.id);
+      select(current.additive ? [...new Set([...selectedIds, ...inside])] : inside);
+      return;
+    }
     if (current.type === "stroke") {
+      broadcastDraft(null);
       // Un clic senza movimento lascia un punto.
       const points = current.points.length >= 4 ? current.points : [0, 0, 0.01, 0.01];
       const item: StrokeItem = {
@@ -438,19 +502,44 @@ export function Board({ store, provider, roomId, role }: Props) {
   }
 
   /** I token si agganciano alla griglia durante il trascinamento (Alt per muoverli liberi). */
+  /** Nodi degli oggetti selezionati che si muovono insieme a quello trascinato. */
+  function selectedNodes(dragged: Konva.Node): Konva.Node[] {
+    const stage = stageRef.current;
+    if (!stage || !selectedIds.includes(dragged.id())) return [dragged];
+    return selectedIds
+      .filter((id) => canEdit(store.get(id)))
+      .map((id) => stage.findOne((n: Konva.Node) => n.hasName("item") && n.id() === id))
+      .filter((n): n is Konva.Node => n !== undefined);
+  }
+
+  function onItemDragStart(e: Konva.KonvaEventObject<DragEvent>) {
+    cancelPress();
+    dragStartRef.current = new Map(selectedNodes(e.target).map((n) => [n.id(), n.position()]));
+  }
+
   function onItemDragMove(e: Konva.KonvaEventObject<DragEvent>) {
-    const item = store.get(e.target.id());
-    if (item?.kind !== "token" || !grid.enabled || e.evt.altKey) return;
-    e.target.position(snapTokenCenter(e.target.position(), item.size, grid));
+    const dragged = e.target;
+    const item = store.get(dragged.id());
+    // I token si agganciano alla griglia (Alt per muoverli liberi).
+    if (item?.kind === "token" && grid.enabled && !e.evt.altKey) {
+      dragged.position(snapTokenCenter(dragged.position(), item.size, grid));
+    }
+    // Gli altri oggetti selezionati (token compresi, che il Transformer non gestisce) seguono.
+    const starts = dragStartRef.current;
+    const origin = starts?.get(dragged.id());
+    if (!starts || !origin) return;
+    const dx = dragged.x() - origin.x;
+    const dy = dragged.y() - origin.y;
+    for (const node of selectedNodes(dragged)) {
+      const start = starts.get(node.id());
+      if (node !== dragged && start) node.position({ x: start.x + dx, y: start.y + dy });
+    }
   }
 
   function onItemDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
-    const dragged = e.target;
-    const selected = transformerRef.current?.nodes() ?? [];
-    // Trascinando un oggetto selezionato, il Transformer sposta anche gli altri.
-    const nodes = selected.includes(dragged) ? selected : [dragged];
     const patches: Record<string, { x: number; y: number }> = {};
-    for (const node of nodes) patches[node.id()] = { x: node.x(), y: node.y() };
+    for (const node of selectedNodes(e.target)) patches[node.id()] = { x: node.x(), y: node.y() };
+    dragStartRef.current = null;
     store.update(patches);
   }
 
@@ -596,7 +685,8 @@ export function Board({ store, provider, roomId, role }: Props) {
       editing={item.id === editingTextId}
       concealed={store.isHidden(item.id)}
       selected={selectedIds.includes(item.id)}
-      onDragMove={item.kind === "token" ? onItemDragMove : undefined}
+      onDragStart={onItemDragStart}
+      onDragMove={onItemDragMove}
       onDragEnd={onItemDragEnd}
     />
   );
@@ -631,7 +721,10 @@ export function Board({ store, provider, roomId, role }: Props) {
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerLeave={() => broadcastCursor(null)}
+          onPointerLeave={() => {
+            cancelPress();
+            broadcastCursor(null);
+          }}
           onWheel={onWheel}
         >
           <Layer>
@@ -720,7 +813,15 @@ export function Board({ store, provider, roomId, role }: Props) {
                 filled={filled}
               />
             )}
-            <Cursors provider={provider} scale={viewport.scale} />
+            {interaction?.type === "marquee" && (
+              <Rect
+                {...normalizeBox(interaction.start, interaction.end)}
+                stroke={SELECTION_COLOR}
+                strokeWidth={1 / viewport.scale}
+                fill="rgba(142, 124, 240, 0.12)"
+              />
+            )}
+            <Presence provider={provider} scale={viewport.scale} />
           </Layer>
         </Stage>
       )}

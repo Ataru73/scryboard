@@ -73,6 +73,16 @@ export PNG/PDF, fog dinamico con muri, plugin, account utente.
 4. Chiudere e riaprire il browser ripristina lo stato esatto della board.
 5. Funziona sulle ultime due versioni di Chrome, Firefox, Safari, Edge (desktop).
 
+Verifica (M4):
+
+| #   | Esito                                         | Come                                                                                                                                                                      |
+| --- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | ✅ mediana 0,8 ms, p95 1,2 ms in locale       | `apps/server/test/latency.test.ts`: GM + 6 giocatori, 20 modifiche. Esclude la latenza di rete reale                                                                      |
+| 2   | ✅                                            | `e2e/polish.spec.ts`: il nome di un token nascosto non compare mai nei frame WebSocket del giocatore, nemmeno alla sincronizzazione iniziale; compare appena lo si rivela |
+| 3   | ✅~60 fps                                     | `pnpm e2e:perf`: pan su una mappa 8000×8000 a zoom 100% e a mappa intera, Chromium headless                                                                               |
+| 4   | ✅                                            | Test E2E con ricaricamento e test di persistenza al riavvio del server                                                                                                    |
+| 5   | ✅ Chromium e Firefox in locale, WebKit in CI | Edge usa Chromium; WebKit è il motore di Safari                                                                                                                           |
+
 ## Stack tecnico
 
 | Area             | Scelta                                                                                      | Motivo                                                                                                    |
@@ -199,12 +209,17 @@ Note sulla M3: il GM può creare oggetti già nascosti (pulsante con l'occhio ne
 copre anche le azioni che toccano entrambi i documenti, come nascondere un oggetto; dopo il
 caricamento di una mappa il GM può coprirla di nebbia con un clic.
 
+Note sulla M4: ping con clic prolungato, selezione a riquadro, trascinamento di selezioni miste
+(forme e token), tratti visibili agli altri mentre si disegnano (ma non quelli creati nascosti dal
+GM); lato server limiti di frequenza su creazione stanze e upload, ultima attività delle stanze e
+comando di pulizia manuale; configurazione per Fly.io e Docker Compose in `docs/DEPLOY.md`.
+
 | Milestone                | Contenuto                                                                                 | Stima           |
 | ------------------------ | ----------------------------------------------------------------------------------------- | --------------- |
 | M0 – Fondamenta ✅       | Monorepo, CI, Hocuspocus + Hono, creazione stanza e link                                  | 3–4 giorni      |
 | M1 – Canvas condiviso ✅ | Pan/zoom, upload immagini, disegno, testo, cursori, persistenza, annulla/ripeti, test E2E | 1–1,5 settimane |
 | M2 – Token e griglia ✅  | Token, griglia, calibrazione, snap, blocco                                                | 4–5 giorni      |
 | M3 – Visibilità ✅       | Doppio documento, nascondi/rivela, fog statico, permessi server                           | 1–1,5 settimane |
-| M4 – Rifinitura          | Ping, selezione a riquadro, rifiniture, deploy                                            | 1 settimana     |
+| M4 – Rifinitura ✅       | Ping, selezione a riquadro, rifiniture, deploy                                            | 1 settimana     |
 
 Totale indicativo: **5–6 settimane** di lavoro per una persona.

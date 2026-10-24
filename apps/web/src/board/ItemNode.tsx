@@ -24,6 +24,7 @@ interface Props {
   concealed: boolean;
   /** Evidenzia la selezione dei token, che non usano il Transformer. */
   selected: boolean;
+  onDragStart?: (event: Konva.KonvaEventObject<DragEvent>) => void;
   onDragMove?: (event: Konva.KonvaEventObject<DragEvent>) => void;
   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
 }
@@ -36,6 +37,7 @@ export const ItemNode = memo(function ItemNode({
   editing,
   concealed,
   selected,
+  onDragStart,
   onDragMove,
   onDragEnd,
 }: Props) {
@@ -48,6 +50,7 @@ export const ItemNode = memo(function ItemNode({
       rotation={item.rotation}
       draggable={draggable}
       opacity={editing ? 0 : concealed ? 0.4 : 1}
+      onDragStart={onDragStart}
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >

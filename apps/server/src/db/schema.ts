@@ -6,6 +6,8 @@ export const rooms = sqliteTable("rooms", {
   /** SHA-256 del token del GM: il token in chiaro non viene mai salvato. */
   gmTokenHash: text("gm_token_hash").notNull(),
   createdAt: text("created_at").notNull(),
+  /** Ultima connessione o modifica; null per le stanze create prima di questa colonna. */
+  lastActiveAt: text("last_active_at"),
 });
 
 /** Snapshot Yjs dei documenti, uno per nome (`room:<id>:<scope>`). */

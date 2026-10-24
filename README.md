@@ -42,23 +42,26 @@ Dopo aver modificato `apps/server/src/db/schema.ts`, genera la migrazione con
 `pnpm --filter @scryboard/server db:generate`.
 
 Per i test end-to-end serve Chromium, da installare una volta con
-`pnpm exec playwright install chromium`.
+`pnpm exec playwright install chromium`. In locale la suite gira su Chromium; con
+`ALL_BROWSERS=1 pnpm e2e` anche su Firefox e WebKit (come in CI).
 
 ## Scorciatoie della lavagna
 
-| Tasto                      | Azione                                                                   |
-| -------------------------- | ------------------------------------------------------------------------ |
-| V H P L R O T E K          | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token |
-| Alt (trascinando un token) | Muove il token senza agganciarlo alla griglia                            |
-| F (solo GM)                | Nebbia: copri o scopri con rettangolo, poligono o pennello               |
-| Shift+H (solo GM)          | Nasconde ai giocatori la selezione, o la rivela                          |
-| Spazio (tenuto premuto)    | Sposta la vista con qualsiasi strumento                                  |
-| Rotella / pinch            | Zoom                                                                     |
-| Shift+1 / Shift+0          | Adatta al contenuto / zoom 100%                                          |
-| Canc / Backspace           | Elimina la selezione                                                     |
-| ] / [                      | Porta in primo piano / sullo sfondo                                      |
-| Ctrl+Z / Ctrl+Shift+Z      | Annulla / ripeti                                                         |
-| Esc                        | Deseleziona, chiude l'editor di testo                                    |
+| Tasto                          | Azione                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| V H P L R O T E K              | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token |
+| Alt (trascinando un token)     | Muove il token senza agganciarlo alla griglia                            |
+| F (solo GM)                    | Nebbia: copri o scopri con rettangolo, poligono o pennello               |
+| Shift+H (solo GM)              | Nasconde ai giocatori la selezione, o la rivela                          |
+| Spazio (tenuto premuto)        | Sposta la vista con qualsiasi strumento                                  |
+| Rotella / pinch                | Zoom                                                                     |
+| Shift+1 / Shift+0              | Adatta al contenuto / zoom 100%                                          |
+| Canc / Backspace               | Elimina la selezione                                                     |
+| ] / [                          | Porta in primo piano / sullo sfondo                                      |
+| Ctrl+Z / Ctrl+Shift+Z          | Annulla / ripeti                                                         |
+| Esc                            | Deseleziona, chiude l'editor di testo                                    |
+| Clic prolungato                | Ping visibile a tutti                                                    |
+| Trascinare su uno spazio vuoto | Selezione a riquadro (con Shift si aggiunge)                             |
 
 Le immagini si aggiungono con il pulsante della barra, trascinandole sulla lavagna o incollandole.
 Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificare.
@@ -78,7 +81,9 @@ docker build -t scryboard .
 docker run -p 3000:3000 -v scryboard-data:/data scryboard
 ```
 
-Il container serve sia l'API sia la web app sulla porta 3000 e salva il database in `/data`.
+Il container serve API, WebSocket e web app sulla porta 3000 e salva database e immagini in
+`/data`. Istruzioni per Fly.io, per una VPS con Docker Compose e per la pulizia delle stanze
+inattive in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Come funzionano le stanze
 

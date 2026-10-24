@@ -51,10 +51,13 @@ test("GM calibrates the grid by tracing one cell", async ({ browser }) => {
   await enableGrid(gm);
   await gm.getByRole("button", { name: "Calibra sulla mappa" }).click();
   await drag(gm, [130, 245], [180, 295]);
-  await expect(gm.getByLabel("Casella (px)")).toHaveValue("50");
-  await expect(gm.getByLabel("Sposta X")).toHaveValue("30");
-  await expect(gm.getByLabel("Sposta Y")).toHaveValue("45");
-  await expect(gm.getByText("Griglia calibrata: caselle di 50 px.")).toBeVisible();
+  // Il riquadro è tracciato col mouse: si accetta mezzo pixel di differenza tra browser.
+  const value = async (label: string) => Number(await gm.getByLabel(label).inputValue());
+  await expect.poll(() => value("Casella (px)")).toBeGreaterThanOrEqual(49.5);
+  expect(Math.abs((await value("Casella (px)")) - 50)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs((await value("Sposta X")) - 30)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs((await value("Sposta Y")) - 45)).toBeLessThanOrEqual(0.5);
+  await expect(gm.getByText(/Griglia calibrata: caselle di (49\.5|50|50\.5) px\./)).toBeVisible();
 
   // I giocatori vedono la griglia ma non possono modificarla.
   await expect(player.getByRole("button", { name: "Griglia" })).toHaveCount(0);

@@ -25,6 +25,7 @@ export function createCollab(db: Db, rooms: RoomService): Hocuspocus<ConnectionC
       const isGm = rooms.isGmToken(parsed.roomId, token);
       // Il documento del GM contiene gli oggetti nascosti: i giocatori non devono mai riceverlo.
       if (parsed.scope === "gm" && !isGm) throw new Error("Accesso negato");
+      rooms.touch(parsed.roomId);
       return { roomId: parsed.roomId, role: isGm ? "gm" : "player" };
     },
 
@@ -43,6 +44,8 @@ export function createCollab(db: Db, rooms: RoomService): Hocuspocus<ConnectionC
           return row ? new Uint8Array(row.state) : null;
         },
         async store({ documentName, state }) {
+          const roomId = parseRoomDocumentName(documentName)?.roomId;
+          if (roomId) rooms.touch(roomId);
           const updatedAt = new Date().toISOString();
           db.insert(documents)
             .values({ name: documentName, state, updatedAt })

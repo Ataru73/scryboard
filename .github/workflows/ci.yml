@@ -19,7 +19,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm exec playwright install --with-deps chromium
+      # In CI la suite gira su Chromium, Firefox e WebKit (Safari).
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm e2e
       - uses: actions/upload-artifact@v4
         if: failure()

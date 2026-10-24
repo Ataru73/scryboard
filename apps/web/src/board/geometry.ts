@@ -110,3 +110,9 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
       };
   }
 }
+
+export function boxesIntersect(a: Box, b: Box): boolean {
+  return (
+    a.x <= b.x + b.width && b.x <= a.x + a.width && a.y <= b.y + b.height && b.y <= a.y + a.height
+  );
+}
