@@ -1,5 +1,5 @@
 import { PORTRAITS } from "@scryboard/shared";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
 /** Autori delle immagini della libreria, con il numero di sagome di ciascuno. */
 const AUTHORS = Object.entries(
@@ -10,13 +10,20 @@ const AUTHORS = Object.entries(
 ).sort(([a], [b]) => a.localeCompare(b));
 
 /** Pulsante "Crediti" che apre la finestra con autori e licenze, come richiede CC BY. */
-export function CreditsButton({ className }: { className?: string }) {
+/** Con `icon` il pulsante mostra solo l'icona; il nome resta per screen reader e tooltip. */
+export function CreditsButton({ className, icon }: { className?: string; icon?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)}>
-        Crediti
+      <button
+        type="button"
+        className={className}
+        aria-label={icon ? "Crediti" : undefined}
+        title={icon ? "Crediti" : undefined}
+        onClick={() => setOpen(true)}
+      >
+        {icon ?? "Crediti"}
       </button>
       {open && (
         // biome-ignore lint/a11y/useKeyWithClickEvents: Esc chiude nativamente <dialog>.

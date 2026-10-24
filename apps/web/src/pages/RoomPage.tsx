@@ -2,6 +2,7 @@ import { GM_MAILBOX, playerCredentials, type RoomInfo } from "@scryboard/shared"
 import { useEffect, useId, useMemo, useState } from "react";
 import { AssetAuthContext } from "../board/assetAuth";
 import { Board } from "../board/Board";
+import { InfoIcon, SettingsIcon } from "../board/icons";
 import { BoardStore } from "../board/store";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
 import { ApiRequestError, api } from "../lib/api";
@@ -126,8 +127,8 @@ function Room({
         </a>
         <h1>{room.name}</h1>
         <span className={`status status-${status}`}>{STATUS_LABEL[status]}</span>
-        <SettingsButton className="link-button" />
-        <CreditsButton className="link-button" />
+        <SettingsButton className="icon-button" icon={SettingsIcon} />
+        <CreditsButton className="icon-button" icon={InfoIcon} />
       </header>
       <aside className="sidebar">
         {gmToken && <SharePanel roomId={room.id} gmToken={gmToken} />}

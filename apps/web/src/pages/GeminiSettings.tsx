@@ -1,11 +1,12 @@
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { DEFAULT_GEMINI_MODEL, GeminiError, testKey } from "../gemini/api";
 import { storage } from "../lib/storage";
 
 type Check = { state: "idle" | "testing" } | { state: "ok" } | { state: "error"; message: string };
 
 /** Pulsante "Impostazioni" con la chiave API di Gemini per generare le immagini dei token. */
-export function SettingsButton({ className }: { className?: string }) {
+/** Con `icon` il pulsante mostra solo l'icona; il nome resta per screen reader e tooltip. */
+export function SettingsButton({ className, icon }: { className?: string; icon?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const keyId = useId();
@@ -35,8 +36,14 @@ export function SettingsButton({ className }: { className?: string }) {
 
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)}>
-        Impostazioni
+      <button
+        type="button"
+        className={className}
+        aria-label={icon ? "Impostazioni" : undefined}
+        title={icon ? "Impostazioni" : undefined}
+        onClick={() => setOpen(true)}
+      >
+        {icon ?? "Impostazioni"}
       </button>
       {open && (
         // biome-ignore lint/a11y/useKeyWithClickEvents: Esc chiude nativamente <dialog>.
