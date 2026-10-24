@@ -4,6 +4,7 @@ async function joinAs(page: Page, name: string) {
   await page.getByLabel("Nome", { exact: true }).fill(name);
   await page.getByRole("button", { name: "Entra" }).click();
   await expect(page.getByText("Connesso")).toBeVisible();
+  await expect(board(page)).toHaveAttribute("data-synced", "true");
 }
 
 async function createRoomAsGm(browser: Browser) {
@@ -139,6 +140,42 @@ test("drawing on an empty board does not move the view", async ({ browser }) => 
   await gm.page.getByRole("button", { name: "Gomma" }).click();
   await drag(gm.page, [290, 260], [310, 260]);
   await expectItems(gm.page, 0);
+});
+
+test("a late first sync does not move the view under someone already drawing", async ({
+  browser,
+}) => {
+  const page = await (await browser.newContext()).newPage();
+  // Trattiene le risposte del server (carichi pesanti, rete lenta): "Connesso" compare col
+  // socket, ma la prima sincronizzazione arriva solo dopo che il GM ha già disegnato.
+  let held = true;
+  const queue: Array<() => void> = [];
+  await page.routeWebSocket(/\/collab/, (ws) => {
+    const server = ws.connectToServer();
+    server.onMessage((message) => {
+      if (held) queue.push(() => ws.send(message));
+      else ws.send(message);
+    });
+  });
+  await page.goto("/");
+  await page.getByLabel("Nome della stanza").fill("La Miniera Perduta");
+  await page.getByRole("button", { name: "Crea stanza come GM" }).click();
+  await page.getByLabel("Nome", { exact: true }).fill("Master");
+  await page.getByRole("button", { name: "Entra" }).click();
+  await expect(page.getByText("Connesso")).toBeVisible();
+  await expect(board(page)).toHaveAttribute("data-synced", "false");
+
+  await page.getByRole("button", { name: "Rettangolo" }).click();
+  await drag(page, [300, 200], [500, 320]);
+  await expectItems(page, 1);
+  held = false;
+  for (const send of queue.splice(0)) send();
+  await expect(board(page)).toHaveAttribute("data-synced", "true");
+  await expect(page.getByRole("button", { name: "Zoom al 100%" })).toHaveText("100%");
+  // La vista non si è spostata: la gomma trova il bordo dove lo si è disegnato.
+  await page.getByRole("button", { name: "Gomma" }).click();
+  await drag(page, [290, 260], [310, 260]);
+  await expectItems(page, 0);
 });
 
 test("zoom with the wheel and pan with the hand tool", async ({ browser }) => {

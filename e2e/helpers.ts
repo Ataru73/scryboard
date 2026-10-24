@@ -4,6 +4,9 @@ export async function joinAs(page: Page, name: string) {
   await page.getByLabel("Nome", { exact: true }).fill(name);
   await page.getByRole("button", { name: "Entra" }).click();
   await expect(page.getByText("Connesso")).toBeVisible();
+  // "Connesso" arriva con il socket, la prima sincronizzazione dopo: si aspetta anche quella,
+  // perché i test contano su coordinate schermo = mondo già dal primo clic.
+  await expect(board(page)).toHaveAttribute("data-synced", "true");
 }
 
 /** GM e giocatore entrambi su una lavagna vuota: vista identica, coordinate schermo = mondo. */

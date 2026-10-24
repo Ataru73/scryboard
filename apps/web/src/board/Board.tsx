@@ -357,7 +357,9 @@ export function Board({ store, provider, roomId, role }: Props) {
   }, []);
 
   // Alla prima sincronizzazione centra la vista sul contenuto già presente (una volta sola:
-  // gli oggetti disegnati dopo non devono spostare la vista).
+  // gli oggetti disegnati dopo non devono spostare la vista). Se la sincronizzazione arriva
+  // tardi e l'utente ha già iniziato a lavorare, la vista resta dov'è: spostarla sotto il
+  // cursore farebbe finire il trascinamento successivo in un altro punto della mappa.
   const [synced, setSynced] = useState(provider.synced);
   useEffect(() => {
     const onSynced = () => setSynced(true);
@@ -369,8 +371,9 @@ export function Board({ store, provider, roomId, role }: Props) {
   useEffect(() => {
     if (fittedRef.current || !synced || size.width === 0) return;
     fittedRef.current = true;
+    if (store.canUndo() || store.canRedo()) return;
     fitToContent();
-  }, [synced, size.width, fitToContent]);
+  }, [synced, size.width, fitToContent, store]);
 
   // Tiene il Transformer agganciato ai nodi selezionati (che possono cambiare da remoto).
   // biome-ignore lint/correctness/useExhaustiveDependencies: i nodi Konva cambiano con `items`.
@@ -1242,6 +1245,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       data-fog-count={fog.length}
       data-terrain-count={terrain.length}
       data-wall-count={walls.length}
+      data-synced={synced}
       style={{
         cursor,
         // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.
