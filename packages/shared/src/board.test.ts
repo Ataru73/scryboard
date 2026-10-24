@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type BoardItem, boardItemSchema, compareItems } from "./board";
+import { terrainOpSchema } from "./terrain";
 
 const base = { x: 0, y: 0, rotation: 0, locked: false, createdBy: "u" };
 
@@ -88,6 +89,25 @@ describe("board items", () => {
     expect(boardItemSchema.safeParse(path([0, 0, 10, 5, 5])).success).toBe(false);
     expect(boardItemSchema.safeParse(path([0, 0, 10, 5, 5, 0])).success).toBe(false);
     expect(boardItemSchema.safeParse(path([0, 0, 10, 5, 5, 8])).success).toBe(true);
+  });
+
+  it("validates terrain fills: rings must cover the points exactly", () => {
+    const fill = (points: number[], rings?: number[]) => ({
+      id: "f",
+      seq: 1,
+      biome: "grass",
+      mode: "paint",
+      shape: "fill",
+      points,
+      rings,
+    });
+    const square = [0, 0, 10, 0, 10, 10, 0, 10];
+    expect(terrainOpSchema.safeParse(fill(square, [8])).success).toBe(true);
+    expect(terrainOpSchema.safeParse(fill(square)).success).toBe(false);
+    expect(terrainOpSchema.safeParse(fill(square, [6])).success).toBe(false);
+    expect(terrainOpSchema.safeParse({ ...fill(square, [8]), clip: [0, 0, 5] }).success).toBe(
+      false,
+    );
   });
 
   it("rejects malformed items", () => {

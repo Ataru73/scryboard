@@ -4,6 +4,7 @@ import { biomePattern } from "./textures";
 
 /** Larghezza della sfumatura sul bordo, in pixel del mondo. */
 export function edgeWidth(op: TerrainOp): number {
+  if (op.shape === "fill") return 4;
   return op.shape === "brush" ? Math.min(24, Math.max(2, ((op.width ?? 40) / 2) * 0.3)) : 10;
 }
 
@@ -45,6 +46,17 @@ function shapePath(ctx: CanvasRenderingContext2D, op: TerrainOp, shrink: number,
       ctx.moveTo(x + radius, y);
       ctx.arc(x, y, radius, 0, Math.PI * 2);
     }
+  } else if (op.shape === "fill") {
+    // Anelli esatti, senza smussatura: il riempimento deve combaciare con i bordi che lo chiudono.
+    let start = 0;
+    for (const length of op.rings ?? [op.points.length]) {
+      for (let i = start; i + 1 < start + length; i += 2) {
+        if (i === start) ctx.moveTo(op.points[i] as number, op.points[i + 1] as number);
+        else ctx.lineTo(op.points[i] as number, op.points[i + 1] as number);
+      }
+      ctx.closePath();
+      start += length;
+    }
   } else {
     const outline = regionOutline(op);
     for (let i = 0; i + 1 < outline.length; i += 2) {
@@ -82,14 +94,24 @@ export function drawTerrainOp(ctx: CanvasRenderingContext2D, op: TerrainOp) {
       target.stroke();
     } else {
       target.fillStyle = style;
-      target.fill();
+      // Pari/dispari: i buchi del riempimento restano vuoti.
+      target.fill(op.shape === "fill" ? "evenodd" : "nonzero");
     }
+  };
+  /** Terreno incollato: si vede solo nel riquadro di origine, spostato. */
+  const applyClip = (target: CanvasRenderingContext2D) => {
+    if (!op.clip) return;
+    const [x = 0, y = 0, w = 0, h = 0] = op.clip;
+    target.beginPath();
+    target.rect(x, y, w, h);
+    target.clip();
   };
 
   // Sfumatura di un pixel o poco più (da lontano): si disegna direttamente sul tassello, senza
   // canvas di lavoro; la differenza non si vede e costa molto meno.
   if (blurPx < 1.5 || scale < DETAIL_SCALE * 0.7) {
     ctx.save();
+    applyClip(ctx);
     if (op.mode === "erase") ctx.globalCompositeOperation = "destination-out";
     fillShape(ctx, op.mode === "erase" ? "#000000" : biomePattern(ctx, op.biome), 0);
     ctx.restore();
@@ -108,6 +130,8 @@ export function drawTerrainOp(ctx: CanvasRenderingContext2D, op: TerrainOp) {
   const height = bottom - top;
   const work = scratchContext(width, height);
   work.setTransform(scale, 0, 0, scale, m.e - left, m.f - top);
+  work.save();
+  applyClip(work);
 
   // La sfocatura allarga la forma: la si restringe di metà sfumatura per restare al suo posto.
   if ("filter" in work) {
@@ -123,10 +147,39 @@ export function drawTerrainOp(ctx: CanvasRenderingContext2D, op: TerrainOp) {
     work.fillStyle = biomePattern(work, op.biome);
     work.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
   }
+  work.restore();
 
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = op.mode === "erase" ? "destination-out" : "source-over";
   ctx.drawImage(scratch as HTMLCanvasElement, 0, 0, width, height, left, top, width, height);
+  ctx.restore();
+}
+
+/**
+ * Disegna la forma di un'operazione in tinta unita, senza texture né sfumatura (la gomma
+ * cancella): serve a ricostruire "quale bioma c'è dove" per il riempimento.
+ */
+export function drawTerrainOpFlat(ctx: CanvasRenderingContext2D, op: TerrainOp, color: string) {
+  const scale = ctx.getTransform().a;
+  ctx.save();
+  if (op.clip) {
+    const [x = 0, y = 0, w = 0, h = 0] = op.clip;
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+  }
+  if (op.mode === "erase") ctx.globalCompositeOperation = "destination-out";
+  shapePath(ctx, op, 0, scale);
+  if (op.shape === "brush" && scale < DETAIL_SCALE) {
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(1, op.width ?? 40);
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = color;
+    ctx.fill(op.shape === "fill" ? "evenodd" : "nonzero");
+  }
   ctx.restore();
 }

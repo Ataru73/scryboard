@@ -23,6 +23,10 @@ export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
     }
     case "path":
       return pathBounds(item.points);
+    case "stamp": {
+      const r = (item.size * cellSize) / 2;
+      return { x: -r, y: -r, width: 2 * r, height: 2 * r };
+    }
     case "light": {
       // L'icona della luce (solo per il GM): un piccolo disco attorno al centro.
       const r = cellSize * 0.3;
@@ -108,6 +112,9 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
       return { width: item.width * sx, height: item.height * sy };
     case "stroke":
       return { points: item.points.map((v, i) => v * (i % 2 === 0 ? sx : sy)) };
+    case "stamp":
+      // Il Transformer mantiene le proporzioni: la scala diventa la taglia del timbro.
+      return { size: Math.max(0.1, item.size * Math.max(sx, sy)) };
     case "token":
     case "path":
     case "light":

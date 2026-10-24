@@ -190,7 +190,23 @@ convivere (per esempio un edificio importato su un prato dipinto).
   variante più sicura (il server invia a ciascun giocatore solo ciò che vede) è molto più
   costosa e va valutata dopo.
 
-### F5 — Rifiniture per la pittura in sessione (≈ 1 settimana)
+### F5 — Rifiniture per la pittura in sessione (≈ 1 settimana) ✅
+
+**Stato**: completata. Note rispetto al piano:
+- Tavolozza rapida: con lo strumento Terreno i tasti 1–9 scelgono i biomi usati di recente
+  (ricordati nel browser); con Percorso gli stili, con Timbri i timbri (0 = decimo).
+- Timbri: dieci elementi disegnati dal codice (albero, pino, cespuglio, roccia, masso, barile,
+  cassa, tavolo, sedia, letto) con otto varianti ciascuno. Sono oggetti del livello mappa: solo il
+  GM li modifica, si ridimensionano e ruotano con le maniglie. Uno sparso con un trascinamento è un
+  solo passo di annulla.
+- Riempimento: la mappa si ricostruisce in un raster per bioma (con i muri come barriere), si
+  riempie a partire dal clic e il bordo torna un poligono esatto con i buchi (nuova forma `fill`
+  delle operazioni di terreno). Se l'area tocca il bordo della mappa non è chiusa e viene
+  rifiutata.
+- Copia/incolla: si copiano le operazioni che disegnano il riquadro e si incollano spostate, con
+  un ritaglio (`clip`) al riquadro di origine. Il bordo dell'incolla è quindi netto.
+- Pittura nascosta: con "Sotto la nebbia" ogni pennellata nasce coperta da nebbia della sua forma,
+  nella stessa azione di annulla.
 
 - Tavolozza rapida con scorciatoie numeriche (1–9) per biomi e stili usati di recente.
 - **Timbri**: alberi, rocce, cespugli, mobili da piazzare con un clic, con rotazione e scala

@@ -16,6 +16,7 @@ import {
 } from "./icons";
 import { LightPanel } from "./LightPanel";
 import { PathPanel } from "./PathPanel";
+import { StampPanel } from "./StampPanel";
 import type { BoardStore } from "./store";
 import { TerrainPanel } from "./TerrainPanel";
 import { TokenStyleFields } from "./TokenStyleFields";
@@ -38,6 +39,7 @@ const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
   { tool: "terrain", label: "Terreno", key: "B" },
   { tool: "path", label: "Percorso", key: "J" },
   { tool: "light", label: "Luce", key: "I" },
+  { tool: "stamp", label: "Timbri", key: "S" },
   { tool: "wall", label: "Muri", key: "W" },
   { tool: "fog", label: "Nebbia", key: "F" },
 ];
@@ -169,6 +171,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       {tool === "fog" && role === "gm" && <FogPanel store={store} />}
       {tool === "terrain" && role === "gm" && <TerrainPanel store={store} />}
       {tool === "path" && role === "gm" && <PathPanel />}
+      {tool === "stamp" && role === "gm" && <StampPanel />}
       {tool === "light" && role === "gm" && <LightPanel store={store} provider={provider} />}
       {tool === "wall" && role === "gm" && <WallPanel store={store} />}
 

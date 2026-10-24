@@ -15,14 +15,14 @@ test("the GM paints biomes live; players see them but cannot paint", async ({ br
   await drag(gm, [150, 250], [700, 300]);
   await expect(board(player)).toHaveAttribute("data-terrain-count", "1");
 
-  await panel.getByRole("button", { name: "Sabbia" }).click();
+  await panel.getByRole("button", { name: "Sabbia", exact: true }).click();
   await panel.getByRole("button", { name: "Regione", exact: true }).click();
   await click(gm, 450, 380);
   await click(gm, 750, 360);
   await click(gm, 800, 600);
   await click(gm, 480, 620);
   await gm.keyboard.press("Enter");
-  await panel.getByRole("button", { name: "Acqua profonda" }).click();
+  await panel.getByRole("button", { name: "Acqua profonda", exact: true }).click();
   await click(gm, 560, 460);
   await click(gm, 680, 450);
   await click(gm, 640, 560);

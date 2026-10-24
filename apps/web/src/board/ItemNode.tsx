@@ -4,12 +4,14 @@ import {
   type ImageItem,
   type LightItem,
   type PathItem,
+  type StampItem,
   type TokenItem,
 } from "@scryboard/shared";
 import type Konva from "konva";
 import { memo } from "react";
 import { Circle, Ellipse, Group, Image, Line, Rect, Text } from "react-konva";
 import { PathShape } from "../paths/PathShape";
+import { stampImage } from "../stamps/generate";
 import { normalizeBox } from "./geometry";
 import { tokenInitials } from "./grid";
 import { useImage } from "./useImage";
@@ -66,6 +68,8 @@ export const ItemNode = memo(function ItemNode({
         <TokenContent item={item} roomId={roomId} cellSize={cellSize} selected={selected} />
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
+      ) : item.kind === "stamp" ? (
+        <StampContent item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "light" ? (
         <LightIcon color={item.color} cellSize={cellSize} selected={selected} />
       ) : (
@@ -79,7 +83,7 @@ function ItemContent({
   item,
   roomId,
 }: {
-  item: Exclude<BoardItem, TokenItem | PathItem | LightItem>;
+  item: Exclude<BoardItem, TokenItem | PathItem | LightItem | StampItem>;
   roomId: string;
 }) {
   switch (item.kind) {
@@ -273,6 +277,47 @@ function LightIcon({
         />
       ))}
       <Circle radius={r} fill={color} stroke="#1d1a24" strokeWidth={1.5} />
+    </>
+  );
+}
+
+/** Timbro di scenario: immagine procedurale centrata sull'origine, con un'ombra leggera. */
+export function StampContent({
+  item,
+  cellSize,
+  selected = false,
+}: {
+  item: Pick<StampItem, "stamp" | "variant" | "size">;
+  cellSize: number;
+  selected?: boolean;
+}) {
+  const side = item.size * cellSize;
+  return (
+    <>
+      <Image
+        image={stampImage(item.stamp, item.variant)}
+        x={-side / 2}
+        y={-side / 2}
+        width={side}
+        height={side}
+        shadowColor="#000000"
+        shadowOpacity={0.35}
+        shadowBlur={side * 0.06}
+        shadowOffset={{ x: side * 0.03, y: side * 0.04 }}
+      />
+      {selected && (
+        <Rect
+          x={-side / 2}
+          y={-side / 2}
+          width={side}
+          height={side}
+          stroke={SELECTION_COLOR}
+          strokeWidth={2}
+          strokeScaleEnabled={false}
+          dash={[6, 4]}
+          listening={false}
+        />
+      )}
     </>
   );
 }

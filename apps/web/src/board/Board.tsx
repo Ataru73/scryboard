@@ -2,6 +2,7 @@ import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type {
   BoardItem,
   Door,
+  FogOp,
   Role,
   ShapeItem,
   StrokeItem,
@@ -16,6 +17,8 @@ import {
   canSelect,
   isDoorFogged,
   LIGHT_PRESETS,
+  STAMPS,
+  type StampId,
 } from "@scryboard/shared";
 import type Konva from "konva";
 import {
@@ -40,6 +43,7 @@ import {
 import { PathHandles } from "../paths/PathHandles";
 import { PathShape } from "../paths/PathShape";
 import { usePathDrawing } from "../paths/usePathDrawing";
+import { terrainFillArea } from "../terrain/fill";
 import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
 import { ExploredMap } from "../vision/explored";
@@ -56,7 +60,7 @@ import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
 import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
-import { ItemNode, SELECTION_COLOR } from "./ItemNode";
+import { ItemNode, SELECTION_COLOR, StampContent } from "./ItemNode";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
@@ -87,7 +91,19 @@ type Interaction =
   | { type: "fogRect"; start: Point; end: Point }
   | { type: "fogBrush"; points: number[] }
   | { type: "marquee"; start: Point; end: Point; additive: boolean }
-  | { type: "terrainBrush"; points: number[]; erase: boolean };
+  | { type: "terrainBrush"; points: number[]; erase: boolean }
+  | { type: "stampScatter"; stamps: StampDraft[]; last: Point }
+  | { type: "terrainCopy"; start: Point; end: Point };
+
+/** Timbro in anteprima mentre lo si sparge, prima di salvarlo. */
+interface StampDraft {
+  x: number;
+  y: number;
+  stamp: StampId;
+  size: number;
+  rotation: number;
+  variant: number;
+}
 
 /** Tempo di pressione, senza muoversi, che lancia un ping. */
 const PING_HOLD_MS = 550;
@@ -193,6 +209,9 @@ export function Board({ store, provider, roomId, role }: Props) {
   const terrainBiome = useBoardUi((s) => s.terrainBiome);
   const terrainMode = useBoardUi((s) => s.terrainMode);
   const terrainSize = useBoardUi((s) => s.terrainSize);
+  const terrainClipboard = useBoardUi((s) => s.terrainClipboard);
+  /** Posizione del puntatore per l'anteprima dell'incolla. */
+  const [pasteCursor, setPasteCursor] = useState<Point | null>(null);
   /** Larghezza del pennello del terreno in pixel del mondo: segue la casella della griglia. */
   const terrainWidth = terrainSize * grid.size;
   const pathStyle = useBoardUi((s) => s.pathStyle);
@@ -519,6 +538,10 @@ export function Board({ store, provider, roomId, role }: Props) {
         return;
       case "terrain":
         if (terrainMode === "region") addPolygonPoint(p.world, "terrain");
+        else if (terrainMode === "fill") fillTerrainAt(p.world);
+        else if (terrainMode === "copy")
+          setInteraction({ type: "terrainCopy", start: p.world, end: p.world });
+        else if (terrainMode === "paste") pasteTerrainAt(p.world);
         else
           setInteraction({
             type: "terrainBrush",
@@ -532,6 +555,11 @@ export function Board({ store, provider, roomId, role }: Props) {
       case "wall":
         wallDrawing.down(p.world, viewport.scale, e.evt.altKey);
         return;
+      case "stamp": {
+        const first = stampDraft(p.world);
+        setInteraction({ type: "stampScatter", stamps: [first], last: p.world });
+        return;
+      }
       case "light": {
         const preset =
           LIGHT_PRESETS.find((l) => l.id === useBoardUi.getState().lightPreset) ?? LIGHT_PRESETS[1];
@@ -577,7 +605,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       if (polygon.purpose === "fog") {
         store.addFog({ mode: fogMode, shape: "polygon", points: polygon.points });
       } else {
-        store.addTerrain({
+        commitTerrain({
           biome: terrainBiome,
           mode: "paint",
           shape: "region",
@@ -604,6 +632,132 @@ export function Board({ store, provider, roomId, role }: Props) {
     if (!fogPolygon && !terrainRegion) setPolygon(null);
   }, [tool, fogShape, terrainMode]);
 
+  /**
+   * Salva un'operazione di terreno; con la pittura nascosta la copre subito di nebbia, nella
+   * stessa azione (un solo passo di annulla).
+   */
+  function commitTerrain(op: Omit<TerrainOp, "id" | "seq">) {
+    const ui = useBoardUi.getState();
+    if (op.mode === "paint") ui.noteBiomeUsed(op.biome);
+    if (!ui.terrainUnderFog || op.mode === "erase") {
+      store.addTerrainBatch([op]);
+      return;
+    }
+    const covers: Omit<FogOp, "id" | "seq">[] = [];
+    if (op.shape === "brush") {
+      // Larghezza del pennello più il bordo irregolare e la sfumatura su entrambi i lati.
+      covers.push({
+        mode: "cover",
+        shape: "brush",
+        points: op.points,
+        width: (op.width ?? 40) * 1.25 + 52,
+      });
+    } else if (op.shape === "region") {
+      covers.push({ mode: "cover", shape: "polygon", points: op.points });
+      covers.push({
+        mode: "cover",
+        shape: "brush",
+        points: [...op.points, op.points[0] as number, op.points[1] as number],
+        width: 64,
+      });
+    } else {
+      const b = terrainOpBounds({ ...op, id: "", seq: 0 } as TerrainOp);
+      covers.push({ mode: "cover", shape: "rect", points: [b.x, b.y, b.width, b.height] });
+    }
+    store.addTerrainBatch([op], covers);
+  }
+
+  /** Riempie l'area chiusa sotto il clic con il bioma scelto. */
+  function fillTerrainAt(at: Point) {
+    const bounds = contentBounds();
+    if (!bounds) {
+      setNotice("Niente da riempire: dipingi o traccia prima dei bordi chiusi.");
+      return;
+    }
+    const margin = grid.size * 2;
+    const area = {
+      x: bounds.x - margin,
+      y: bounds.y - margin,
+      width: bounds.width + 2 * margin,
+      height: bounds.height + 2 * margin,
+    };
+    const result = terrainFillArea(
+      store.getTerrain(),
+      store.getWalls(),
+      at,
+      area,
+      grid.size,
+      terrainBiome,
+    );
+    if (!result.ok) {
+      setNotice(result.reason);
+      return;
+    }
+    commitTerrain({
+      biome: terrainBiome,
+      mode: "paint",
+      shape: "fill",
+      points: result.points,
+      rings: result.rings,
+    });
+  }
+
+  /** Copia le operazioni che disegnano il riquadro; poi si incolla cliccando altrove. */
+  function copyTerrain(box: { x: number; y: number; width: number; height: number }) {
+    if (box.width * viewport.scale < 4 || box.height * viewport.scale < 4) return;
+    const ops = store.getTerrain().filter((op) => boxesIntersect(terrainOpBounds(op), box));
+    if (ops.length === 0) {
+      setNotice("Nel riquadro non c'è terreno da copiare.");
+      return;
+    }
+    useBoardUi.getState().setTerrain({ terrainClipboard: { box, ops }, terrainMode: "paste" });
+    setNotice(
+      `Copiate ${ops.length} ${ops.length === 1 ? "pennellata" : "pennellate"}: clicca dove incollarle.`,
+    );
+  }
+
+  /** Incolla il terreno copiato centrandolo sul clic, ritagliato al riquadro di origine. */
+  function pasteTerrainAt(at: Point) {
+    const clipboard = useBoardUi.getState().terrainClipboard;
+    if (!clipboard) return;
+    const { box } = clipboard;
+    const dx = at.x - (box.x + box.width / 2);
+    const dy = at.y - (box.y + box.height / 2);
+    const ops = clipboard.ops.map(({ id: _id, seq: _seq, ...op }) => {
+      // Il ritaglio è il riquadro copiato (intersecato con quello che l'operazione aveva già).
+      const [cx = box.x, cy = box.y, cw = box.width, ch = box.height] = op.clip ?? [];
+      const x = Math.max(box.x, cx);
+      const y = Math.max(box.y, cy);
+      const right = Math.min(box.x + box.width, cx + cw);
+      const bottom = Math.min(box.y + box.height, cy + ch);
+      return {
+        ...op,
+        points: op.points.map((v, i) => v + (i % 2 === 0 ? dx : dy)),
+        clip: [x + dx, y + dy, Math.max(0, right - x), Math.max(0, bottom - y)],
+      };
+    });
+    store.addTerrainBatch(ops);
+  }
+
+  function stampDraft(at: Point): StampDraft {
+    const { stampId, stampRandom } = useBoardUi.getState();
+    const def = STAMPS.find((st) => st.id === stampId) ?? STAMPS[0];
+    const furniture = def.group === "furniture";
+    return {
+      x: at.x,
+      y: at.y,
+      stamp: def.id,
+      size: def.size * (stampRandom && !furniture ? 0.85 + Math.random() * 0.3 : 1),
+      // I mobili ruotano di angoli retti, la natura liberamente.
+      rotation: stampRandom
+        ? furniture
+          ? 90 * Math.floor(Math.random() * 4)
+          : Math.random() * 360
+        : 0,
+      variant: stampRandom ? Math.floor(Math.random() * 1000) : 0,
+    };
+  }
+
   function placeToken(at: Point) {
     const { tokenDraft } = useBoardUi.getState();
     const existing = store
@@ -628,6 +782,7 @@ export function Board({ store, provider, roomId, role }: Props) {
     if (!p) return;
     broadcastCursor(p.world);
     if (tool === "path") pathDrawing.move(p.world, p.screen);
+    if (tool === "terrain" && terrainMode === "paste") setPasteCursor(p.world);
     if (tool === "wall") wallDrawing.move(p.world, e.evt.altKey);
     if (
       pressRef.current &&
@@ -670,11 +825,27 @@ export function Board({ store, provider, roomId, role }: Props) {
       case "calibrate":
       case "fogRect":
       case "marquee":
+      case "terrainCopy":
         setInteraction({ ...interaction, end: p.world });
         return;
       case "fogBrush":
         setInteraction({ ...interaction, points: [...interaction.points, p.world.x, p.world.y] });
         return;
+      case "stampScatter": {
+        // Trascinando si sparge un timbro a ogni passo pari a circa la sua larghezza.
+        const spacing =
+          (STAMPS.find((st) => st.id === useBoardUi.getState().stampId)?.size ?? 1) *
+          grid.size *
+          0.9;
+        if (Math.hypot(p.world.x - interaction.last.x, p.world.y - interaction.last.y) < spacing)
+          return;
+        setInteraction({
+          ...interaction,
+          stamps: [...interaction.stamps, stampDraft(p.world)],
+          last: p.world,
+        });
+        return;
+      }
       case "terrainBrush": {
         const n = interaction.points.length;
         const lastX = interaction.points[n - 2] as number;
@@ -695,6 +866,20 @@ export function Board({ store, provider, roomId, role }: Props) {
     const current = interaction;
     setInteraction(null);
     if (!current) return;
+    if (current.type === "stampScatter") {
+      // Tutti i timbri sparsi con un trascinamento sono un solo passo di annulla.
+      addItems(
+        current.stamps.map((st) => ({
+          ...base("map", st),
+          rotation: st.rotation,
+          kind: "stamp" as const,
+          stamp: st.stamp,
+          size: st.size,
+          variant: st.variant,
+        })),
+      );
+      return;
+    }
     if (current.type === "marquee") {
       const box = normalizeBox(current.start, current.end);
       if (box.width * viewport.scale < 4 && box.height * viewport.scale < 4) return;
@@ -717,7 +902,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       };
       addItems([item]);
     } else if (current.type === "terrainBrush") {
-      store.addTerrain({
+      commitTerrain({
         biome: terrainBiome,
         mode: current.erase ? "erase" : "paint",
         shape: "brush",
@@ -725,6 +910,8 @@ export function Board({ store, provider, roomId, role }: Props) {
         points: simplify(current.points, Math.max(0.5, terrainWidth / 20)),
         width: terrainWidth,
       });
+    } else if (current.type === "terrainCopy") {
+      copyTerrain(normalizeBox(current.start, current.end));
     } else if (current.type === "fogRect") {
       const box = normalizeBox(current.start, current.end);
       if (box.width * viewport.scale < 3 || box.height * viewport.scale < 3) return;
@@ -1241,6 +1428,33 @@ export function Board({ store, provider, roomId, role }: Props) {
                 filled={filled}
               />
             )}
+            {interaction?.type === "terrainCopy" && (
+              <Rect
+                {...normalizeBox(interaction.start, interaction.end)}
+                stroke={SELECTION_COLOR}
+                strokeWidth={2 / viewport.scale}
+                dash={[6 / viewport.scale, 4 / viewport.scale]}
+                fill="rgba(142, 124, 240, 0.12)"
+              />
+            )}
+            {tool === "terrain" && terrainMode === "paste" && terrainClipboard && pasteCursor && (
+              <Rect
+                x={pasteCursor.x - terrainClipboard.box.width / 2}
+                y={pasteCursor.y - terrainClipboard.box.height / 2}
+                width={terrainClipboard.box.width}
+                height={terrainClipboard.box.height}
+                stroke={SELECTION_COLOR}
+                strokeWidth={2 / viewport.scale}
+                dash={[6 / viewport.scale, 4 / viewport.scale]}
+              />
+            )}
+            {interaction?.type === "stampScatter" &&
+              interaction.stamps.map((st, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: i timbri in anteprima non hanno id.
+                <Group key={i} x={st.x} y={st.y} rotation={st.rotation} opacity={0.85}>
+                  <StampContent item={st} cellSize={grid.size} />
+                </Group>
+              ))}
             {interaction?.type === "marquee" && (
               <Rect
                 {...normalizeBox(interaction.start, interaction.end)}

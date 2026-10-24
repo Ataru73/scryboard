@@ -166,7 +166,7 @@ test("biome contours generate one undoable wall batch and existing walls can be 
   const { gm, player } = await setupTable(browser);
   await gm.keyboard.press("b");
   const terrain = gm.getByRole("toolbar", { name: "Terreno" });
-  await terrain.getByRole("button", { name: "Roccia" }).click();
+  await terrain.getByRole("button", { name: "Roccia", exact: true }).click();
   await terrain.getByRole("button", { name: "Regione", exact: true }).click();
   await click(gm, 200, 200);
   await click(gm, 500, 200);
@@ -237,6 +237,8 @@ test("doors under the fog are invisible to players and cannot be opened blindly"
   await fog.getByRole("button", { name: "Scopri", exact: true }).click();
   await drag(gm, [240, 240], [400, 320]);
   await expect.poll(async () => (await findNodes(player, ".door-icon")).length).toBe(1);
+  // Konva aggiorna l'area cliccabile al frame successivo: un clic immediato andrebbe a vuoto.
+  await player.waitForTimeout(150);
   await click(player, 315, 280);
   await expect.poll(async () => (await findNodes(gm, ".door-open")).length).toBe(1);
 });

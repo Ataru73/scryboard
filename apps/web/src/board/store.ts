@@ -345,9 +345,27 @@ export class BoardStore {
   }
 
   addTerrain(op: Omit<TerrainOp, "id" | "seq">) {
-    const full: TerrainOp = { ...op, id: newItemId(), seq: this.nextSeq() };
-    if (!terrainOpSchema.safeParse(full).success) return;
-    this.action(() => this.transact(this.pub, () => this.terrainMap.set(full.id, full)));
+    this.addTerrainBatch([op]);
+  }
+
+  /**
+   * Più operazioni di terreno (e di nebbia) come un'unica azione: un incolla, oppure una
+   * pennellata con la nebbia che la copre ("pittura nascosta").
+   */
+  addTerrainBatch(ops: Omit<TerrainOp, "id" | "seq">[], fog: Omit<FogOp, "id" | "seq">[] = []) {
+    const terrain = ops
+      .map((op) => ({ ...op, id: newItemId(), seq: this.nextSeq() }) as TerrainOp)
+      .filter((op) => terrainOpSchema.safeParse(op).success);
+    const fogOps = fog
+      .map((op) => ({ ...op, id: newItemId(), seq: this.nextSeq() }) as FogOp)
+      .filter((op) => fogOpSchema.safeParse(op).success);
+    if (terrain.length === 0 && fogOps.length === 0) return;
+    this.action(() =>
+      this.transact(this.pub, () => {
+        for (const op of terrain) this.terrainMap.set(op.id, op);
+        for (const op of fogOps) this.fogMap.set(op.id, op);
+      }),
+    );
   }
 
   clearTerrain() {

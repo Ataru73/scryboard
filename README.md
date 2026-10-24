@@ -55,6 +55,8 @@ Per i test end-to-end serve Chromium, da installare una volta con
 | J (solo GM)                            | Percorso: strade e fiumi a clic o a mano libera; [ e ] cambiano la larghezza |
 | W (solo GM)                            | Muri, porte, finestre e barriere invisibili agganciati alla griglia          |
 | I (solo GM)                            | Luci, visione dinamica, luce ambientale e anteprima come un giocatore        |
+| S (solo GM)                            | Timbri: alberi, rocce e mobili; trascina per spargerne tanti                 |
+| 1–9 (Terreno, Percorso, Timbri)        | Biomi recenti, stili di percorso, timbri                                     |
 | Doppio clic su un percorso selezionato | Aggiunge un punto di controllo                                               |
 | F (solo GM)                            | Nebbia: copri o scopri con rettangolo, poligono o pennello                   |
 | Shift+H (solo GM)                      | Nasconde ai giocatori la selezione, o la rivela                              |
@@ -78,6 +80,10 @@ bloccato nessuno può spostarlo o cancellarlo.
 Il GM può dipingere il terreno con 13 biomi (erba, foresta, roccia, sabbia, acqua, lava…), a
 pennello o come regioni dai bordi morbidi; le texture sono generate nel browser e ogni pennellata
 arriva subito ai giocatori.
+
+Lo strumento Terreno riempie anche le aree chiuse da muri o da altri biomi, copia e incolla porzioni
+di terreno e può dipingere "sotto la nebbia", da rivelare al momento giusto. I timbri aggiungono
+alberi, rocce e mobili, con rotazione e taglia casuali.
 
 Con lo strumento Percorso il GM traccia sentieri, strade sterrate o lastricate, ruscelli e fiumi:
 la curva passa per i punti cliccati, ogni punto ha la sua larghezza e i corsi d'acqua si

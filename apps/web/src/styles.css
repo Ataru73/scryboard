@@ -445,6 +445,40 @@ button.primary {
   background-size: 90px;
 }
 
+.recent-biomes {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 2px;
+  border: 0;
+}
+
+.recent-biome {
+  position: relative;
+}
+
+.recent-key {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 14px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.stamp-button {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: var(--board-bg);
+}
+
 .biome-button[aria-pressed="true"] {
   outline: 2px solid var(--accent);
   outline-offset: 1px;

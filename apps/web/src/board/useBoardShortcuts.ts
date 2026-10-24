@@ -1,4 +1,4 @@
-import type { BoardItem, Role } from "@scryboard/shared";
+import { type BoardItem, PATH_STYLES, type Role, STAMPS } from "@scryboard/shared";
 import { useEffect } from "react";
 import type { BoardStore } from "./store";
 import { GM_TOOLS, TOOL_SHORTCUTS, useBoardUi } from "./tools";
@@ -97,6 +97,32 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
           store.sendToBack(editable);
           return;
       }
+      // Tavolozza rapida: i numeri scelgono biomi recenti, stili di percorso o timbri.
+      if (/^[0-9]$/.test(e.key) && !e.shiftKey && role === "gm") {
+        const n = Number(e.key);
+        if (ui.tool === "terrain" && n >= 1) {
+          const biome = ui.recentBiomes[n - 1];
+          if (biome) {
+            const keepMode = !["erase", "copy", "paste"].includes(ui.terrainMode);
+            ui.setTerrain({
+              terrainBiome: biome,
+              terrainMode: keepMode ? ui.terrainMode : "brush",
+            });
+          }
+          return;
+        }
+        if (ui.tool === "path" && n >= 1) {
+          const style = PATH_STYLES[n - 1];
+          if (style) ui.setPathStyle(style.id);
+          return;
+        }
+        if (ui.tool === "stamp") {
+          const stamp = STAMPS[n === 0 ? 9 : n - 1];
+          if (stamp) ui.setStamp({ stampId: stamp.id });
+          return;
+        }
+      }
+
       const tool = TOOL_SHORTCUTS[key];
       if (tool && !e.shiftKey && (role === "gm" || !GM_TOOLS.includes(tool))) ui.setTool(tool);
     }

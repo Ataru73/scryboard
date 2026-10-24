@@ -165,6 +165,22 @@ describe("BoardStore", () => {
     expect(player.getLighting().enabled).toBe(false);
   });
 
+  it("adds terrain and covering fog as a single undo step", () => {
+    const store = new BoardStore(new Y.Doc(), null, "gm");
+    store.addTerrainBatch(
+      [
+        { biome: "grass", mode: "paint", shape: "brush", points: [0, 0, 10, 0], width: 40 },
+        { biome: "rock", mode: "paint", shape: "brush", points: [0, 50, 10, 50], width: 40 },
+      ],
+      [{ mode: "cover", shape: "rect", points: [0, 0, 100, 100] }],
+    );
+    expect(store.getTerrain().map((op) => op.biome)).toEqual(["grass", "rock"]);
+    expect(store.getFog()).toHaveLength(1);
+    store.undo();
+    expect(store.getTerrain()).toEqual([]);
+    expect(store.getFog()).toEqual([]);
+  });
+
   it("stores terrain strokes in order, with undo", () => {
     const store = new BoardStore(new Y.Doc(), null, "gm");
     store.addTerrain({

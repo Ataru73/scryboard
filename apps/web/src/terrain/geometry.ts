@@ -132,6 +132,15 @@ export function terrainOpBounds(op: TerrainOp): Box {
   }
   // Raggio massimo con l'irregolarità del bordo, più la sfumatura (al massimo 24 px).
   const margin = op.shape === "brush" ? ((op.width ?? 40) / 2) * 1.25 + 26 : 8 + 24;
+  if (op.clip) {
+    // Con il ritaglio non si va oltre il riquadro.
+    const [cx = 0, cy = 0, cw = 0, ch = 0] = op.clip;
+    const x = Math.max(minX - margin, cx);
+    const y = Math.max(minY - margin, cy);
+    const right = Math.min(maxX + margin, cx + cw);
+    const bottom = Math.min(maxY + margin, cy + ch);
+    return { x, y, width: Math.max(0, right - x), height: Math.max(0, bottom - y) };
+  }
   return {
     x: minX - margin,
     y: minY - margin,

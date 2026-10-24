@@ -104,6 +104,34 @@ export const lightItemSchema = z.object({
   ...lightSpecSchema.shape,
 });
 
+/** Timbri: elementi di scenario disegnati proceduralmente, con varianti. */
+export const STAMPS = [
+  { id: "tree", label: "Albero", size: 2, group: "nature" },
+  { id: "pine", label: "Pino", size: 1.5, group: "nature" },
+  { id: "bush", label: "Cespuglio", size: 1, group: "nature" },
+  { id: "rock", label: "Roccia", size: 0.8, group: "nature" },
+  { id: "boulder", label: "Masso", size: 1.6, group: "nature" },
+  { id: "barrel", label: "Barile", size: 0.7, group: "furniture" },
+  { id: "crate", label: "Cassa", size: 0.8, group: "furniture" },
+  { id: "table", label: "Tavolo", size: 1.6, group: "furniture" },
+  { id: "chair", label: "Sedia", size: 0.6, group: "furniture" },
+  { id: "bed", label: "Letto", size: 1.8, group: "furniture" },
+] as const;
+export type StampId = (typeof STAMPS)[number]["id"];
+const STAMP_IDS = STAMPS.map((s) => s.id) as [StampId, ...StampId[]];
+
+/**
+ * Timbro sul livello mappa (lo modifica solo il GM): (x, y) è il centro, `size` il lato in
+ * caselle, `variant` il seme che ne varia la forma.
+ */
+export const stampItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("stamp"),
+  stamp: z.enum(STAMP_IDS),
+  size: z.number().positive().max(20),
+  variant: z.number().int().min(0).max(1_000_000),
+});
+
 /** Luci tipiche, con raggi in caselle (come in D&D: 1 casella = 1,5 m). */
 export const LIGHT_PRESETS = [
   { id: "candle", label: "Candela", bright: 1, dim: 2, color: "#ffd18a" },
@@ -149,6 +177,7 @@ export const boardItemSchema = z.discriminatedUnion("kind", [
   tokenItemSchema,
   pathItemSchema,
   lightItemSchema,
+  stampItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
@@ -158,6 +187,7 @@ export type TextItem = z.infer<typeof textItemSchema>;
 export type TokenItem = z.infer<typeof tokenItemSchema>;
 export type PathItem = z.infer<typeof pathItemSchema>;
 export type LightItem = z.infer<typeof lightItemSchema>;
+export type StampItem = z.infer<typeof stampItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 
