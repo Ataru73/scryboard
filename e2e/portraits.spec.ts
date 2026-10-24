@@ -40,6 +40,8 @@ async function addTokens(gm: Page, tokens: { id: string; x: number; portrait?: s
   provider.destroy();
 }
 
+const library = (page: Page) => page.getByRole("dialog", { name: "Libreria di immagini" });
+
 const paths = (page: Page) =>
   page.evaluate(() => {
     const { Konva } = window as unknown as {
@@ -129,4 +131,35 @@ test("credits list the icon authors from the home page and from the room", async
   const { gm } = await setupTable(browser);
   await gm.getByRole("button", { name: "Crediti" }).click();
   await expect(gm.getByRole("dialog", { name: "Crediti" })).toContainText("game-icons.net");
+});
+
+test("an image chosen right after placing a token applies to it too, until the tool changes", async ({
+  browser,
+}) => {
+  const { gm } = await setupTable(browser);
+  await gm.keyboard.press("k");
+  await gm.getByLabel("Nome del token").fill("Primo");
+  await click(gm, 200, 300);
+  await expect(board(gm)).toHaveAttribute("data-item-count", "1");
+  await expect.poll(() => paths(gm)).toBe(0);
+
+  const pick = async (name: string) => {
+    await gm.getByRole("button", { name: "Libreria", exact: true }).click();
+    await library(gm).getByRole("button", { name, exact: true }).click();
+  };
+  // L'immagine scelta dopo il primo token va anche a lui.
+  await pick("Goblin");
+  await expect.poll(() => paths(gm)).toBe(1);
+  // E ai token piazzati dopo.
+  await click(gm, 400, 300);
+  await expect.poll(() => paths(gm)).toBe(2);
+
+  // Cambiando strumento il secondo token non è più "l'ultimo": la nuova scelta non lo tocca.
+  await gm.keyboard.press("v");
+  await gm.keyboard.press("k");
+  await pick("Drago");
+  await expect(gm.getByRole("button", { name: "Togli immagine" })).toBeVisible();
+  await expect.poll(() => paths(gm)).toBe(2);
+  await click(gm, 600, 300);
+  await expect.poll(() => paths(gm)).toBe(3);
 });

@@ -181,6 +181,8 @@ export function Board({ store, provider, roomId, role }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
 
+  /** Ultimo token piazzato con lo strumento Token: segue le immagini scelte subito dopo. */
+  const lastTokenRef = useRef<string | null>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [interaction, setInteraction] = useState<Interaction | null>(null);
@@ -211,6 +213,8 @@ export function Board({ store, provider, roomId, role }: Props) {
   const fogShape = useBoardUi((s) => s.fogShape);
   const fogBrush = useBoardUi((s) => s.fogBrush);
   const createHidden = useBoardUi((s) => s.createHidden);
+  const draftAssetId = useBoardUi((s) => s.tokenDraft.assetId);
+  const draftPortrait = useBoardUi((s) => s.tokenDraft.portrait ?? null);
   const terrainBiome = useBoardUi((s) => s.terrainBiome);
   const terrainMode = useBoardUi((s) => s.terrainMode);
   const terrainSize = useBoardUi((s) => s.terrainSize);
@@ -636,6 +640,20 @@ export function Board({ store, provider, roomId, role }: Props) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+  // Scegliere un'immagine subito dopo aver piazzato un token si applica anche a quel token, non
+  // solo ai prossimi; cambiando strumento il token non è più "l'ultimo".
+  // biome-ignore lint/correctness/useExhaustiveDependencies: si reagisce solo alla scelta.
+  useEffect(() => {
+    const id = lastTokenRef.current;
+    if (!id || useBoardUi.getState().tool !== "token") return;
+    const token = store.get(id);
+    if (token && canEdit(token)) {
+      store.update({ [id]: { assetId: draftAssetId, portrait: draftPortrait } });
+    }
+  }, [draftAssetId, draftPortrait]);
+  useEffect(() => {
+    if (tool !== "token") lastTokenRef.current = null;
+  }, [tool]);
   useEffect(() => {
     const fogPolygon = tool === "fog" && fogShape === "polygon";
     const terrainRegion = tool === "terrain" && terrainMode === "region";
@@ -775,9 +793,12 @@ export function Board({ store, provider, roomId, role }: Props) {
       .filter((i): i is TokenItem => i.kind === "token")
       .map((t) => t.name);
     const center = grid.enabled ? snapTokenCenter(at, tokenDraft.size, grid) : at;
+    const id = newItemId();
+    lastTokenRef.current = id;
     addItems([
       {
         ...base("token", center),
+        id,
         kind: "token",
         name: nextTokenName(tokenDraft.name, existing),
         color: tokenDraft.color,
