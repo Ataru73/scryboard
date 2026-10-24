@@ -53,6 +53,29 @@ scryboard.example.com {
 }
 ```
 
+## Google Cloud Run
+
+```bash
+scripts/deploy-cloud-run.sh
+```
+
+Lo script costruisce l'immagine con Cloud Build e aggiorna il servizio `scryboard` su
+`europe-west8`. Progetto, regione e nome si cambiano con le variabili `PROJECT`, `REGION` e
+`SERVICE`; eventuali flag extra passati allo script finiscono a `gcloud run deploy`.
+
+Il servizio è pubblico, su una sola istanza (`--max-instances 1`: lo stato vive nel processo) e
+si spegne quando non serve. Due differenze rispetto a Fly.io:
+
+- Niente volume: database e immagini stanno nel filesystem effimero del container, quindi a
+  ogni riavvio o redeploy si riparte da un database vuoto. Va bene per demo e test; per i
+  dati veri servono Fly.io o una VPS. Un bucket GCS montato con gcsfuse non è un'alternativa
+  per SQLite: manca il file locking che richiede.
+- Il progetto in uso è stato creato da AI Studio con il service account predefinito di Compute
+  disattivato: le build usano quindi il service account `scryboard-builder` con il ruolo
+  `roles/run.builder` (creato una volta con `gcloud iam service-accounts create`).
+
+I WebSocket funzionano, ma Cloud Run li chiude dopo 60 minuti: il client si riconnette da solo.
+
 ## Pulizia delle stanze inattive
 
 Le stanze non si cancellano da sole. Per eliminare definitivamente quelle inattive da più di 90

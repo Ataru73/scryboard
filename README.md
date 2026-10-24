@@ -120,8 +120,8 @@ docker run -p 3000:3000 -v scryboard-data:/data scryboard
 ```
 
 Il container serve API, WebSocket e web app sulla porta 3000 e salva database e immagini in
-`/data`. Istruzioni per Fly.io, per una VPS con Docker Compose e per la pulizia delle stanze
-inattive in [docs/DEPLOY.md](docs/DEPLOY.md).
+`/data`. Istruzioni per Fly.io, Google Cloud Run, per una VPS con Docker Compose e per la
+pulizia delle stanze inattive in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Come funzionano le stanze
 
