@@ -20,7 +20,17 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
+import { Circle, Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
+import {
+  insertPoint,
+  nearestSegment,
+  type PathPoint,
+  toFlat,
+  toPathPoints,
+} from "../paths/geometry";
+import { PathHandles } from "../paths/PathHandles";
+import { PathShape } from "../paths/PathShape";
+import { usePathDrawing } from "../paths/usePathDrawing";
 import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
 import { useAssetAuth } from "./assetAuth";
@@ -134,6 +144,22 @@ export function Board({ store, provider, roomId, role }: Props) {
   const terrainSize = useBoardUi((s) => s.terrainSize);
   /** Larghezza del pennello del terreno in pixel del mondo: segue la casella della griglia. */
   const terrainWidth = terrainSize * grid.size;
+  const pathStyle = useBoardUi((s) => s.pathStyle);
+  const pathPoint = useBoardUi((s) => s.pathPoint);
+  /** Punti di un percorso mentre se ne trascina una maniglia (non ancora salvati). */
+  const [pathEdit, setPathEdit] = useState<{ id: string; points: number[] } | null>(null);
+  const pathDrawing = usePathDrawing({
+    active: tool === "path" && role === "gm",
+    cellSize: grid.size,
+    onCreate: (points) => {
+      const origin = points[0] as PathPoint;
+      // I punti si salvano relativi al primo, così il percorso si sposta come gli altri oggetti.
+      const relative = points.map((pt) => ({ x: pt.x - origin.x, y: pt.y - origin.y, w: pt.w }));
+      addItems([
+        { ...base("paths", origin), kind: "path", style: pathStyle, points: toFlat(relative) },
+      ]);
+    },
+  });
   const { select, setViewport, setEditingText, setTool, setGridPanelOpen } = useBoardUi.getState();
 
   const canEdit = useCallback((item: BoardItem | undefined) => canModify(item, role), [role]);
@@ -203,7 +229,10 @@ export function Board({ store, provider, roomId, role }: Props) {
     const nodes = selectedIds
       // I token hanno un loro indicatore di selezione e la taglia si cambia dal pannello.
       .filter(
-        (id) => canEdit(store.get(id)) && store.get(id)?.kind !== "token" && id !== editingTextId,
+        (id) =>
+          canEdit(store.get(id)) &&
+          !["token", "path"].includes(store.get(id)?.kind ?? "") &&
+          id !== editingTextId,
       )
       .map((id) => stage.findOne((node: Konva.Node) => node.hasName("item") && node.id() === id))
       .filter((n): n is Konva.Node => n !== undefined);
@@ -351,6 +380,9 @@ export function Board({ store, provider, roomId, role }: Props) {
             erase: terrainMode === "erase",
           });
         return;
+      case "path":
+        pathDrawing.down(p.world, p.screen, viewport.scale);
+        return;
     }
   }
 
@@ -432,6 +464,7 @@ export function Board({ store, provider, roomId, role }: Props) {
     const p = pointer();
     if (!p) return;
     broadcastCursor(p.world);
+    if (tool === "path") pathDrawing.move(p.world, p.screen);
     if (
       pressRef.current &&
       Math.hypot(p.screen.x - pressRef.current.screen.x, p.screen.y - pressRef.current.screen.y) > 5
@@ -494,6 +527,7 @@ export function Board({ store, provider, roomId, role }: Props) {
 
   function onPointerUp() {
     cancelPress();
+    if (tool === "path") pathDrawing.up();
     const current = interaction;
     setInteraction(null);
     if (!current) return;
@@ -741,7 +775,9 @@ export function Board({ store, provider, roomId, role }: Props) {
 
   const editingItem = editingTextId ? store.get(editingTextId) : undefined;
 
-  // Ordine dal basso: mappa, griglia, token, nebbia, disegni. La nebbia copre mappa e token.
+  // Ordine dal basso: terreno, percorsi, mappa, griglia, token, nebbia, disegni. La nebbia copre
+  // tutto tranne i disegni.
+  const pathItems = items.filter((i) => i.layer === "paths");
   const mapItems = items.filter((i) => i.layer === "map");
   const tokenItems = items.filter((i) => i.layer === "token");
   const drawItems = items.filter((i) => i.layer === "draw");
@@ -750,21 +786,50 @@ export function Board({ store, provider, roomId, role }: Props) {
     width: size.width / viewport.scale,
     height: size.height / viewport.scale,
   };
-  const renderItem = (item: BoardItem) => (
-    <ItemNode
-      key={item.id}
-      item={item}
-      roomId={roomId}
-      cellSize={grid.size}
-      draggable={tool === "select" && !panMode && canEdit(item)}
-      editing={item.id === editingTextId}
-      concealed={store.isHidden(item.id)}
-      selected={selectedIds.includes(item.id)}
-      onDragStart={onItemDragStart}
-      onDragMove={onItemDragMove}
-      onDragEnd={onItemDragEnd}
-    />
-  );
+  const renderItem = (original: BoardItem) => {
+    const item =
+      original.kind === "path" && pathEdit?.id === original.id
+        ? { ...original, points: pathEdit.points }
+        : original;
+    return (
+      <ItemNode
+        key={item.id}
+        item={item}
+        roomId={roomId}
+        cellSize={grid.size}
+        draggable={tool === "select" && !panMode && canEdit(item)}
+        editing={item.id === editingTextId}
+        concealed={store.isHidden(item.id)}
+        selected={selectedIds.includes(item.id)}
+        onDragStart={onItemDragStart}
+        onDragMove={onItemDragMove}
+        onDragEnd={onItemDragEnd}
+      />
+    );
+  };
+
+  // Il percorso selezionato (uno solo, modificabile) mostra le maniglie dei punti.
+  const editablePath = (() => {
+    if (tool !== "select" || selectedIds.length !== 1) return null;
+    const item = store.get(selectedIds[0] as string);
+    if (item?.kind !== "path" || !canEdit(item)) return null;
+    return pathEdit?.id === item.id ? { ...item, points: pathEdit.points } : item;
+  })();
+
+  /** Doppio clic su un percorso selezionato: aggiunge un punto di controllo lì. */
+  function onDoubleClick() {
+    const p = pointer();
+    if (!p || !editablePath) return;
+    const local = { x: p.world.x - editablePath.x, y: p.world.y - editablePath.y };
+    const controls = toPathPoints(editablePath.points);
+    const hit = nearestSegment(controls, local);
+    const reach = Math.max(...controls.map((c) => c.w)) / 2 + 10 / viewport.scale;
+    if (hit.distance > reach) return;
+    store.update({
+      [editablePath.id]: { points: toFlat(insertPoint(controls, hit.index, hit.t)) },
+    });
+    useBoardUi.getState().setPathPoint(hit.index + 1);
+  }
 
   return (
     <div
@@ -797,6 +862,7 @@ export function Board({ store, provider, roomId, role }: Props) {
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onDblClick={onDoubleClick}
           onPointerLeave={() => {
             cancelPress();
             broadcastCursor(null);
@@ -805,6 +871,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         >
           <TerrainLayer ops={terrain} visible={visibleWorld} scale={viewport.scale} />
           <Layer>
+            {pathItems.map(renderItem)}
             {mapItems.map(renderItem)}
             <GridLines grid={grid} visible={visibleWorld} scale={viewport.scale} />
             {tokenItems.map(renderItem)}
@@ -812,6 +879,22 @@ export function Board({ store, provider, roomId, role }: Props) {
           <FogLayer ops={fog} translucent={role === "gm"} />
           <Layer>{drawItems.map(renderItem)}</Layer>
           <Layer>
+            {editablePath && (
+              <PathHandles
+                item={editablePath}
+                scale={viewport.scale}
+                selectedPoint={pathPoint}
+                onSelectPoint={(i) => useBoardUi.getState().setPathPoint(i)}
+                onChange={(points, commit) => {
+                  if (commit) {
+                    setPathEdit(null);
+                    store.update({ [editablePath.id]: { points } });
+                  } else {
+                    setPathEdit({ id: editablePath.id, points });
+                  }
+                }}
+              />
+            )}
             <Transformer
               ref={transformerRef}
               onTransformEnd={onTransformEnd}
@@ -912,6 +995,23 @@ export function Board({ store, provider, roomId, role }: Props) {
                 fill="rgba(142, 124, 240, 0.12)"
               />
             )}
+            {pathDrawing.preview && pathDrawing.preview.length >= 2 && (
+              <Group opacity={0.8}>
+                <PathShape points={toFlat(pathDrawing.preview)} style={pathStyle} />
+              </Group>
+            )}
+            {pathDrawing.preview?.slice(0, -1).map((pt, i) => (
+              <Circle
+                // biome-ignore lint/suspicious/noArrayIndexKey: i punti della bozza non hanno id.
+                key={i}
+                x={pt.x}
+                y={pt.y}
+                radius={4 / viewport.scale}
+                fill="#ffffff"
+                stroke={SELECTION_COLOR}
+                strokeWidth={1.5 / viewport.scale}
+              />
+            ))}
             <Presence provider={provider} scale={viewport.scale} />
           </Layer>
         </Stage>

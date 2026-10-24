@@ -47,22 +47,24 @@ Per i test end-to-end serve Chromium, da installare una volta con
 
 ## Scorciatoie della lavagna
 
-| Tasto                          | Azione                                                                   |
-| ------------------------------ | ------------------------------------------------------------------------ |
-| V H P L R O T E K              | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token |
-| Alt (trascinando un token)     | Muove il token senza agganciarlo alla griglia                            |
-| B (solo GM)                    | Terreno: dipinge i biomi a pennello o come regioni, con gomma            |
-| F (solo GM)                    | Nebbia: copri o scopri con rettangolo, poligono o pennello               |
-| Shift+H (solo GM)              | Nasconde ai giocatori la selezione, o la rivela                          |
-| Spazio (tenuto premuto)        | Sposta la vista con qualsiasi strumento                                  |
-| Rotella / pinch                | Zoom                                                                     |
-| Shift+1 / Shift+0              | Adatta al contenuto / zoom 100%                                          |
-| Canc / Backspace               | Elimina la selezione                                                     |
-| ] / [                          | Porta in primo piano / sullo sfondo                                      |
-| Ctrl+Z / Ctrl+Shift+Z          | Annulla / ripeti                                                         |
-| Esc                            | Deseleziona, chiude l'editor di testo                                    |
-| Clic prolungato                | Ping visibile a tutti                                                    |
-| Trascinare su uno spazio vuoto | Selezione a riquadro (con Shift si aggiunge)                             |
+| Tasto                                  | Azione                                                                       |
+| -------------------------------------- | ---------------------------------------------------------------------------- |
+| V H P L R O T E K                      | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token     |
+| Alt (trascinando un token)             | Muove il token senza agganciarlo alla griglia                                |
+| B (solo GM)                            | Terreno: dipinge i biomi a pennello o come regioni, con gomma                |
+| J (solo GM)                            | Percorso: strade e fiumi a clic o a mano libera; [ e ] cambiano la larghezza |
+| Doppio clic su un percorso selezionato | Aggiunge un punto di controllo                                               |
+| F (solo GM)                            | Nebbia: copri o scopri con rettangolo, poligono o pennello                   |
+| Shift+H (solo GM)                      | Nasconde ai giocatori la selezione, o la rivela                              |
+| Spazio (tenuto premuto)                | Sposta la vista con qualsiasi strumento                                      |
+| Rotella / pinch                        | Zoom                                                                         |
+| Shift+1 / Shift+0                      | Adatta al contenuto / zoom 100%                                              |
+| Canc / Backspace                       | Elimina la selezione                                                         |
+| ] / [                                  | Porta in primo piano / sullo sfondo                                          |
+| Ctrl+Z / Ctrl+Shift+Z                  | Annulla / ripeti                                                             |
+| Esc                                    | Deseleziona, chiude l'editor di testo                                        |
+| Clic prolungato                        | Ping visibile a tutti                                                        |
+| Trascinare su uno spazio vuoto         | Selezione a riquadro (con Shift si aggiunge)                                 |
 
 Le immagini si aggiungono con il pulsante della barra, trascinandole sulla lavagna o incollandole.
 Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificare.
@@ -74,6 +76,10 @@ bloccato nessuno può spostarlo o cancellarlo.
 Il GM può dipingere il terreno con 13 biomi (erba, foresta, roccia, sabbia, acqua, lava…), a
 pennello o come regioni dai bordi morbidi; le texture sono generate nel browser e ogni pennellata
 arriva subito ai giocatori.
+
+Con lo strumento Percorso il GM traccia sentieri, strade sterrate o lastricate, ruscelli e fiumi:
+la curva passa per i punti cliccati, ogni punto ha la sua larghezza e i corsi d'acqua si
+assottigliano alle estremità. Selezionando un percorso se ne trascinano i punti.
 
 Il GM può nascondere qualsiasi oggetto ai giocatori (o crearlo già nascosto): gli oggetti nascosti
 e le loro immagini non arrivano proprio ai browser dei giocatori. La nebbia copre mappa e token;

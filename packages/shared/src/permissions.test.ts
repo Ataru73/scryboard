@@ -28,6 +28,7 @@ describe("permissions", () => {
 
   it("keeps players away from the map layer and locked items", () => {
     expect(canSelect(token("map", false), "player")).toBe(false);
+    expect(canSelect(token("paths", false), "player")).toBe(false);
     expect(canSelect(token("token", true), "player")).toBe(false);
     expect(canModify(token("token", false), "player")).toBe(true);
     expect(canModify(undefined, "player")).toBe(false);

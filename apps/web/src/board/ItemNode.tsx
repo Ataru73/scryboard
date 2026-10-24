@@ -1,7 +1,14 @@
-import { assetUrl, type BoardItem, type ImageItem, type TokenItem } from "@scryboard/shared";
+import {
+  assetUrl,
+  type BoardItem,
+  type ImageItem,
+  type PathItem,
+  type TokenItem,
+} from "@scryboard/shared";
 import type Konva from "konva";
 import { memo } from "react";
 import { Circle, Ellipse, Group, Image, Line, Rect, Text } from "react-konva";
+import { PathShape } from "../paths/PathShape";
 import { normalizeBox } from "./geometry";
 import { tokenInitials } from "./grid";
 import { useImage } from "./useImage";
@@ -56,6 +63,8 @@ export const ItemNode = memo(function ItemNode({
     >
       {item.kind === "token" ? (
         <TokenContent item={item} roomId={roomId} cellSize={cellSize} selected={selected} />
+      ) : item.kind === "path" ? (
+        <PathShape points={item.points} style={item.style} selected={selected} />
       ) : (
         <ItemContent item={item} roomId={roomId} />
       )}
@@ -63,7 +72,13 @@ export const ItemNode = memo(function ItemNode({
   );
 });
 
-function ItemContent({ item, roomId }: { item: Exclude<BoardItem, TokenItem>; roomId: string }) {
+function ItemContent({
+  item,
+  roomId,
+}: {
+  item: Exclude<BoardItem, TokenItem | PathItem>;
+  roomId: string;
+}) {
   switch (item.kind) {
     case "image":
       return <ImageContent item={item} roomId={roomId} />;

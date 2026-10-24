@@ -81,7 +81,17 @@ convivere (per esempio un edificio importato su un prato dipinto).
 - Una mappa di 60×40 caselle dipinta con 2.000 pennellate resta fluida.
 - Annulla/ripeti per pennellata; gomma e regioni funzionano su tutti i biomi.
 
-### F2 — Strade e fiumi (≈ 1–1,5 settimane)
+### F2 — Strade e fiumi (≈ 1–1,5 settimane) ✅
+
+**Stato**: completata. Note rispetto al piano:
+- I percorsi sono oggetti della lavagna sul nuovo livello `paths` (sotto le mappe), riservato al
+  GM come il livello mappa: il server annulla le modifiche dei giocatori.
+- Ogni stile è fatto di fasce sovrapposte (rive, ciglio, acqua bassa, acqua profonda) con
+  texture procedurali; le strade hanno estremità arrotondate, ruscelli e fiumi si assottigliano.
+- La larghezza dei punti nuovi si regola con `[` e `]` durante il disegno; dopo, dal pannello di
+  selezione (del punto selezionato o di tutto il percorso). La rotella resta allo zoom.
+- La texture segue il mondo, non la direzione della strada: le file del selciato non ruotano con
+  le curve.
 
 **Cosa vede l'utente**
 - Strumento **Percorso** (solo GM, tasto `J`) con stili: sentiero, strada sterrata, strada

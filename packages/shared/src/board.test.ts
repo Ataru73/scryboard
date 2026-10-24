@@ -8,6 +8,15 @@ describe("board items", () => {
     const items: unknown[] = [
       {
         ...base,
+        id: "p",
+        layer: "paths",
+        z: 0,
+        kind: "path",
+        style: "river",
+        points: [0, 0, 40, 100, 50, 80],
+      },
+      {
+        ...base,
         id: "t",
         layer: "token",
         z: 0,
@@ -63,6 +72,22 @@ describe("board items", () => {
       },
     ];
     for (const item of items) expect(boardItemSchema.safeParse(item).success).toBe(true);
+  });
+
+  it("rejects paths with a single point, broken triples or zero widths", () => {
+    const path = (points: number[]) => ({
+      ...base,
+      id: "p",
+      layer: "paths",
+      z: 0,
+      kind: "path",
+      style: "trail",
+      points,
+    });
+    expect(boardItemSchema.safeParse(path([0, 0, 10])).success).toBe(false);
+    expect(boardItemSchema.safeParse(path([0, 0, 10, 5, 5])).success).toBe(false);
+    expect(boardItemSchema.safeParse(path([0, 0, 10, 5, 5, 0])).success).toBe(false);
+    expect(boardItemSchema.safeParse(path([0, 0, 10, 5, 5, 8])).success).toBe(true);
   });
 
   it("rejects malformed items", () => {

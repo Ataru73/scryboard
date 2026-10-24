@@ -80,6 +80,12 @@ export const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M5 10l3-4 3 4M14 9l2-3 3 4" />
     </Icon>
   ),
+  path: (
+    <Icon>
+      <path d="M7 21c0-5 10-6 10-11 0-3-3-5-6-5" />
+      <path d="M11 21c0-3 6-4 8-8" strokeDasharray="2 2" />
+    </Icon>
+  ),
   fog: (
     <Icon>
       <path d="M4 9h11a3 3 0 100-3M3 13h15a3 3 0 110 3M6 17h7" />

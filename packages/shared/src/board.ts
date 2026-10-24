@@ -1,8 +1,11 @@
 import { z } from "zod";
 
-/** Livelli fissi della board, dal basso verso l'alto. */
-export const LAYERS = ["map", "token", "draw"] as const;
+/** Livelli fissi della board, dal basso verso l'alto (il terreno dipinto sta sotto a tutti). */
+export const LAYERS = ["paths", "map", "token", "draw"] as const;
 export type Layer = (typeof LAYERS)[number];
+
+/** Livelli che solo il GM può modificare: percorsi e mappe. */
+export const GM_LAYERS: readonly Layer[] = ["paths", "map"];
 
 const baseItem = {
   id: z.string().min(1).max(64),
@@ -71,12 +74,41 @@ export const tokenItemSchema = z.object({
   size: z.number().positive().max(10),
 });
 
+/** Stili dei percorsi, con larghezza predefinita (in caselle) e assottigliamento alle estremità. */
+export const PATH_STYLES = [
+  { id: "trail", label: "Sentiero", width: 0.5, taper: false },
+  { id: "dirt-road", label: "Strada sterrata", width: 1, taper: false },
+  { id: "paved-road", label: "Strada lastricata", width: 1.5, taper: false },
+  { id: "stream", label: "Ruscello", width: 0.6, taper: true },
+  { id: "river", label: "Fiume", width: 2, taper: true },
+] as const;
+export type PathStyleId = (typeof PATH_STYLES)[number]["id"];
+const PATH_STYLE_IDS = PATH_STYLES.map((s) => s.id) as [PathStyleId, ...PathStyleId[]];
+
+/**
+ * Strada o fiume: punti di controllo relativi a (x, y), ognuno con la sua larghezza. La curva
+ * passa per tutti i punti (spline di Catmull–Rom).
+ */
+export const pathItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("path"),
+  style: z.enum(PATH_STYLE_IDS),
+  /** [x0, y0, w0, x1, y1, w1, ...]: almeno due punti. */
+  points: z
+    .array(z.number())
+    .min(6)
+    .max(30000)
+    .refine((p) => p.length % 3 === 0, "I punti vanno a terne (x, y, larghezza)")
+    .refine((p) => p.every((v, i) => i % 3 !== 2 || v > 0), "Le larghezze devono essere positive"),
+});
+
 export const boardItemSchema = z.discriminatedUnion("kind", [
   imageItemSchema,
   strokeItemSchema,
   shapeItemSchema,
   textItemSchema,
   tokenItemSchema,
+  pathItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
@@ -84,6 +116,7 @@ export type StrokeItem = z.infer<typeof strokeItemSchema>;
 export type ShapeItem = z.infer<typeof shapeItemSchema>;
 export type TextItem = z.infer<typeof textItemSchema>;
 export type TokenItem = z.infer<typeof tokenItemSchema>;
+export type PathItem = z.infer<typeof pathItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 

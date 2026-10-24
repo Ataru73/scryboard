@@ -1,4 +1,10 @@
-import { type BiomeId, DRAW_COLORS, STROKE_WIDTHS } from "@scryboard/shared";
+import {
+  type BiomeId,
+  DRAW_COLORS,
+  PATH_STYLES,
+  type PathStyleId,
+  STROKE_WIDTHS,
+} from "@scryboard/shared";
 import { create } from "zustand";
 import type { Viewport } from "./viewport";
 
@@ -17,7 +23,9 @@ export type Tool =
   /** Solo GM: copre o scopre aree con la nebbia. */
   | "fog"
   /** Solo GM: dipinge i biomi del terreno. */
-  | "terrain";
+  | "terrain"
+  /** Solo GM: strade e fiumi. */
+  | "path";
 
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
@@ -31,10 +39,14 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   k: "token",
   f: "fog",
   b: "terrain",
+  j: "path",
 };
 
 /** Strumenti riservati al GM: le scorciatoie non li attivano per i giocatori. */
-export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain"];
+export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain", "path"];
+
+/** Larghezze dei percorsi, in caselle della griglia. */
+export const PATH_WIDTHS = [0.5, 1, 1.5, 2, 3] as const;
 
 export type FogMode = "cover" | "reveal";
 export type FogShape = "rect" | "polygon" | "brush";
@@ -57,6 +69,8 @@ interface BoardUiState {
   /** Riempimento per rettangoli ed ellissi. */
   filled: boolean;
   selectedIds: string[];
+  /** Punto di controllo selezionato del percorso selezionato. */
+  pathPoint: number | null;
   editingTextId: string | null;
   viewport: Viewport;
   /** Barra spaziatrice premuta: pan temporaneo con qualsiasi strumento. */
@@ -73,11 +87,15 @@ interface BoardUiState {
   terrainMode: TerrainMode;
   /** In caselle: la larghezza segue la griglia. */
   terrainSize: number;
+  pathStyle: PathStyleId;
+  /** Larghezza dei nuovi punti del percorso, in caselle. */
+  pathWidth: number;
   setTool: (tool: Tool) => void;
   setColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
   setFilled: (filled: boolean) => void;
   select: (ids: string[]) => void;
+  setPathPoint: (index: number | null) => void;
   setEditingText: (id: string | null) => void;
   setViewport: (viewport: Viewport) => void;
   setSpacePan: (on: boolean) => void;
@@ -85,6 +103,9 @@ interface BoardUiState {
   setGridPanelOpen: (open: boolean) => void;
   setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
   setCreateHidden: (on: boolean) => void;
+  /** Cambiando stile si riparte dalla sua larghezza tipica. */
+  setPathStyle: (style: PathStyleId) => void;
+  setPathWidth: (width: number) => void;
   setTerrain: (
     patch: Partial<Pick<BoardUiState, "terrainBiome" | "terrainMode" | "terrainSize">>,
   ) => void;
@@ -96,6 +117,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   strokeWidth: STROKE_WIDTHS[1],
   filled: false,
   selectedIds: [],
+  pathPoint: null,
   editingTextId: null,
   viewport: { x: 0, y: 0, scale: 1 },
   spacePan: false,
@@ -108,11 +130,14 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   terrainBiome: "grass",
   terrainMode: "brush",
   terrainSize: 1,
-  setTool: (tool) => set({ tool, selectedIds: [], editingTextId: null }),
+  pathStyle: "dirt-road",
+  pathWidth: 1,
+  setTool: (tool) => set({ tool, selectedIds: [], pathPoint: null, editingTextId: null }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
   setFilled: (filled) => set({ filled }),
-  select: (selectedIds) => set({ selectedIds }),
+  select: (selectedIds) => set({ selectedIds, pathPoint: null }),
+  setPathPoint: (pathPoint) => set({ pathPoint }),
   setEditingText: (editingTextId) => set({ editingTextId }),
   setViewport: (viewport) => set({ viewport }),
   setSpacePan: (spacePan) => set({ spacePan }),
@@ -121,4 +146,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setFog: (patch) => set(patch),
   setCreateHidden: (createHidden) => set({ createHidden }),
   setTerrain: (patch) => set(patch),
+  setPathStyle: (pathStyle) =>
+    set({ pathStyle, pathWidth: PATH_STYLES.find((s) => s.id === pathStyle)?.width ?? 1 }),
+  setPathWidth: (pathWidth) => set({ pathWidth: Math.min(8, Math.max(0.25, pathWidth)) }),
 }));

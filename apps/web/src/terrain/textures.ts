@@ -241,13 +241,69 @@ export function biomeColor(id: BiomeId): string {
   return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
 }
 
-const textures = new Map<BiomeId, HTMLCanvasElement>();
+/** Pietre di un selciato, disposte a file sfalsate. */
+function cobbles(ctx: Ctx, random: Random) {
+  const rows = 8;
+  const h = TEXTURE_SIZE / rows;
+  for (let row = 0; row < rows; row++) {
+    const offset = row % 2 === 0 ? 0 : h * 0.7;
+    for (let x = -h; x < TEXTURE_SIZE + h; x += h * 1.4) {
+      const w = h * (1.15 + random() * 0.2);
+      const cx = x + offset + w / 2;
+      const cy = row * h + h / 2;
+      const shade = 0.85 + random() * 0.3;
+      const [r, g, b] = [120 * shade, 114 * shade, 106 * shade].map(Math.round);
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      wrapped((dx, dy) => {
+        ctx.beginPath();
+        ctx.roundRect(cx - w / 2 + 1.5 + dx, cy - h / 2 + 1.5 + dy, w - 3, h - 3, h * 0.3);
+        ctx.fill();
+      });
+    }
+  }
+}
+
+/** Texture dei percorsi, generate come quelle dei biomi. */
+export type PathTextureId = "trail" | "dirt" | "cobble";
+
+const PATH_TEXTURES: Record<PathTextureId, BiomeStyle> = {
+  trail: {
+    colors: ["#8a6f48", "#a3875c", "#b99f72"],
+    period: 8,
+    octaves: 4,
+    detail: speckles(["#6f5838", "#cdb68a"], 700, 1.5, 0.6),
+  },
+  dirt: {
+    colors: ["#6f5536", "#84693f", "#9a7f52"],
+    period: 7,
+    octaves: 4,
+    detail: combine(
+      speckles(["#5a4429", "#ad9467"], 900, 1.5, 0.6),
+      blobs(["#5f4a30"], 30, 3, 8, 0.4),
+    ),
+  },
+  cobble: {
+    colors: ["#4b4641", "#57514b", "#625b54"],
+    period: 6,
+    octaves: 2,
+    detail: cobbles,
+  },
+};
+
+const textures = new Map<string, HTMLCanvasElement>();
 
 /** Texture del bioma, generata una volta e ripetibile senza cuciture. */
 export function biomeTexture(id: BiomeId): HTMLCanvasElement {
+  return generateTexture(id, STYLES[id]);
+}
+
+export function pathTexture(id: PathTextureId): HTMLCanvasElement {
+  return generateTexture(`path:${id}`, PATH_TEXTURES[id]);
+}
+
+function generateTexture(id: string, style: BiomeStyle): HTMLCanvasElement {
   const cached = textures.get(id);
   if (cached) return cached;
-  const style = STYLES[id];
   const canvas = document.createElement("canvas");
   canvas.width = TEXTURE_SIZE;
   canvas.height = TEXTURE_SIZE;

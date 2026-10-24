@@ -37,6 +37,17 @@ describe("isAllowedPlayerItemChange", () => {
 
   it("rejects map items, locked items, invalid data and kind changes", () => {
     expect(isAllowedPlayerItemChange("add", "m", undefined, mapImage("m"))).toBe(false);
+    const river = {
+      ...base,
+      id: "r",
+      kind: "path",
+      layer: "paths",
+      locked: false,
+      style: "river",
+      points: [0, 0, 50, 100, 0, 50],
+    };
+    expect(isAllowedPlayerItemChange("add", "r", undefined, river)).toBe(false);
+    expect(isAllowedPlayerItemChange("delete", "r", river, undefined)).toBe(false);
     expect(isAllowedPlayerItemChange("delete", "m", mapImage("m"), undefined)).toBe(false);
     expect(isAllowedPlayerItemChange("update", "t", token("t", { locked: true }), token("t"))).toBe(
       false,

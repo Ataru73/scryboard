@@ -13,6 +13,7 @@ import {
   TOOL_ICONS,
   UndoIcon,
 } from "./icons";
+import { PathPanel } from "./PathPanel";
 import type { BoardStore } from "./store";
 import { TerrainPanel } from "./TerrainPanel";
 import { TokenStyleFields } from "./TokenStyleFields";
@@ -32,6 +33,7 @@ const TOOLS: { tool: Tool; label: string; key: string }[] = [
 ];
 const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
   { tool: "terrain", label: "Terreno", key: "B" },
+  { tool: "path", label: "Percorso", key: "J" },
   { tool: "fog", label: "Nebbia", key: "F" },
 ];
 
@@ -160,6 +162,7 @@ export function Toolbar({ store, role, roomId, onUpload, onFit, viewportSize }: 
 
       {tool === "fog" && role === "gm" && <FogPanel store={store} />}
       {tool === "terrain" && role === "gm" && <TerrainPanel store={store} />}
+      {tool === "path" && role === "gm" && <PathPanel />}
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">

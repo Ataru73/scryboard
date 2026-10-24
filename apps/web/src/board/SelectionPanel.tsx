@@ -2,6 +2,7 @@ import type { BoardItem, Role } from "@scryboard/shared";
 import { canModify } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
 import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
+import { PathFields } from "./PathFields";
 import type { BoardStore } from "./store";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { useBoardUi } from "./tools";
@@ -40,6 +41,9 @@ export function SelectionPanel({ store, role, roomId }: Props) {
           />
           <span className="toolbar-separator" />
         </>
+      )}
+      {single?.kind === "path" && canModify(single, role) && (
+        <PathFields path={single} store={store} cellSize={store.getGrid().size} />
       )}
       {role === "gm" && store.canHide && (
         <button
