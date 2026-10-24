@@ -89,6 +89,12 @@ export const tokenItemSchema = z.object({
   /** Immagine del token; null = cerchio colorato con le iniziali. */
   assetId: z.string().nullable(),
   size: z.number().positive().max(10),
+  /** Immagine della libreria (id del catalogo); usata se non c'è un'immagine caricata. */
+  portrait: z
+    .string()
+    .regex(/^[a-z0-9-]{1,40}$/)
+    .nullable()
+    .optional(),
   // Campi della F4, facoltativi: i token creati prima restano validi.
   vision: visionSpecSchema.optional(),
   /** Luce portata dal token (torcia, lanterna…). */

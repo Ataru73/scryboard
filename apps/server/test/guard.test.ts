@@ -96,6 +96,23 @@ describe("isAllowedPlayerItemChange", () => {
   });
 });
 
+describe("token portrait", () => {
+  it("can be set by players on the tokens they can edit", () => {
+    expect(
+      isAllowedPlayerItemChange("update", "t", token("t"), token("t", { portrait: "goblin" })),
+    ).toBe(true);
+    expect(
+      isAllowedPlayerItemChange("add", "t", undefined, token("t", { portrait: "drago" })),
+    ).toBe(true);
+  });
+
+  it("rejects malformed ids", () => {
+    expect(
+      isAllowedPlayerItemChange("update", "t", token("t"), token("t", { portrait: "Goblin!" })),
+    ).toBe(false);
+  });
+});
+
 describe("token vision fields", () => {
   it("are reserved to the GM", () => {
     const seer = token("t", { vision: { range: 0, darkvision: 12 } });

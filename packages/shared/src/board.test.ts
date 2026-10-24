@@ -150,3 +150,33 @@ describe("board items", () => {
     expect(sorted.map((i) => i.id)).toEqual(["m", "c", "b", "d"]);
   });
 });
+
+describe("token portrait", () => {
+  const token = {
+    ...base,
+    id: "t",
+    layer: "token",
+    z: 0,
+    kind: "token",
+    name: "Goblin",
+    color: "#46a758",
+    assetId: null,
+    size: 1,
+  };
+
+  it("is optional, so tokens created before the library stay valid", () => {
+    expect(boardItemSchema.safeParse(token).success).toBe(true);
+    expect(boardItemSchema.safeParse({ ...token, portrait: null }).success).toBe(true);
+  });
+
+  it("accepts catalog ids, including ones this client does not know", () => {
+    expect(boardItemSchema.safeParse({ ...token, portrait: "goblin" }).success).toBe(true);
+    expect(boardItemSchema.safeParse({ ...token, portrait: "futuro-2" }).success).toBe(true);
+  });
+
+  it("rejects malformed ids", () => {
+    for (const portrait of ["", "Goblin", "a b", "x".repeat(41), 3]) {
+      expect(boardItemSchema.safeParse({ ...token, portrait }).success).toBe(false);
+    }
+  });
+});

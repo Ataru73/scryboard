@@ -9,11 +9,12 @@ import {
 } from "@scryboard/shared";
 import type Konva from "konva";
 import { memo } from "react";
-import { Circle, Ellipse, Group, Image, Line, Rect, Text } from "react-konva";
+import { Circle, Ellipse, Group, Image, Line, Path, Rect, Text } from "react-konva";
 import { PathShape } from "../paths/PathShape";
 import { stampImage } from "../stamps/generate";
 import { normalizeBox } from "./geometry";
 import { tokenInitials } from "./grid";
+import { usePortraitPath } from "./portraitPaths";
 import { useImage } from "./useImage";
 
 export const FONT_FAMILY = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
@@ -177,19 +178,7 @@ function TokenContent({
       {item.assetId ? (
         <TokenImage roomId={roomId} assetId={item.assetId} radius={r - ring / 2} />
       ) : (
-        <Text
-          text={tokenInitials(item.name)}
-          x={-r}
-          y={-r}
-          width={2 * r}
-          height={2 * r}
-          align="center"
-          verticalAlign="middle"
-          fontFamily={FONT_FAMILY}
-          fontStyle="bold"
-          fontSize={r * 0.8}
-          fill="#ffffff"
-        />
+        <TokenFace item={item} radius={r} />
       )}
       <Circle radius={r - ring / 2} stroke={item.color} strokeWidth={ring} />
       {item.name && (
@@ -210,6 +199,41 @@ function TokenContent({
         />
       )}
     </>
+  );
+}
+
+/** Sagoma della libreria se il token ne ha una già caricata, altrimenti le iniziali. */
+function TokenFace({ item, radius }: { item: TokenItem; radius: number }) {
+  const data = usePortraitPath(item.portrait);
+  if (data) {
+    // La sagoma occupa il quadrato 512×512 (gli angoli sono vuoti): 1,5 r sta dentro l'anello.
+    const scale = (radius * 1.5) / 512;
+    return (
+      <Path
+        data={data}
+        x={-256 * scale}
+        y={-256 * scale}
+        scaleX={scale}
+        scaleY={scale}
+        fill="#ffffff"
+        listening={false}
+      />
+    );
+  }
+  return (
+    <Text
+      text={tokenInitials(item.name)}
+      x={-radius}
+      y={-radius}
+      width={2 * radius}
+      height={2 * radius}
+      align="center"
+      verticalAlign="middle"
+      fontFamily={FONT_FAMILY}
+      fontStyle="bold"
+      fontSize={radius * 0.8}
+      fill="#ffffff"
+    />
   );
 }
 
