@@ -1,0 +1,59 @@
+# Scryboard
+
+Whiteboard collaborativa per sessioni di gioco di ruolo online: il GM condivide mappe e
+informazioni e decide cosa vedono i giocatori. Perimetro, architettura e piano di lavoro sono in
+[docs/MVP.md](docs/MVP.md).
+
+## Struttura
+
+```
+apps/server       Node: API HTTP (Hono) + sincronizzazione Yjs (Hocuspocus) + SQLite (Drizzle)
+apps/web          React + Vite
+packages/shared   Tipi e schemi condivisi tra client e server
+```
+
+## Requisiti
+
+- Node.js 24 (`.nvmrc`)
+- pnpm, attivabile con Corepack: `corepack enable pnpm`
+  (se non hai i permessi su `/usr/bin`: `corepack enable --install-directory ~/.local/bin pnpm`)
+
+## Sviluppo
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Apri http://localhost:5173. Vite inoltra `/api` e il WebSocket `/collab` al server sulla porta
+3000. La configurazione del server si legge da `apps/server/.env` (vedi `.env.example`); il
+database di sviluppo finisce in `apps/server/data/`.
+
+| Comando          | Cosa fa                                 |
+| ---------------- | --------------------------------------- |
+| `pnpm dev`       | Server e web app in modalità watch      |
+| `pnpm test`      | Test di tutti i pacchetti (Vitest)      |
+| `pnpm typecheck` | Controllo dei tipi                      |
+| `pnpm lint`      | Lint e formattazione (Biome)            |
+| `pnpm format`    | Applica le correzioni di Biome          |
+| `pnpm build`     | Build di produzione di server e web app |
+
+Dopo aver modificato `apps/server/src/db/schema.ts`, genera la migrazione con
+`pnpm --filter @scryboard/server db:generate`.
+
+## Produzione
+
+```bash
+docker build -t scryboard .
+docker run -p 3000:3000 -v scryboard-data:/data scryboard
+```
+
+Il container serve sia l'API sia la web app sulla porta 3000 e salva il database in `/data`.
+
+## Come funzionano le stanze
+
+- Chi crea una stanza diventa GM e riceve un link con il token segreto nel frammento dell'URL
+  (`/r/<id>#gm=<token>`), che il browser non invia mai al server nelle richieste HTTP.
+- Il link senza frammento è quello da dare ai giocatori.
+- Ogni stanza ha due documenti Yjs: `room:<id>:public` per tutti e `room:<id>:gm`, a cui il
+  server dà accesso solo con il token GM. Gli oggetti nascosti vivranno nel secondo (milestone M3).
