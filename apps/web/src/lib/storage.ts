@@ -42,8 +42,35 @@ function write(key: string, value: string | null): void {
 }
 
 const RECENT_PORTRAITS_KEY = "scryboard:recent-portraits";
+const GEMINI_KEY = "scryboard:gemini-key";
+const GEMINI_MODEL_KEY = "scryboard:gemini-model";
+const MAX_GENERATED = 24;
 
 export const storage = {
+  /** Chiave API di Gemini: resta in questo browser, non si invia mai al server di Scryboard. */
+  getGeminiKey: () => read(GEMINI_KEY),
+  setGeminiKey: (key: string | null) => write(GEMINI_KEY, key?.trim() || null),
+  getGeminiModel: () => read(GEMINI_MODEL_KEY),
+  setGeminiModel: (model: string | null) => write(GEMINI_MODEL_KEY, model?.trim() || null),
+  /** Immagini generate in questa stanza (id degli asset caricati), le più recenti per prime. */
+  getGenerated: (roomId: string): string[] => {
+    try {
+      const saved: unknown = JSON.parse(read(`scryboard:generated:${roomId}`) ?? "[]");
+      return Array.isArray(saved) ? saved.filter((id) => typeof id === "string") : [];
+    } catch {
+      return [];
+    }
+  },
+  addGenerated: (roomId: string, assetId: string) =>
+    write(
+      `scryboard:generated:${roomId}`,
+      JSON.stringify(
+        [assetId, ...storage.getGenerated(roomId).filter((a) => a !== assetId)].slice(
+          0,
+          MAX_GENERATED,
+        ),
+      ),
+    ),
   getRecentPortraits: (): string[] => {
     try {
       const saved: unknown = JSON.parse(read(RECENT_PORTRAITS_KEY) ?? "[]");

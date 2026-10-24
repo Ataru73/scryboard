@@ -1,6 +1,7 @@
 import { PORTRAIT_CATEGORIES, PORTRAITS } from "@scryboard/shared";
 import { useEffect, useId, useMemo, useState } from "react";
 import { storage } from "../lib/storage";
+import { GeneratePanel } from "./GeneratePanel";
 import { loadPortraitPaths, usePortraitPath } from "./portraitPaths";
 
 type Portrait = (typeof PORTRAITS)[number];
@@ -27,15 +28,23 @@ export function PortraitGlyph({ id, color }: { id: string; color: string }) {
 interface Props {
   /** Colore del token, usato per le anteprime. */
   color: string;
+  roomId: string;
+  /** Nome del token, descrizione iniziale della generazione. */
+  tokenName: string;
   onPick: (portrait: Portrait) => void;
+  /** Immagine generata (asset della stanza) scelta dall'utente. */
+  onPickAsset: (assetId: string) => void;
   onClose: () => void;
 }
 
 /** Finestra con la libreria di immagini: ricerca, categorie e immagini usate di recente. */
-export function PortraitPicker({ color, onPick, onClose }: Props) {
+export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, onClose }: Props) {
   const titleId = useId();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+  // La scheda Genera esiste solo con una chiave di Gemini.
+  const [apiKey] = useState(() => storage.getGeminiKey());
+  const [tab, setTab] = useState<"library" | "generate">("library");
   const [recent] = useState(() => storage.getRecentPortraits());
   // Le anteprime si disegnano appena il chunk è scaricato.
   useEffect(() => {
@@ -80,36 +89,65 @@ export function PortraitPicker({ color, onPick, onClose }: Props) {
       }}
     >
       <h2 id={titleId}>Libreria di immagini</h2>
-      <input
-        type="search"
-        aria-label="Cerca nella libreria"
-        placeholder="Cerca (es. goblin, dragon)"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <fieldset className="portrait-categories" aria-label="Categorie">
-        <button type="button" aria-pressed={category === null} onClick={() => setCategory(null)}>
-          Tutte
-        </button>
-        {PORTRAIT_CATEGORIES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            aria-pressed={category === c.id}
-            onClick={() => setCategory(c.id)}
-          >
-            {c.label}
+      {apiKey && (
+        <fieldset className="portrait-categories" aria-label="Origine">
+          <button type="button" aria-pressed={tab === "library"} onClick={() => setTab("library")}>
+            Libreria
           </button>
-        ))}
-      </fieldset>
-      {recentEntries.length > 0 && !query && !category && (
-        <section aria-label="Recenti">
-          <h3 className="muted small">Recenti</h3>
-          <div className="portrait-grid">{recentEntries.map(button)}</div>
-        </section>
+          <button
+            type="button"
+            aria-pressed={tab === "generate"}
+            onClick={() => setTab("generate")}
+          >
+            Genera
+          </button>
+        </fieldset>
       )}
-      <div className="portrait-grid">{shown.map(button)}</div>
-      {shown.length === 0 && <p className="muted small">Nessuna immagine trovata.</p>}
+      {tab === "generate" && apiKey ? (
+        <GeneratePanel
+          roomId={roomId}
+          apiKey={apiKey}
+          tokenName={tokenName}
+          onPickAsset={onPickAsset}
+        />
+      ) : (
+        <>
+          <input
+            type="search"
+            aria-label="Cerca nella libreria"
+            placeholder="Cerca (es. goblin, dragon)"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <fieldset className="portrait-categories" aria-label="Categorie">
+            <button
+              type="button"
+              aria-pressed={category === null}
+              onClick={() => setCategory(null)}
+            >
+              Tutte
+            </button>
+            {PORTRAIT_CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={category === c.id}
+                onClick={() => setCategory(c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </fieldset>
+          {recentEntries.length > 0 && !query && !category && (
+            <section aria-label="Recenti">
+              <h3 className="muted small">Recenti</h3>
+              <div className="portrait-grid">{recentEntries.map(button)}</div>
+            </section>
+          )}
+          <div className="portrait-grid">{shown.map(button)}</div>
+          {shown.length === 0 && <p className="muted small">Nessuna immagine trovata.</p>}
+        </>
+      )}
       <p className="muted small">
         Sagome di{" "}
         <a href="https://game-icons.net" target="_blank" rel="noreferrer">

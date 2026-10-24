@@ -1,0 +1,159 @@
+import { expect, type Page, test } from "@playwright/test";
+import { board, click, setupTable } from "./helpers";
+
+const KEY = "AIza-clave-di-prova";
+const PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const GEMINI = "https://generativelanguage.googleapis.com/**";
+
+const imageReply = {
+  candidates: [
+    {
+      finishReason: "STOP",
+      content: { parts: [{ inlineData: { mimeType: "image/png", data: PNG } }] },
+    },
+  ],
+};
+
+/** L'API di Gemini è sempre simulata: nessuna chiamata reale e nessuna chiave nella CI. */
+async function mockGemini(page: Page, reply: { status: number; body: unknown } | null = null) {
+  const calls: { method: string; url: string; key: string | undefined }[] = [];
+  await page.route(GEMINI, async (route) => {
+    const req = route.request();
+    calls.push({ method: req.method(), url: req.url(), key: req.headers()["x-goog-api-key"] });
+    const { status, body } = reply ?? {
+      status: 200,
+      body: req.method() === "POST" ? imageReply : { name: "models/x" },
+    };
+    await route.fulfill({
+      status,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" },
+      body: JSON.stringify(body),
+    });
+  });
+  return calls;
+}
+
+async function saveKey(page: Page, key = KEY) {
+  await page.getByRole("button", { name: "Impostazioni" }).click();
+  await page.getByLabel("Chiave API di Gemini").fill(key);
+  await page.getByRole("button", { name: "Salva" }).click();
+}
+
+const library = (page: Page) => page.getByRole("dialog", { name: "Libreria di immagini" });
+
+async function openLibrary(page: Page) {
+  await page.keyboard.press("k");
+  await page.getByRole("button", { name: "Libreria", exact: true }).click();
+  return library(page);
+}
+
+test("without a key the library has no Genera tab", async ({ browser }) => {
+  const { gm } = await setupTable(browser);
+  const dialog = await openLibrary(gm);
+  await expect(dialog.getByRole("button", { name: "Genera" })).toHaveCount(0);
+});
+
+test("the key can be tested, saved and forgotten", async ({ browser }) => {
+  const { gm } = await setupTable(browser);
+  const calls = await mockGemini(gm);
+  await gm.getByRole("button", { name: "Impostazioni" }).click();
+  await gm.getByLabel("Chiave API di Gemini").fill(KEY);
+  await gm.getByRole("button", { name: "Prova chiave" }).click();
+  await expect(gm.getByText("Chiave valida.")).toBeVisible();
+  // La prova legge il modello: non è una generazione.
+  expect(calls.map((c) => c.method)).toEqual(["GET"]);
+  expect(calls[0]?.key).toBe(KEY);
+  await gm.getByRole("button", { name: "Salva" }).click();
+
+  const dialog = await openLibrary(gm);
+  await expect(dialog.getByRole("button", { name: "Genera" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Chiudi" }).click();
+
+  await gm.getByRole("button", { name: "Impostazioni" }).click();
+  await gm.getByRole("button", { name: "Dimentica chiave" }).click();
+  await gm.getByRole("button", { name: "Salva" }).click();
+  await gm.keyboard.press("k");
+  await gm.getByRole("button", { name: "Libreria", exact: true }).click();
+  await expect(library(gm).getByRole("button", { name: "Genera" })).toHaveCount(0);
+});
+
+test("a wrong key is reported", async ({ browser }) => {
+  const { gm } = await setupTable(browser);
+  await mockGemini(gm, {
+    status: 400,
+    body: { error: { message: "API key not valid. Please pass a valid API key." } },
+  });
+  await gm.getByRole("button", { name: "Impostazioni" }).click();
+  await gm.getByLabel("Chiave API di Gemini").fill("sbagliata");
+  await gm.getByRole("button", { name: "Prova chiave" }).click();
+  await expect(gm.getByText("Chiave API non valida.")).toBeVisible();
+});
+
+test("a player generates a token image and it becomes the token's image", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  const calls = await mockGemini(player);
+  const leaks: string[] = [];
+  player.on("request", (req) => {
+    const appRequest = new URL(req.url()).hostname === "127.0.0.1";
+    const text = `${req.url()} ${req.postData() ?? ""} ${JSON.stringify(req.headers())}`;
+    if (appRequest && text.includes(KEY)) leaks.push(req.url());
+  });
+  await saveKey(player);
+
+  await player.keyboard.press("k");
+  await player.getByLabel("Nome del token").fill("Goblin arciere");
+  await player.getByRole("button", { name: "Libreria", exact: true }).click();
+  const dialog = library(player);
+  await dialog.getByRole("button", { name: "Genera" }).click();
+  // La descrizione parte dal nome del token.
+  await expect(dialog.getByLabel("Descrizione")).toHaveValue("Goblin arciere");
+  await dialog.getByLabel("Descrizione").fill("goblin con l'arco e il cappuccio verde");
+  await dialog.getByRole("button", { name: "Genera", exact: true }).last().click();
+  await expect(dialog.getByRole("button", { name: /Usa la variante/ })).toHaveCount(2);
+  const posts = calls.filter((c) => c.method === "POST");
+  expect(posts).toHaveLength(2);
+  expect(posts.every((c) => c.key === KEY && !c.url.includes(KEY))).toBe(true);
+
+  await dialog.getByRole("button", { name: "Usa la variante 1" }).click();
+  await expect(dialog).toBeHidden();
+  // L'immagine è un asset della stanza: il token ora ha "Togli immagine".
+  await expect(player.getByRole("button", { name: "Togli immagine" })).toBeVisible();
+  await click(player, 300, 300);
+  await expect(board(gm)).toHaveAttribute("data-item-count", "1");
+
+  // Resta nella cronologia della stanza e si riusa senza rigenerare.
+  await player.getByRole("button", { name: "Togli immagine" }).click();
+  await player.getByRole("button", { name: "Libreria", exact: true }).click();
+  await library(player).getByRole("button", { name: "Genera" }).click();
+  await expect(
+    library(player).getByRole("button", { name: "Riusa un'immagine generata" }),
+  ).toHaveCount(1);
+  await library(player).getByRole("button", { name: "Riusa un'immagine generata" }).click();
+  await expect(player.getByRole("button", { name: "Togli immagine" })).toBeVisible();
+  expect(calls.filter((c) => c.method === "POST")).toHaveLength(2);
+  expect(leaks).toEqual([]);
+});
+
+test("Gemini refusals and quota errors are shown clearly", async ({ browser }) => {
+  const { gm } = await setupTable(browser);
+  await saveKey(gm);
+  for (const [reply, message] of [
+    [{ status: 200, body: { promptFeedback: { blockReason: "PROHIBITED_CONTENT" } } }, /rifiutato/],
+    [
+      { status: 429, body: { error: { status: "RESOURCE_EXHAUSTED" } } },
+      /Quota di Gemini esaurita/,
+    ],
+  ] as const) {
+    await gm.unroute(GEMINI);
+    await mockGemini(gm, reply);
+    const dialog = await openLibrary(gm);
+    await dialog.getByRole("button", { name: "Genera" }).click();
+    await dialog.getByLabel("Descrizione").fill("un mostro");
+    await dialog.getByRole("button", { name: "Genera", exact: true }).last().click();
+    await expect(dialog.getByText(message)).toBeVisible();
+    await dialog.getByRole("button", { name: "Chiudi" }).click();
+    await gm.keyboard.press("Escape");
+  }
+});

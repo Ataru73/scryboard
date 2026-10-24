@@ -123,7 +123,13 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
       {libraryOpen && (
         <PortraitPicker
           color={value.color}
+          roomId={roomId}
+          tokenName={name}
           onPick={pickPortrait}
+          onPickAsset={(assetId) => {
+            setLibraryOpen(false);
+            onChange({ assetId, portrait: null });
+          }}
           onClose={() => setLibraryOpen(false)}
         />
       )}
