@@ -6,6 +6,31 @@ const PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 const GEMINI = "https://generativelanguage.googleapis.com/**";
 
+const modelsReply = {
+  models: [
+    {
+      name: "models/gemini-3.1-flash",
+      displayName: "Gemini Flash",
+      supportedGenerationMethods: ["generateContent"],
+    },
+    {
+      name: "models/gemini-3.1-flash-image",
+      displayName: "Nano Banana 2",
+      supportedGenerationMethods: ["generateContent"],
+    },
+    {
+      name: "models/gemini-nano-banana-2.1",
+      displayName: "Nano Banana 2.1",
+      supportedGenerationMethods: ["generateContent"],
+    },
+    {
+      name: "models/imagen-4.0-generate",
+      displayName: "Imagen 4",
+      supportedGenerationMethods: ["predict"],
+    },
+  ],
+};
+
 const imageReply = {
   candidates: [
     {
@@ -23,7 +48,7 @@ async function mockGemini(page: Page, reply: { status: number; body: unknown } |
     calls.push({ method: req.method(), url: req.url(), key: req.headers()["x-goog-api-key"] });
     const { status, body } = reply ?? {
       status: 200,
-      body: req.method() === "POST" ? imageReply : { name: "models/x" },
+      body: req.method() === "POST" ? imageReply : modelsReply,
     };
     await route.fulfill({
       status,
@@ -61,14 +86,38 @@ test("the key can be tested, saved and forgotten", async ({ browser }) => {
   await gm.getByRole("button", { name: "Impostazioni" }).click();
   await gm.getByLabel("Chiave API di Gemini").fill(KEY);
   await gm.getByRole("button", { name: "Prova chiave" }).click();
-  await expect(gm.getByText("Chiave valida.")).toBeVisible();
-  // La prova legge il modello: non è una generazione.
+  await expect(gm.getByText("Chiave valida: 2 modelli per immagini.")).toBeVisible();
+  // La prova scarica l'elenco dei modelli: non è una generazione.
   expect(calls.map((c) => c.method)).toEqual(["GET"]);
   expect(calls[0]?.key).toBe(KEY);
+
+  // Nel menu ci sono solo i modelli che generano immagini.
+  const select = gm.getByLabel("Modello");
+  await expect(select.getByRole("option")).toHaveText([
+    /Predefinito/,
+    "Nano Banana 2 (gemini-3.1-flash-image)",
+    "Nano Banana 2.1 (gemini-nano-banana-2.1)",
+  ]);
+  await select.selectOption("gemini-nano-banana-2.1");
+  await gm.getByRole("button", { name: "Salva" }).click();
+
+  // Alla riapertura l'elenco si scarica da solo e il modello scelto resta selezionato.
+  await gm.getByRole("button", { name: "Impostazioni" }).click();
+  await expect(gm.getByLabel("Modello")).toHaveValue("gemini-nano-banana-2.1");
+  await expect.poll(() => calls.map((c) => c.method)).toEqual(["GET", "GET"]);
   await gm.getByRole("button", { name: "Salva" }).click();
 
   const dialog = await openLibrary(gm);
-  await expect(dialog.getByRole("button", { name: "Genera" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Genera" }).click();
+  await dialog.getByLabel("Descrizione").fill("un lupo");
+  await dialog.getByRole("button", { name: "Genera", exact: true }).last().click();
+  await expect(dialog.getByRole("button", { name: /Usa la variante/ })).toHaveCount(2);
+  // La generazione usa il modello scelto nel menu.
+  expect(
+    calls
+      .filter((c) => c.method === "POST")
+      .every((c) => c.url.includes("gemini-nano-banana-2.1:generateContent")),
+  ).toBe(true);
   await dialog.getByRole("button", { name: "Chiudi" }).click();
 
   await gm.getByRole("button", { name: "Impostazioni" }).click();

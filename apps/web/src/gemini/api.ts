@@ -164,7 +164,45 @@ export async function generateVariants(
   throw (first as PromiseRejectedResult).reason;
 }
 
-/** Controlla la chiave leggendo i dati del modello: non genera nulla, quindi non costa. */
-export async function testKey(apiKey: string, model: string): Promise<void> {
-  await call(`${ENDPOINT}/models/${encodeURIComponent(model)}`, apiKey);
+export interface GeminiModel {
+  /** Id da usare nell'URL (senza il prefisso `models/`). */
+  id: string;
+  displayName: string;
+}
+
+interface ModelsResponse {
+  models?: { name?: string; displayName?: string; supportedGenerationMethods?: string[] }[];
+  nextPageToken?: string;
+}
+
+/**
+ * L'elenco dei modelli non dice cosa producono: si tengono quelli che rispondono a
+ * `generateContent` e hanno nel nome "image" o "nano-banana" (Imagen usa un altro metodo).
+ */
+export function pickImageModels(json: unknown): GeminiModel[] {
+  const res = (json ?? {}) as ModelsResponse;
+  return (res.models ?? []).flatMap((m) => {
+    const id = m.name?.replace(/^models\//, "");
+    if (!id || !m.supportedGenerationMethods?.includes("generateContent")) return [];
+    if (!/image|nano-banana/i.test(id)) return [];
+    return [{ id, displayName: m.displayName || id }];
+  });
+}
+
+/**
+ * Elenco dei modelli per immagini disponibili con la chiave. Serve anche a controllare la chiave:
+ * non genera nulla, quindi non costa.
+ */
+export async function listImageModels(apiKey: string): Promise<GeminiModel[]> {
+  const models: GeminiModel[] = [];
+  let pageToken = "";
+  // Poche pagine bastano: il limite evita cicli infiniti con risposte anomale.
+  for (let page = 0; page < 10; page++) {
+    const query = `pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`;
+    const body = (await call(`${ENDPOINT}/models?${query}`, apiKey)) as ModelsResponse | null;
+    models.push(...pickImageModels(body));
+    pageToken = body?.nextPageToken ?? "";
+    if (!pageToken) break;
+  }
+  return models;
 }

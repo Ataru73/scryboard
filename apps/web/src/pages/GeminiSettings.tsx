@@ -1,5 +1,10 @@
-import { type ReactNode, useId, useState } from "react";
-import { DEFAULT_GEMINI_MODEL, GeminiError, testKey } from "../gemini/api";
+import { type ReactNode, useEffect, useId, useState } from "react";
+import {
+  DEFAULT_GEMINI_MODEL,
+  GeminiError,
+  type GeminiModel,
+  listImageModels,
+} from "../gemini/api";
 import { storage } from "../lib/storage";
 
 type Check = { state: "idle" | "testing" } | { state: "ok" } | { state: "error"; message: string };
@@ -14,25 +19,41 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
   const [apiKey, setApiKey] = useState(() => storage.getGeminiKey() ?? "");
   const [model, setModel] = useState(() => storage.getGeminiModel() ?? "");
   const [check, setCheck] = useState<Check>({ state: "idle" });
+  /** Modelli per immagini disponibili con la chiave; null finché non sono stati scaricati. */
+  const [models, setModels] = useState<GeminiModel[] | null>(null);
 
   const save = () => {
     storage.setGeminiKey(apiKey);
     storage.setGeminiModel(model);
   };
 
-  async function test() {
+  /** Scarica i modelli con la chiave: se risponde, la chiave è valida. */
+  async function loadModels(key: string): Promise<boolean> {
     setCheck({ state: "testing" });
     try {
-      await testKey(apiKey.trim(), model.trim() || DEFAULT_GEMINI_MODEL);
-      save();
+      setModels(await listImageModels(key));
       setCheck({ state: "ok" });
+      return true;
     } catch (e) {
+      setModels(null);
       setCheck({
         state: "error",
         message: e instanceof GeminiError ? e.message : "Prova non riuscita.",
       });
+      return false;
     }
   }
+
+  async function test() {
+    if (await loadModels(apiKey.trim())) save();
+  }
+
+  // Con una chiave già salvata l'elenco si scarica all'apertura (non costa nulla).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: solo all'apertura.
+  useEffect(() => {
+    const saved = storage.getGeminiKey();
+    if (open && saved) void loadModels(saved);
+  }, [open]);
 
   return (
     <>
@@ -73,27 +94,52 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
               value={apiKey}
               onChange={(e) => {
                 setApiKey(e.target.value);
+                setModels(null);
                 setCheck({ state: "idle" });
               }}
             />
           </label>
           <label className="field" htmlFor={modelId}>
             <span>Modello</span>
-            <input
-              id={modelId}
-              value={model}
-              placeholder={DEFAULT_GEMINI_MODEL}
-              spellCheck={false}
-              onChange={(e) => setModel(e.target.value)}
-            />
+            {models && models.length > 0 ? (
+              <select id={modelId} value={model} onChange={(e) => setModel(e.target.value)}>
+                <option value="">Predefinito ({DEFAULT_GEMINI_MODEL})</option>
+                {/* Un modello scelto in precedenza resta selezionabile anche se non è più in elenco. */}
+                {model && !models.some((m) => m.id === model) && (
+                  <option value={model}>{model}</option>
+                )}
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.displayName === m.id ? m.id : `${m.displayName} (${m.id})`}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={modelId}
+                value={model}
+                placeholder={DEFAULT_GEMINI_MODEL}
+                spellCheck={false}
+                onChange={(e) => setModel(e.target.value)}
+              />
+            )}
           </label>
+          {models && models.length === 0 && (
+            <p className="muted small">
+              Con questa chiave non risultano modelli per immagini: puoi scrivere il nome a mano.
+            </p>
+          )}
           <p className="muted small">
             La chiave resta salvata solo in questo browser e le richieste partono da qui verso
             Google: Scryboard non le vede. Le richieste sono addebitate sul conto Google di chi ha
             creato la chiave, e qualunque script della pagina può leggerla: usa una chiave dedicata,
             con limiti di spesa.
           </p>
-          {check.state === "ok" && <p role="status">Chiave valida.</p>}
+          {check.state === "ok" && (
+            <p role="status">
+              Chiave valida{models ? `: ${models.length} modelli per immagini` : ""}.
+            </p>
+          )}
           {check.state === "error" && <p className="error">{check.message}</p>}
           <div className="modal-actions">
             <button
@@ -110,6 +156,7 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
               onClick={() => {
                 storage.setGeminiKey(null);
                 setApiKey("");
+                setModels(null);
                 setCheck({ state: "idle" });
               }}
             >

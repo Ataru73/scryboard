@@ -4,8 +4,9 @@ import {
   GeminiError,
   generateImage,
   generateVariants,
+  listImageModels,
   parseImages,
-  testKey,
+  pickImageModels,
 } from "./api";
 
 const image = (data: string) => ({ inlineData: { mimeType: "image/png", data } });
@@ -106,12 +107,56 @@ describe("requests", () => {
     mockFetch(429, {});
     await expect(generateVariants(opts, 2)).rejects.toMatchObject({ code: "quota" });
   });
+});
 
-  it("tests the key by reading the model, which generates nothing", async () => {
-    const fetchMock = mockFetch(200, { name: "models/m" });
-    await testKey("k", "m");
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit | undefined];
-    expect(url).toBe("https://generativelanguage.googleapis.com/v1beta/models/m");
-    expect(init?.method).toBeUndefined();
+const model = (name: string, methods: string[] = ["generateContent"], displayName?: string) => ({
+  name: `models/${name}`,
+  displayName,
+  supportedGenerationMethods: methods,
+});
+
+describe("image models", () => {
+  it("keeps the generateContent models that make images", () => {
+    const picked = pickImageModels({
+      models: [
+        model("gemini-3.1-flash-image", ["generateContent"], "Nano Banana 2"),
+        model("gemini-nano-banana-2.1"),
+        model("gemini-3.1-flash"),
+        model("imagen-4.0-generate", ["predict"]),
+        model("gemini-2.5-flash-image", ["countTokens"]),
+        { displayName: "senza nome" },
+      ],
+    });
+    expect(picked).toEqual([
+      { id: "gemini-3.1-flash-image", displayName: "Nano Banana 2" },
+      { id: "gemini-nano-banana-2.1", displayName: "gemini-nano-banana-2.1" },
+    ]);
+    expect(pickImageModels(null)).toEqual([]);
+  });
+
+  it("follows the pages and sends the key as a header", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ models: [model("a-image")], nextPageToken: "t 2" }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ models: [model("b-image")] }), { status: 200 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await listImageModels("k")).map((m) => m.id)).toEqual(["a-image", "b-image"]);
+    const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(urls[0]).toBe("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000");
+    expect(urls[1]).toContain("pageToken=t%202");
+    expect(urls.join()).not.toContain("key=");
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect((init.headers as Record<string, string>)["x-goog-api-key"]).toBe("k");
+  });
+
+  it("rejects a wrong key", async () => {
+    mockFetch(400, { error: { message: "API key not valid." } });
+    await expect(listImageModels("x")).rejects.toMatchObject({ code: "invalid-key" });
   });
 });
