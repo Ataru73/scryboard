@@ -13,6 +13,8 @@
       "!**/drizzle/meta",
       "!pnpm-lock.yaml",
       "!test-results",
+      "!**/*.gen.ts",
+      "!assets/portraits/*.svg",
       "!playwright-report"
     ]
   },

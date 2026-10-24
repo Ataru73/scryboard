@@ -4,6 +4,7 @@ export * from "./documents";
 export * from "./fog";
 export * from "./messages";
 export * from "./permissions";
+export * from "./portraits";
 export * from "./presence";
 export * from "./rooms";
 export * from "./terrain";
