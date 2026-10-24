@@ -247,6 +247,41 @@ describe("BoardStore", () => {
     expect(store.getWalls()).toEqual([]);
   });
 
+  it("clears the entire board (public items, hidden items, terrain, walls and fog) in one undo step", () => {
+    const publicDoc = new Y.Doc();
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, gmDoc, "gm");
+    expect(store.isEmpty()).toBe(true);
+
+    store.add([text("pub")]);
+    store.add([text("secret")], { hidden: true });
+    store.addTerrain({
+      biome: "grass",
+      mode: "paint",
+      shape: "brush",
+      points: [0, 0, 10, 10],
+      width: 40,
+    });
+    store.addWall({ kind: "wall", points: [0, 0, 70, 0] });
+    store.addFog({ mode: "cover", shape: "all", points: [] });
+    expect(store.isEmpty()).toBe(false);
+
+    store.clearBoard();
+    expect(store.isEmpty()).toBe(true);
+    expect(store.getSnapshot()).toEqual([]);
+    expect(store.getTerrain()).toEqual([]);
+    expect(store.getWalls()).toEqual([]);
+    expect(store.getFog()).toEqual([]);
+
+    store.undo();
+    expect(store.isEmpty()).toBe(false);
+    expect(store.getSnapshot().map((i) => i.id)).toEqual(["pub", "secret"]);
+    expect(store.isHidden("secret")).toBe(true);
+    expect(store.getTerrain()).toHaveLength(1);
+    expect(store.getWalls()).toHaveLength(1);
+    expect(store.getFog()).toHaveLength(1);
+  });
+
   it("syncs between clients and undoes only local changes", () => {
     const [docA, docB] = linkedDocs();
     const alice = new BoardStore(docA, null, "alice");

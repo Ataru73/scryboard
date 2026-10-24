@@ -150,6 +150,7 @@ function Room({
             gmToken ? { gmToken } : { credentials: playerCredentials(profile.id, profile.secret) }
           }
         />
+        <p className="muted small attribution">Powered by Doc</p>
       </aside>
       <main className="board-area">
         {store && provider ? (

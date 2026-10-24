@@ -1,6 +1,6 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { DRAW_COLORS, type Role, STROKE_WIDTHS } from "@scryboard/shared";
-import { useRef, useSyncExternalStore } from "react";
+import { useId, useRef, useState, useSyncExternalStore } from "react";
 import { COLOR_NAMES } from "./colors";
 import { FogPanel } from "./FogPanel";
 import { GridPanel } from "./GridPanel";
@@ -12,6 +12,7 @@ import {
   ImageIcon,
   RedoIcon,
   TOOL_ICONS,
+  TrashIcon,
   UndoIcon,
 } from "./icons";
 import { LightPanel } from "./LightPanel";
@@ -68,10 +69,16 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     setTokenDraft,
     setGridPanelOpen,
     setCreateHidden,
+    select,
+    setEditingText,
   } = useBoardUi.getState();
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const canUndo = useSyncExternalStore(store.subscribe, () => store.canUndo());
   const canRedo = useSyncExternalStore(store.subscribe, () => store.canRedo());
+  const isEmpty = useSyncExternalStore(store.subscribe, () => store.isEmpty());
+  const [clearModalOpen, setClearModalOpen] = useState(false);
+  const clearTitleId = useId();
+  const clearDescId = useId();
   const fileInput = useRef<HTMLInputElement>(null);
   const center = { x: viewportSize.width / 2, y: viewportSize.height / 2 };
 
@@ -161,7 +168,61 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         >
           {RedoIcon}
         </button>
+        {role === "gm" && (
+          <>
+            <span className="toolbar-separator" />
+            <button
+              type="button"
+              className="icon-button"
+              title="Svuota lavagna"
+              aria-label="Svuota lavagna"
+              disabled={isEmpty}
+              onClick={() => setClearModalOpen(true)}
+            >
+              {TrashIcon}
+            </button>
+          </>
+        )}
       </div>
+
+      {role === "gm" && clearModalOpen && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: Esc chiude nativamente <dialog>.
+        <dialog
+          ref={(el) => {
+            if (el && !el.open) el.showModal();
+          }}
+          className="card stack modal"
+          aria-labelledby={clearTitleId}
+          aria-describedby={clearDescId}
+          onClose={() => setClearModalOpen(false)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setClearModalOpen(false);
+          }}
+        >
+          <h2 id={clearTitleId}>Svuotare la lavagna?</h2>
+          <p id={clearDescId} className="muted small">
+            Verranno rimossi mappe, terreno, percorsi, muri, porte, luci, token, nebbia e disegni.
+            Potrai comunque annullare con Ctrl+Z.
+          </p>
+          <div className="modal-actions">
+            <button type="button" onClick={() => setClearModalOpen(false)}>
+              Annulla
+            </button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => {
+                store.clearBoard();
+                select([]);
+                setEditingText(null);
+                setClearModalOpen(false);
+              }}
+            >
+              Svuota lavagna
+            </button>
+          </div>
+        </dialog>
+      )}
 
       {tool === "token" && (
         <div className="toolbar toolbar-style" role="toolbar" aria-label="Nuovo token">

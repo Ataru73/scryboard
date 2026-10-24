@@ -431,6 +431,41 @@ export class BoardStore {
     );
   }
 
+  isEmpty(): boolean {
+    return (
+      this.byId.size === 0 &&
+      this.terrainMap.size === 0 &&
+      this.wallsMap.size === 0 &&
+      this.fogMap.size === 0
+    );
+  }
+
+  /** Svuota l'intera lavagna (oggetti pubblici e nascosti, terreno, muri e nebbia) in un solo passo di annulla. */
+  clearBoard() {
+    if (this.isEmpty()) return;
+    this.action(() => {
+      if (
+        this.pub.items.size > 0 ||
+        this.terrainMap.size > 0 ||
+        this.wallsMap.size > 0 ||
+        this.fogMap.size > 0
+      ) {
+        this.transact(this.pub, () => {
+          for (const key of [...this.pub.items.keys()]) this.pub.items.delete(key);
+          for (const key of [...this.terrainMap.keys()]) this.terrainMap.delete(key);
+          for (const key of [...this.wallsMap.keys()]) this.wallsMap.delete(key);
+          for (const key of [...this.fogMap.keys()]) this.fogMap.delete(key);
+        });
+      }
+      if (this.gm && this.gm.items.size > 0) {
+        const gm = this.gm;
+        this.transact(gm, () => {
+          for (const key of [...gm.items.keys()]) gm.items.delete(key);
+        });
+      }
+    });
+  }
+
   undo() {
     const entry = this.history.pop();
     if (!entry) return;

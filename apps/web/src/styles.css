@@ -103,6 +103,13 @@ button.primary {
   font-weight: 600;
 }
 
+button.danger {
+  border-color: transparent;
+  background: var(--danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -805,6 +812,33 @@ button.primary {
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
   font-size: 0.9rem;
   z-index: 2;
+}
+
+.modal {
+  width: min(calc(100% - 2rem), 22rem);
+  padding: 1.25rem;
+  color: var(--text);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+}
+
+.modal::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.attribution {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+.sidebar .attribution {
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 
 @media (max-width: 720px) {

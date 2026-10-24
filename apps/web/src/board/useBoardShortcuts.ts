@@ -33,7 +33,7 @@ function isTyping(target: EventTarget | null): boolean {
 export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewportSize }: Options) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (isTyping(e.target)) return;
+      if (isTyping(e.target) || document.querySelector("dialog[open]")) return;
       const ui = useBoardUi.getState();
       const mod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();

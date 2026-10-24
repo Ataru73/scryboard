@@ -200,3 +200,36 @@ test("zoom with the wheel and pan with the hand tool", async ({ browser }) => {
   await gm.page.keyboard.press("Delete");
   await expectItems(gm.page, 0);
 });
+
+test("GM clears the board after confirming in the modal, and can undo", async ({ browser }) => {
+  const gm = await createRoomAsGm(browser);
+  const player = await (await browser.newContext()).newPage();
+  await player.goto(gm.playerLink);
+  await joinAs(player, "Frodo");
+
+  await expect(player.getByRole("button", { name: "Svuota lavagna" })).toHaveCount(0);
+  const clearButton = gm.page.getByRole("button", { name: "Svuota lavagna" });
+  await expect(clearButton).toBeDisabled();
+
+  await gm.page.getByRole("button", { name: "Rettangolo" }).click();
+  await drag(gm.page, [300, 200], [500, 320]);
+  await expectItems(player, 1);
+  await expect(clearButton).toBeEnabled();
+
+  await clearButton.click();
+  const dialog = gm.page.getByRole("dialog", { name: "Svuotare la lavagna?" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Annulla" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expectItems(player, 1);
+
+  await clearButton.click();
+  await dialog.getByRole("button", { name: "Svuota lavagna" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expectItems(gm.page, 0);
+  await expectItems(player, 0);
+  await expect(clearButton).toBeDisabled();
+
+  await gm.page.keyboard.press("Control+z");
+  await expectItems(player, 1);
+});

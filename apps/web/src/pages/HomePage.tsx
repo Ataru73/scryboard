@@ -48,6 +48,7 @@ export function HomePage() {
           </button>
           {error && <p className="error">{error}</p>}
         </form>
+        <p className="muted small attribution">Powered by Doc</p>
       </div>
     </main>
   );
