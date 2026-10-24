@@ -952,3 +952,17 @@ button.danger {
   height: 100%;
   object-fit: cover;
 }
+
+.cropper-canvas {
+  align-self: center;
+  width: min(100%, 20rem);
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  cursor: grab;
+  touch-action: none;
+}
+
+.cropper-canvas:active {
+  cursor: grabbing;
+}

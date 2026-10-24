@@ -1,11 +1,12 @@
-import { DRAW_COLORS, PORTRAITS, TOKEN_SIZES } from "@scryboard/shared";
+import { DRAW_COLORS, MAX_ASSET_BYTES, PORTRAITS, TOKEN_SIZES } from "@scryboard/shared";
 import { useId, useRef, useState } from "react";
 import { storage } from "../lib/storage";
 import { useAssetAuth } from "./assetAuth";
 import { COLOR_NAMES } from "./colors";
 import { PortraitPicker } from "./PortraitPicker";
+import { TokenCropper } from "./TokenCropper";
 import type { TokenDraft } from "./tools";
-import { UploadError, uploadImage } from "./upload";
+import { isSupportedImage, UploadError, uploadImage } from "./upload";
 
 interface Props {
   value: TokenDraft;
@@ -23,6 +24,8 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  /** Immagine scelta dal disco, in attesa che l'utente ne scelga l'area. */
+  const [cropping, setCropping] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const gmToken = useAssetAuth();
   const nameId = useId();
@@ -46,8 +49,21 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
     onChange(patch);
   }
 
-  async function onFile(file: File | undefined) {
+  /** Controlla il file e apre l'editor di ritaglio: si carica solo l'area scelta. */
+  function onFile(file: File | undefined) {
     if (!file) return;
+    setError(null);
+    if (!isSupportedImage(file)) {
+      setError(`"${file.name}": formato non supportato (usa PNG, JPEG, WebP o GIF).`);
+    } else if (file.size > MAX_ASSET_BYTES) {
+      setError(`"${file.name}" è troppo grande (massimo 20 MB).`);
+    } else {
+      setCropping(file);
+    }
+  }
+
+  async function upload(file: File) {
+    setCropping(null);
     setUploading(true);
     setError(null);
     try {
@@ -120,6 +136,13 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
           Togli immagine
         </button>
       )}
+      {cropping && (
+        <TokenCropper
+          file={cropping}
+          onConfirm={(cropped) => void upload(cropped)}
+          onCancel={() => setCropping(null)}
+        />
+      )}
       {libraryOpen && (
         <PortraitPicker
           color={value.color}
@@ -140,7 +163,7 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
         hidden
         aria-label="Immagine del token"
         onChange={(e) => {
-          void onFile(e.target.files?.[0]);
+          onFile(e.target.files?.[0]);
           e.target.value = "";
         }}
       />
