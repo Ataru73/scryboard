@@ -41,7 +41,23 @@ function write(key: string, value: string | null): void {
   }
 }
 
+const RECENT_PORTRAITS_KEY = "scryboard:recent-portraits";
+
 export const storage = {
+  getRecentPortraits: (): string[] => {
+    try {
+      const saved: unknown = JSON.parse(read(RECENT_PORTRAITS_KEY) ?? "[]");
+      return Array.isArray(saved) ? saved.filter((id) => typeof id === "string").slice(0, 8) : [];
+    } catch {
+      return [];
+    }
+  },
+  /** Mette l'immagine in testa ai recenti (al massimo 8, senza doppioni). */
+  addRecentPortrait: (id: string) =>
+    write(
+      RECENT_PORTRAITS_KEY,
+      JSON.stringify([id, ...storage.getRecentPortraits().filter((r) => r !== id)].slice(0, 8)),
+    ),
   getGmToken: (roomId: string) => read(`scryboard:gm:${roomId}`),
   setGmToken: (roomId: string, token: string | null) => write(`scryboard:gm:${roomId}`, token),
   getProfile: (): Profile | null => {

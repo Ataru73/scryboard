@@ -776,6 +776,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         color: tokenDraft.color,
         size: tokenDraft.size,
         assetId: tokenDraft.assetId,
+        portrait: tokenDraft.portrait ?? null,
       },
     ]);
   }

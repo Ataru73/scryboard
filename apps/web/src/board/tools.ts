@@ -80,6 +80,8 @@ export interface TokenDraft {
   color: string;
   size: number;
   assetId: string | null;
+  /** Immagine della libreria (id del catalogo). */
+  portrait?: string | null;
 }
 
 interface BoardUiState {
@@ -193,7 +195,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   editingTextId: null,
   viewport: { x: 0, y: 0, scale: 1 },
   spacePan: false,
-  tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null },
+  tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null, portrait: null },
   gridPanelOpen: false,
   fogMode: "cover",
   fogShape: "rect",

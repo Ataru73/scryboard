@@ -1,7 +1,7 @@
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { expect, type Page, test } from "@playwright/test";
 import * as Y from "yjs";
-import { board, setupTable } from "./helpers";
+import { board, click, setupTable, tokenList } from "./helpers";
 
 /** Dopo T3 il portrait si sceglie dalla Libreria; qui lo imposta un client Yjs come farebbe il GM. */
 async function addTokens(gm: Page, tokens: { id: string; x: number; portrait?: string }[]) {
@@ -45,7 +45,7 @@ const paths = (page: Page) =>
     const { Konva } = window as unknown as {
       Konva: { stages: { find: (s: string) => { className: string }[] }[] };
     };
-    return Konva.stages[0]?.find("Path").length ?? 0;
+    return Konva.stages[0]?.find(".portrait").length ?? 0;
   });
 
 test("a token with a library portrait shows the silhouette; unknown ids fall back to initials", async ({
@@ -61,4 +61,54 @@ test("a token with a library portrait shows the silhouette; unknown ids fall bac
   for (const page of [gm, player]) {
     await expect.poll(() => paths(page)).toBe(2);
   }
+});
+
+test("the GM picks Goblin from the library and the player sees it in the token list", async ({
+  browser,
+}) => {
+  const { gm, player } = await setupTable(browser);
+  await gm.keyboard.press("k");
+  await gm.getByRole("button", { name: "Libreria", exact: true }).click();
+  const dialog = gm.getByRole("dialog", { name: "Libreria di immagini" });
+  await dialog.getByLabel("Cerca nella libreria").fill("goblin");
+  await expect(dialog.getByRole("button", { name: "Goblin" })).toHaveCount(1);
+  await dialog.getByRole("button", { name: "Goblin" }).click();
+  await expect(dialog).toBeHidden();
+  // Nome e taglia si adattano alla scelta.
+  await expect(gm.getByLabel("Nome del token")).toHaveValue("Goblin");
+
+  await click(gm, 300, 300);
+  await expect(board(gm)).toHaveAttribute("data-item-count", "1");
+  await expect(tokenList(player).getByRole("listitem")).toContainText("Goblin, ");
+  await expect(tokenList(player).getByRole("listitem")).toContainText("immagine Goblin");
+  await expect.poll(() => paths(player)).toBe(1);
+
+  // Il drago nasce Enorme e "Togli immagine" riporta alle iniziali.
+  await gm.getByRole("button", { name: "Libreria", exact: true }).click();
+  await gm
+    .getByRole("dialog", { name: "Libreria di immagini" })
+    .getByRole("button", { name: "Drago", exact: true })
+    .click();
+  await expect(gm.getByLabel("Taglia")).toHaveValue("3");
+  await gm.getByRole("button", { name: "Togli immagine" }).click();
+  await expect(gm.getByRole("button", { name: "Togli immagine" })).toHaveCount(0);
+});
+
+test("a selected token can change its library image", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await gm.keyboard.press("k");
+  await gm.getByLabel("Nome del token").fill("Boss");
+  await click(gm, 300, 300);
+  await gm.keyboard.press("v");
+  await click(gm, 300, 300);
+  const panel = gm.getByRole("toolbar", { name: "Selezione" });
+  await panel.getByRole("button", { name: "Libreria", exact: true }).click();
+  await gm
+    .getByRole("dialog", { name: "Libreria di immagini" })
+    .getByRole("button", { name: "Troll", exact: true })
+    .click();
+  await expect.poll(() => paths(player)).toBe(1);
+  await expect(tokenList(player).getByRole("listitem")).toContainText("immagine Troll");
+  // Il nome scelto dal GM non viene sovrascritto.
+  await expect(tokenList(player).getByRole("listitem")).toContainText("Boss");
 });

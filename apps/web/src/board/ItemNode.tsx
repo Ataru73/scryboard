@@ -210,6 +210,7 @@ function TokenFace({ item, radius }: { item: TokenItem; radius: number }) {
     const scale = (radius * 1.5) / 512;
     return (
       <Path
+        name="portrait"
         data={data}
         x={-256 * scale}
         y={-256 * scale}

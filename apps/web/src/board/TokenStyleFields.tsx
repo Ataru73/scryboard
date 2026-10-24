@@ -1,7 +1,9 @@
-import { DRAW_COLORS, TOKEN_SIZES } from "@scryboard/shared";
+import { DRAW_COLORS, PORTRAITS, TOKEN_SIZES } from "@scryboard/shared";
 import { useId, useRef, useState } from "react";
+import { storage } from "../lib/storage";
 import { useAssetAuth } from "./assetAuth";
 import { COLOR_NAMES } from "./colors";
+import { PortraitPicker } from "./PortraitPicker";
 import type { TokenDraft } from "./tools";
 import { UploadError, uploadImage } from "./upload";
 
@@ -20,6 +22,7 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
   const [name, setName] = useState(value.name);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const gmToken = useAssetAuth();
   const nameId = useId();
@@ -28,6 +31,20 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
   const commitName = () => {
     if (name !== value.name) onChange({ name: name.trim() });
   };
+
+  /** Sceglie un'immagine: nome e taglia si adattano solo se non li ha già cambiati l'utente. */
+  function pickPortrait(picked: (typeof PORTRAITS)[number]) {
+    const previous = PORTRAITS.find((p) => p.id === value.portrait);
+    const patch: Partial<TokenDraft> = { portrait: picked.id, assetId: null };
+    if (!name.trim() || name === previous?.label) {
+      patch.name = picked.label;
+      setName(picked.label);
+    }
+    if (!previous || value.size === previous.size) patch.size = picked.size;
+    storage.addRecentPortrait(picked.id);
+    setLibraryOpen(false);
+    onChange(patch);
+  }
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -95,10 +112,20 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
       <button type="button" disabled={uploading} onClick={() => fileInput.current?.click()}>
         {uploading ? "Caricamento…" : value.assetId ? "Cambia immagine" : "Immagine"}
       </button>
-      {value.assetId && (
-        <button type="button" onClick={() => onChange({ assetId: null })}>
+      <button type="button" onClick={() => setLibraryOpen(true)}>
+        Libreria
+      </button>
+      {(value.assetId || value.portrait) && (
+        <button type="button" onClick={() => onChange({ assetId: null, portrait: null })}>
           Togli immagine
         </button>
+      )}
+      {libraryOpen && (
+        <PortraitPicker
+          color={value.color}
+          onPick={pickPortrait}
+          onClose={() => setLibraryOpen(false)}
+        />
       )}
       <input
         ref={fileInput}
