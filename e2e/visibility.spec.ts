@@ -10,7 +10,7 @@ test("the GM hides and reveals items; players never receive hidden ones", async 
 
   await gm.keyboard.press("v");
   await click(gm, 105, 105);
-  await gm.getByRole("button", { name: "Nascondi" }).click();
+  await gm.getByRole("button", { name: "Nascondi", exact: true }).click();
   await expect(tokenList(gm).getByRole("listitem")).toHaveText(["Drago, nascosto"]);
   await expect(tokenList(player).getByRole("listitem")).toHaveCount(0);
   await expect(board(player)).toHaveAttribute("data-item-count", "0");

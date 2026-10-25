@@ -50,7 +50,7 @@ test("hidden tokens in the order are not shown to players", async ({ browser }) 
   await click(gm, 175, 175);
   await gm.getByRole("button", { name: "Turni" }).click();
   await gm.getByRole("button", { name: "Aggiungi selezione" }).click();
-  await gm.getByRole("button", { name: "Nascondi" }).click();
+  await gm.getByRole("button", { name: "Nascondi", exact: true }).click();
   await player.getByRole("button", { name: "Turni" }).click();
   await expect(gm.locator(".initiative-name")).toContainText("Drago");
   await expect(
