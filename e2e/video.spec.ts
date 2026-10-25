@@ -51,7 +51,10 @@ async function videoState(page: Page) {
 
 test("the GM uses a video as an animated map; players see it playing in a loop", async ({
   browser,
+  browserName,
 }) => {
+  // Il WebKit di Playwright non registra né riproduce WebM come Chromium e Firefox.
+  test.skip(browserName === "webkit", "WebM non è supportato dal WebKit di Playwright");
   const { gm, player } = await setupTable(browser);
   await gm
     .locator("input[type=file]")

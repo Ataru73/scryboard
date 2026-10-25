@@ -8,6 +8,9 @@ export default defineConfig({
   // I test di prestazioni girano solo con `pnpm e2e:perf`.
   grepInvert: process.env.PERF ? undefined : /@perf/,
   fullyParallel: false,
+  // I runner di CI sono più lenti del computer di chi sviluppa, soprattutto con Firefox e WebKit.
+  timeout: process.env.CI ? 60_000 : 30_000,
+  expect: { timeout: process.env.CI ? 10_000 : 5_000 },
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
