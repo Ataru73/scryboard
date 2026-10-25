@@ -13,6 +13,10 @@
 #
 # `--max-instances 1` è obbligatorio: lo stato vive nel processo e due istanze
 # avrebbero due database separati.
+#
+# `--scaling auto` serve a tenere il servizio in scaling automatico: se qualcuno lo porta in
+# scaling manuale (es. `--scaling 1`), resta sempre un'istanza accesa e fatturata anche senza
+# traffico, e `--min-instances 0` da solo non lo riporta indietro.
 
 set -euo pipefail
 
@@ -78,6 +82,7 @@ gcloud run deploy "$SERVICE" \
   --port 3000 \
   --cpu 1 \
   --memory 1Gi \
+  --scaling auto \
   --min-instances 0 \
   --max-instances 1 \
   --set-env-vars "$ENV_VARS" \
