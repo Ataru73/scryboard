@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { visibilityPolygon } from "./visibility";
+import { type SightGeometry, visibilityPolygon } from "./visibility";
 import type { PolygonRequest, PolygonResponse } from "./visibility.worker";
 
 export interface PolygonSource {
@@ -32,20 +32,20 @@ function getWorker(): Worker | null {
  * precedenti, così la vista non lampeggia.
  */
 export function useVisibilityPolygons(
-  segments: Float64Array,
+  geometry: SightGeometry,
   sources: PolygonSource[],
 ): ReadonlyMap<string, number[]> {
   const [polygons, setPolygons] = useState<ReadonlyMap<string, number[]>>(new Map());
   const cache = useRef(new Map<string, number[]>());
-  const cachedSegments = useRef<Float64Array | null>(null);
+  const cachedGeometry = useRef<SightGeometry | null>(null);
   const requestId = useRef(0);
   const sourcesKey = sources.map((s) => `${s.id}:${sourceKey(s)}`).join(";");
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `sources` è riassunto da sourcesKey.
   useEffect(() => {
-    if (cachedSegments.current !== segments) {
+    if (cachedGeometry.current !== geometry) {
       cache.current.clear();
-      cachedSegments.current = segments;
+      cachedGeometry.current = geometry;
     }
     const publish = () =>
       setPolygons(
@@ -65,7 +65,7 @@ export function useVisibilityPolygons(
     const worker = getWorker();
     if (!worker) {
       for (const s of missing)
-        cache.current.set(sourceKey(s), visibilityPolygon(s, segments, s.radius));
+        cache.current.set(sourceKey(s), visibilityPolygon(s, geometry, s.radius));
       publish();
       return;
     }
@@ -77,11 +77,11 @@ export function useVisibilityPolygons(
     worker.addEventListener("message", onMessage);
     worker.postMessage({
       requestId: id,
-      segments,
+      geometry,
       sources: missing.map((s) => ({ key: sourceKey(s), x: s.x, y: s.y, radius: s.radius })),
     } satisfies PolygonRequest);
     return () => worker.removeEventListener("message", onMessage);
-  }, [segments, sourcesKey]);
+  }, [geometry, sourcesKey]);
 
   return polygons;
 }

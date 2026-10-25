@@ -15,6 +15,8 @@ const WALL_COLORS = {
   door: "#9c6b30",
   window: "#36a3b8",
   invisible: "#8e7cf0",
+  "one-way": "#d9822b",
+  terrain: "#7a6a55",
 } as const;
 
 interface Props {
@@ -61,11 +63,14 @@ export function WallLayer({
                 dash={
                   wall.kind === "invisible" || (wall.kind === "door" && wall.door === "open")
                     ? [10 / scale, 7 / scale]
-                    : undefined
+                    : wall.kind === "terrain"
+                      ? [14 / scale, 5 / scale]
+                      : undefined
                 }
                 lineCap="round"
                 lineJoin="round"
               />
+              {wall.kind === "one-way" && <OneWayArrows points={wall.points} scale={scale} />}
               {selectedWallId === wall.id && (
                 <Line
                   points={wall.points}
@@ -86,6 +91,47 @@ export function WallLayer({
                 onToggle={() => onToggleDoor(wall)}
               />
             )}
+        </Group>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Frecce a metà di ogni tratto di un muro a senso unico: puntano nel verso in cui si vede
+ * attraverso, cioè dal lato sinistro di chi percorre la polilinea (il lato trasparente) a destra.
+ */
+function OneWayArrows({ points, scale }: { points: number[]; scale: number }) {
+  const arrows: { x: number; y: number; angle: number }[] = [];
+  for (let i = 0; i + 3 < points.length; i += 2) {
+    const ax = points[i] as number;
+    const ay = points[i + 1] as number;
+    const bx = points[i + 2] as number;
+    const by = points[i + 3] as number;
+    // Normale destra in coordinate con y verso il basso: (−dy, dx).
+    const angle = (Math.atan2(bx - ax, -(by - ay)) * 180) / Math.PI;
+    arrows.push({ x: (ax + bx) / 2, y: (ay + by) / 2, angle });
+  }
+  return (
+    <>
+      {arrows.map((arrow, index) => (
+        <Group
+          // biome-ignore lint/suspicious/noArrayIndexKey: i tratti non hanno un id.
+          key={index}
+          x={arrow.x}
+          y={arrow.y}
+          rotation={arrow.angle}
+          scaleX={1 / scale}
+          scaleY={1 / scale}
+          listening={false}
+        >
+          <Line
+            points={[-9, 0, 9, 0, 4, -5, 9, 0, 4, 5]}
+            stroke="#d9822b"
+            strokeWidth={2.5}
+            lineCap="round"
+            lineJoin="round"
+          />
         </Group>
       ))}
     </>

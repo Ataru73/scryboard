@@ -327,6 +327,22 @@ perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
 
 ### T10 — Muri a senso unico e di terreno (≈ 1,5 settimane)
 
+**Stato**: completata. Note rispetto al piano:
+- Due nuovi tipi di muro (`one-way`, `terrain`) nello schema condiviso, quindi il guard del server
+  li accetta senza regole nuove. Entrambi bloccano il movimento come un muro; la finestra era già
+  fatta.
+- Senso unico: si vede attraverso dal lato sinistro di chi percorre la polilinea nel verso in cui
+  è stata tracciata; dall'altro lato ferma la vista. Frecce a metà di ogni tratto (solo per il GM)
+  indicano il verso della vista, e «Inverti il verso» nel pannello del muro scambia i lati (un solo
+  passo di annulla). Il lato si decide in base alla posizione della sorgente (token o luce), quindi
+  vale anche per le luci.
+- Terreno: lungo ogni raggio il primo muro di terreno non ferma la vista e il secondo sì (per una
+  colonna chiusa: si vede la faccia davanti e l'interno fino al retro, non oltre). Si calcola nel
+  poligono di visibilità come «secondo colpo» e non pesa se non ci sono muri di terreno.
+- La geometria per la visione ora è `SightGeometry` (tre array: bloccanti, a senso unico, di
+  terreno) passata al worker; `sightSegments` resta per i soli muri bloccanti.
+- Il tracciamento di Gemini continua a produrre muri, porte e finestre.
+
 **Cosa vede l'utente**
 - Due nuovi tipi nel pannello Muri: **Senso unico** (si vede da un lato solo: dirupi,
   sporgenze; una freccia indica il lato trasparente) e **Terreno** (si vede dentro la colonna o

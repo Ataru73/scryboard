@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { blocksMovement, blocksSight, canPlayerToggleDoor, wallSchema } from "./walls";
+import {
+  blocksMovement,
+  blocksSight,
+  canPlayerToggleDoor,
+  sideOfSegment,
+  wallSchema,
+} from "./walls";
 
 const wall = {
   id: "w",
@@ -57,5 +63,23 @@ describe("blocksSight", () => {
     expect(blocksSight({ id: "w", kind: "invisible", points: [0, 0, 1, 1] })).toBe(false);
     expect(blocksSight({ id: "d", kind: "door", points: [0, 0, 1, 1], door: "open" })).toBe(false);
     expect(blocksSight({ id: "d", kind: "door", points: [0, 0, 1, 1], door: "locked" })).toBe(true);
+  });
+});
+
+describe("special sight walls", () => {
+  it("blocks movement but not sight on its own", () => {
+    for (const kind of ["one-way", "terrain"] as const) {
+      const wall = wallSchema.parse({ id: "w", kind, points: [0, 0, 70, 0] });
+      expect(blocksMovement(wall)).toBe(true);
+      expect(blocksSight(wall)).toBe(false);
+    }
+  });
+
+  it("tells the side of a segment", () => {
+    const a = { x: 0, y: 0 };
+    const b = { x: 10, y: 0 };
+    expect(sideOfSegment(a, b, { x: 5, y: 5 })).toBeGreaterThan(0); // sotto (y verso il basso)
+    expect(sideOfSegment(a, b, { x: 5, y: -5 })).toBeLessThan(0);
+    expect(sideOfSegment(a, b, { x: 20, y: 0 })).toBe(0);
   });
 });

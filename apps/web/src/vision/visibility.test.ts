@@ -1,7 +1,7 @@
 import type { BoardItem, Door, TokenItem, Wall } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
 import { isDoorSeen, isPointVisible, lightSources, viewerTokens, visionSources } from "./sources";
-import { pointInPolygon, sightSegments, visibilityPolygon } from "./visibility";
+import { pointInPolygon, sightGeometry, sightSegments, visibilityPolygon } from "./visibility";
 
 const wall = (points: number[], extra: Partial<Wall> = {}) =>
   ({ id: "w", kind: "wall", points, ...extra }) as Wall;
@@ -34,6 +34,51 @@ describe("visibility polygon", () => {
     const segments = sightSegments([wall([0, -50, 0, 50])]);
     const poly = visibilityPolygon({ x: 0.0, y: 0 }, segments, 100);
     expect(poly.length).toBeGreaterThan(6);
+  });
+});
+
+describe("one-way walls", () => {
+  // Il muro scende da (50, -20) a (50, 20): chi sta a ovest (x minore) è sul lato che blocca.
+  const cliff = [wall([50, -20, 50, 20], { kind: "one-way" })];
+
+  it("blocks sight from the opaque side and lets it through from the other", () => {
+    const geometry = sightGeometry(cliff);
+    const fromBelow = visibilityPolygon({ x: 0, y: 0 }, geometry, 300);
+    expect(pointInPolygon({ x: 100, y: 0 }, fromBelow)).toBe(false);
+    const fromAbove = visibilityPolygon({ x: 100, y: 0 }, geometry, 300);
+    expect(pointInPolygon({ x: 0, y: 0 }, fromAbove)).toBe(true);
+  });
+
+  it("reverses when the wall is drawn the other way", () => {
+    const reversed = sightGeometry([wall([50, 20, 50, -20], { kind: "one-way" })]);
+    expect(pointInPolygon({ x: 100, y: 0 }, visibilityPolygon({ x: 0, y: 0 }, reversed, 300))).toBe(
+      true,
+    );
+    expect(pointInPolygon({ x: 0, y: 0 }, visibilityPolygon({ x: 100, y: 0 }, reversed, 300))).toBe(
+      false,
+    );
+  });
+});
+
+describe("terrain walls", () => {
+  // Una colonna di 20 × 20 con il centro in (60, 0).
+  const pillar = sightGeometry([
+    wall([50, -10, 70, -10, 70, 10, 50, 10, 50, -10], { kind: "terrain" }),
+  ]);
+
+  it("shows the front face but not what is behind the pillar", () => {
+    const poly = visibilityPolygon({ x: 0, y: 0 }, pillar, 300);
+    expect(pointInPolygon({ x: 40, y: 0 }, poly)).toBe(true);
+    expect(pointInPolygon({ x: 60, y: 0 }, poly)).toBe(true); // dentro la colonna
+    expect(pointInPolygon({ x: 120, y: 0 }, poly)).toBe(false); // dietro
+    expect(pointInPolygon({ x: 120, y: 80 }, poly)).toBe(true); // di lato
+  });
+
+  it("does not block on its own when only one terrain wall is in the way", () => {
+    const single = sightGeometry([wall([50, -20, 50, 20], { kind: "terrain" })]);
+    expect(pointInPolygon({ x: 100, y: 0 }, visibilityPolygon({ x: 0, y: 0 }, single, 300))).toBe(
+      true,
+    );
   });
 });
 

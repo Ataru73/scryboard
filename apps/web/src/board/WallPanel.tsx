@@ -24,7 +24,17 @@ const KINDS: { kind: WallKind; label: string }[] = [
   { kind: "door", label: "Porta" },
   { kind: "window", label: "Finestra" },
   { kind: "invisible", label: "Invisibile" },
+  { kind: "one-way", label: "Senso unico" },
+  { kind: "terrain", label: "Terreno" },
 ];
+
+/** Cosa fa ciascun tipo, per il suggerimento sotto la barra. */
+const KIND_HINTS: Partial<Record<WallKind, string>> = {
+  "one-way":
+    "Dirupi e sporgenze: si vede attraverso solo nel verso delle frecce (sinistra di chi traccia).",
+  terrain:
+    "Colonne e rocce: si vede la faccia davanti ma non il retro (il secondo muro ferma la vista).",
+};
 
 const DOOR_LABELS: Record<DoorState, string> = {
   open: "Aperta",
@@ -138,7 +148,7 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
       <span className="muted small fog-hint">
         {wallKind === "door"
           ? "Clicca i due estremi della porta."
-          : "Clic per i vertici, doppio clic o Invio per finire. Alt non aggancia."}
+          : `${KIND_HINTS[wallKind] ? `${KIND_HINTS[wallKind]} ` : ""}Clic per i vertici, doppio clic o Invio per finire. Alt non aggancia.`}
       </span>
       <span className="toolbar-separator" />
       <label className="small muted" htmlFor="wall-biome">
@@ -183,6 +193,14 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
   );
 }
 
+/** Stessi punti in ordine inverso (coppie x, y): scambia il lato trasparente di un muro a senso unico. */
+function reversePoints(points: number[]): number[] {
+  const out: number[] = [];
+  for (let i = points.length - 2; i >= 0; i -= 2)
+    out.push(points[i] as number, points[i + 1] as number);
+  return out;
+}
+
 /** Proprietà della porta selezionata ed eliminazione di una barriera esistente. */
 export function WallSelectionPanel({ store }: { store: BoardStore }) {
   useSyncExternalStore(store.subscribe, store.getWalls);
@@ -207,6 +225,19 @@ export function WallSelectionPanel({ store }: { store: BoardStore }) {
               {DOOR_LABELS[state]}
             </button>
           ))}
+        </>
+      )}
+      {wall.kind === "one-way" && (
+        <>
+          <span className="toolbar-separator" />
+          <button
+            type="button"
+            className="text-button"
+            title="Scambia il lato da cui si vede attraverso il muro"
+            onClick={() => store.updateWall(wall.id, { points: reversePoints(wall.points) })}
+          >
+            Inverti il verso
+          </button>
         </>
       )}
       <span className="muted small fog-hint">Trascina i vertici per modificare.</span>

@@ -3,7 +3,7 @@ import { useCallback, useMemo } from "react";
 import type { Point } from "../board/viewport";
 import { isPointVisible, lightSources, viewerTokens, visionSources } from "./sources";
 import { useVisibilityPolygons } from "./useVisibilityPolygons";
-import { sightSegments } from "./visibility";
+import { sightGeometry } from "./visibility";
 
 /**
  * Tutto ciò che serve per luci e visione: sorgenti, poligoni (calcolati nel worker) e un test di
@@ -22,7 +22,7 @@ export function useVision({
   lighting: LightingSettings;
   viewerId: string | null;
 }) {
-  const segments = useMemo(() => sightSegments(walls), [walls]);
+  const geometry = useMemo(() => sightGeometry(walls), [walls]);
   const lights = useMemo(
     () => (lighting.enabled ? lightSources(items, grid.size) : []),
     [items, grid.size, lighting.enabled],
@@ -39,7 +39,7 @@ export function useVision({
     ],
     [visions, lights],
   );
-  const polygons = useVisibilityPolygons(segments, sources);
+  const polygons = useVisibilityPolygons(geometry, sources);
   const active = lighting.enabled && viewerId !== null;
   const isVisible = useCallback(
     (p: Point) => !active || isPointVisible(p, visions, lights, polygons, lighting.ambient),

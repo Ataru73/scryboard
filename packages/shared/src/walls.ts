@@ -17,7 +17,7 @@ const barrierPoints = z
 const barrierSchema = z
   .object({
     id: z.string().min(1).max(64),
-    kind: z.enum(["wall", "window", "invisible"]),
+    kind: z.enum(["wall", "window", "invisible", "one-way", "terrain"]),
     /** Polilinea in coordinate assolute del mondo: [x0, y0, x1, y1, ...]. */
     points: barrierPoints,
   })
@@ -33,7 +33,7 @@ const doorSchema = z
   })
   .strict();
 
-/** Muro, finestra, muro invisibile o porta nella Y.Map pubblica `walls`. */
+/** Muro, finestra, muro invisibile, a senso unico, di terreno o porta nella Y.Map pubblica `walls`. */
 export const wallSchema = z.union([barrierSchema, doorSchema]);
 export type Barrier = z.infer<typeof barrierSchema>;
 export type Door = z.infer<typeof doorSchema>;
@@ -41,12 +41,34 @@ export type Wall = z.infer<typeof wallSchema>;
 export type WallKind = Wall["kind"];
 export type WallDraft = Omit<Barrier, "id"> | Omit<Door, "id">;
 
+/**
+ * Muri speciali per la vista:
+ * - `one-way` (dirupi, sporgenze): si vede attraverso solo da un lato, il sinistro di chi percorre
+ *   la polilinea nel verso in cui è stata tracciata; dall'altro lato ferma la vista come un muro;
+ * - `terrain` (colonne, rocce): non ferma la vista da solo ma il secondo muro di terreno lungo lo
+ *   stesso raggio sì, così si vede la faccia davanti e non il retro.
+ * Entrambi bloccano il movimento come un muro.
+ */
+export const SPECIAL_SIGHT_KINDS = ["one-way", "terrain"] as const;
+
+/** Da che lato del segmento (a → b) sta il punto: > 0 a destra di chi lo percorre, < 0 a sinistra. */
+export function sideOfSegment(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  p: { x: number; y: number },
+): number {
+  return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+}
+
 /** Le finestre bloccano il movimento ma, dalla F4, non la vista; le porte aperte non bloccano. */
 export function blocksMovement(wall: Wall): boolean {
   return wall.kind !== "door" || wall.door !== "open";
 }
 
-/** Fermano la vista e la luce: muri e porte non aperte (non le finestre né i muri invisibili). */
+/**
+ * Fermano sempre la vista e la luce: muri e porte non aperte (non le finestre né i muri
+ * invisibili). Quelli a senso unico e di terreno hanno regole proprie (`SPECIAL_SIGHT_KINDS`).
+ */
 export function blocksSight(wall: Wall): boolean {
   if (wall.kind === "door") return wall.door !== "open";
   return wall.kind === "wall";
