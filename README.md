@@ -1,159 +1,250 @@
 # Scryboard
 
-Whiteboard collaborativa per sessioni di gioco di ruolo online: il GM condivide mappe e
-informazioni e decide cosa vedono i giocatori. Perimetro, architettura e piano di lavoro sono in
-[docs/MVP.md](docs/MVP.md).
+Collaborative whiteboard for online tabletop role-playing sessions: the GM shares maps and
+information and decides what the players see. Scope, architecture and work plan are in
+[docs/MVP.md](docs/MVP.md) (in Italian).
 
-## Struttura
+> Italiano: [README.it.md](README.it.md)
+
+## At a glance
+
+- **Rooms with no accounts**: one link for the GM (with a secret token), one for the players.
+- **Infinite whiteboard** with layers, drawing, text, images, undo/redo and live cursors.
+- **Square or hex grid** with calibration, a ruler with configurable scale, area templates and auras.
+- **Tokens**: a library of ~80 silhouettes, your own images, AI-generated images, attachments
+  (mounts), initiative order and turn ring.
+- **Painted maps**: 13 biomes, roads and rivers, stamps, fill, copy/paste, or imported images and
+  animated video maps.
+- **Walls, doors and lights** with dynamic vision, one-way and terrain walls, ambient light.
+- **Secrets enforced by the server**: hidden objects, fog of war and private messages never reach
+  players' browsers.
+- **Multiple scenes** per room: prepare the next one while the players stay in the current one.
+- **Dice** rolled by the server, with a public log and secret GM rolls.
+- **Export and import** a whole room as a `.scryboard` file.
+- **Optional Gemini integration** to generate token images and maps and to trace walls.
+
+## Structure
 
 ```
-apps/server       Node: API HTTP (Hono) + sincronizzazione Yjs (Hocuspocus) + SQLite (Drizzle)
+apps/server       Node: HTTP API (Hono) + Yjs sync (Hocuspocus) + SQLite (Drizzle)
 apps/web          React + Vite
-packages/shared   Tipi e schemi condivisi tra client e server
+packages/shared   Types and schemas shared between client and server
 ```
 
-## Requisiti
+## Requirements
 
 - Node.js 24 (`.nvmrc`)
-- pnpm, attivabile con Corepack: `corepack enable pnpm`
-  (se non hai i permessi su `/usr/bin`: `corepack enable --install-directory ~/.local/bin pnpm`)
+- pnpm, which you can enable with Corepack: `corepack enable pnpm`
+  (if you don't have permission on `/usr/bin`: `corepack enable --install-directory ~/.local/bin pnpm`)
 
-## Sviluppo
+## Development
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Apri http://localhost:5173. Vite inoltra `/api` e il WebSocket `/collab` al server sulla porta
-3000. La configurazione del server si legge da `apps/server/.env` (vedi `.env.example`); il
-database di sviluppo finisce in `apps/server/data/`.
+Open http://localhost:5173. Vite forwards `/api` and the `/collab` WebSocket to the server on
+port 3000. The server configuration is read from `apps/server/.env` (see `.env.example`); the
+development database ends up in `apps/server/data/`.
 
-| Comando          | Cosa fa                                 |
-| ---------------- | --------------------------------------- |
-| `pnpm dev`       | Server e web app in modalità watch      |
-| `pnpm test`      | Test di tutti i pacchetti (Vitest)      |
-| `pnpm typecheck` | Controllo dei tipi                      |
-| `pnpm lint`      | Lint e formattazione (Biome)            |
-| `pnpm format`    | Applica le correzioni di Biome          |
-| `pnpm build`     | Build di produzione di server e web app |
+| Command          | What it does                               |
+| ---------------- | ------------------------------------------ |
+| `pnpm dev`       | Server and web app in watch mode           |
+| `pnpm test`      | Tests for all packages (Vitest)            |
+| `pnpm typecheck` | Type checking                              |
+| `pnpm lint`      | Lint and formatting (Biome)                |
+| `pnpm format`    | Applies Biome's fixes                      |
+| `pnpm build`     | Production build of the server and web app |
 
-Dopo aver modificato `apps/server/src/db/schema.ts`, genera la migrazione con
-`pnpm --filter @scryboard/server db:generate`.
+After changing `apps/server/src/db/schema.ts`, generate the migration with
+`pnpm --filter @scryboard/server db:generate`. After pulling server changes, restart the server:
+the shared package and the migrations are loaded at startup.
 
-Per i test end-to-end serve Chromium, da installare una volta con
-`pnpm exec playwright install chromium`. In locale la suite gira su Chromium; con
-`ALL_BROWSERS=1 pnpm e2e` anche su Firefox e WebKit (come in CI).
+The end-to-end tests need Chromium, which you install once with
+`pnpm exec playwright install chromium`. Locally the suite runs on Chromium; with
+`ALL_BROWSERS=1 pnpm e2e` it also runs on Firefox and WebKit (as in CI, where each browser runs
+in its own job).
 
-## Scorciatoie della lavagna
+## Whiteboard shortcuts
 
-| Tasto                                  | Azione                                                                       |
-| -------------------------------------- | ---------------------------------------------------------------------------- |
-| V H P L R O T E K                      | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token     |
-| Alt (trascinando un token)             | Muove senza griglia; solo il GM ignora anche i muri                          |
-| B (solo GM)                            | Terreno: dipinge i biomi a pennello o come regioni, con gomma                |
-| J (solo GM)                            | Percorso: strade e fiumi a clic o a mano libera; [ e ] cambiano la larghezza |
-| W (solo GM)                            | Muri, porte, finestre e barriere invisibili agganciati alla griglia          |
-| I (solo GM)                            | Luci, visione dinamica, luce ambientale e anteprima come un giocatore        |
-| S (solo GM)                            | Timbri: alberi, rocce e mobili; trascina per spargerne tanti                 |
-| 1–9 (Terreno, Percorso, Timbri)        | Biomi recenti, stili di percorso, timbri                                     |
-| Doppio clic su un percorso selezionato | Aggiunge un punto di controllo                                               |
-| F (solo GM)                            | Nebbia: copri o scopri con rettangolo, poligono o pennello                   |
-| Shift+H (solo GM)                      | Nasconde ai giocatori la selezione, o la rivela                              |
-| Spazio (tenuto premuto)                | Sposta la vista con qualsiasi strumento                                      |
-| Rotella / pinch                        | Zoom                                                                         |
-| Shift+1 / Shift+0                      | Adatta al contenuto / zoom 100%                                              |
-| Canc / Backspace                       | Elimina la selezione                                                         |
-| ] / [                                  | Porta in primo piano / sullo sfondo                                          |
-| Ctrl+Z / Ctrl+Shift+Z                  | Annulla / ripeti                                                             |
-| Esc                                    | Deseleziona, chiude l'editor di testo                                        |
-| Clic prolungato                        | Ping visibile a tutti                                                        |
-| Trascinare su uno spazio vuoto         | Selezione a riquadro (con Shift si aggiunge)                                 |
+| Key                             | Action                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| V H P L R O T E K               | Select, hand, pencil, line, rectangle, ellipse, text, eraser, token              |
+| M                               | Ruler and area templates (distance, circle, cone, cube, ray)                     |
+| Alt (while dragging)            | Moves or draws without the grid; only the GM also ignores walls                  |
+| B (GM only)                     | Terrain: paints biomes with a brush or as regions, with an eraser                |
+| J (GM only)                     | Path: roads and rivers by clicking or freehand; [ and ] change the width         |
+| W (GM only)                     | Walls, doors, windows, invisible, one-way and terrain walls snapped to the grid  |
+| I (GM only)                     | Lights, dynamic vision, ambient light and preview as a player                    |
+| S (GM only)                     | Stamps: trees, rocks and furniture; drag to scatter many                         |
+| N (GM only)                     | Next turn in the initiative order                                                |
+| 1–9 (Terrain, Path, Stamps)     | Recent biomes, path styles, stamps                                               |
+| Double-click on a selected path | Adds a control point                                                             |
+| F (GM only)                     | Fog: cover or reveal with a rectangle, polygon or brush                          |
+| Shift+H (GM only)               | Hides the selection from the players, or reveals it                              |
+| Space (held down)               | Pans the view with any tool; while measuring, adds a waypoint                    |
+| Mouse wheel / pinch             | Zoom                                                                             |
+| Shift+1 / Shift+0               | Fit to content / zoom 100%                                                       |
+| Del / Backspace                 | Deletes the selection                                                            |
+| ] / [                           | Bring to front / send to back                                                    |
+| Ctrl+Z / Ctrl+Shift+Z           | Undo / redo                                                                      |
+| Esc                             | Deselects, closes the text editor, cancels a measurement or an attachment        |
+| Long press                      | Ping visible to everyone (GM with Shift: also summons the players to that point) |
+| Dragging on an empty space      | Box selection (hold Shift to add)                                                |
 
-Le immagini si aggiungono con il pulsante della barra, trascinandole sulla lavagna o incollandole.
-Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificare. Le luci (lo
-strumento Luce) restano sempre sopra le mappe. La gomma cancella gli oggetti e, per il GM, anche
-muri e porte.
+Images are added with the toolbar button, by dragging them onto the whiteboard, or by pasting
+them (PNG, JPEG, WebP, GIF, up to 20 MB). The GM's images go on the map layer, which players
+cannot edit. Lights (the Light tool) always stay above the maps. The eraser deletes objects and,
+for the GM, also walls and doors.
 
-## Generazione con Gemini
+## Table tools
 
-Con una chiave API di Gemini, salvata dalle Impostazioni, compaiono tre funzioni:
-- la scheda **Genera** della libreria di immagini, per creare l'immagine di un token da una
-  descrizione (ritratto, vista dall'alto o sagoma);
-- il pulsante **Genera mappa** della barra, solo per il GM: da una descrizione, un tipo (dungeon
-  o interno, esterno, mappa di una regione) e un formato produce fino a 3 varianti; quella scelta
-  viene ridotta a 2048 px e messa al centro della vista come immagine del livello mappa;
-- il pulsante **Traccia muri con Gemini** dello strumento Muri, solo per il GM: Gemini legge
-  l'immagine di mappa più grande e ne traccia muri, porte e finestre, agganciati alla griglia se è
-  attiva. È un punto di partenza da ritoccare, e un solo Ctrl+Z annulla tutto. Il modello che
-  legge le immagini si sceglie nelle Impostazioni; di default è il modello "flash" più recente
-  tra quelli disponibili con la chiave.
+- **Ruler** (`M`): drag to measure; `Space` adds waypoints, `Esc` cancels. Everyone sees the
+  measurement in real time in the color of whoever is measuring. The GM sets what one cell is worth
+  (5 ft, 1.5 m…) and how diagonals count (every diagonal is 1, alternating 1-2, or straight line)
+  from the grid panel. Dragging a token shows the distance it has travelled.
+- **Area templates**: the same tool draws circles, cones, cubes and rays that highlight the covered
+  cells and outline the tokens they touch. They stay visible for a few seconds; releasing with
+  `Shift` pins them as objects that can be moved or deleted.
+- **Auras**: any token can have an aura (radius in cells and color) visible to everyone.
+- **Dice**: the _Table_ tab of the messages panel rolls formulas like `2d20kh1+5`, `8d6`, `4d6dl1`
+  or `d%`, with quick buttons from d4 to d100. Rolls are made by the server, appear in a public log
+  (the last 200) and pop up on the whiteboard for a few seconds. The GM can roll in secret (the
+  result stays in their browser). Typing `/r 1d4` in any conversation rolls for the whole table.
+- **Initiative**: the _Turns_ panel (zoom toolbar) lists the tokens in the order; the GM adds them,
+  sets their values and moves on with _Next_ (`N`). The active token gets a golden ring; players
+  see the order and can edit values. Hidden tokens stay hidden.
+- **Pings**: a long press pings everyone. If a ping falls outside your view, an arrow on the screen
+  edge points to it and a click centers the view. The GM's _Bring players here_ button (or
+  Shift + long press) centers every player's view on the same point.
+- **Attachments**: _Attach to…_ in the token's selection panel binds it to another token (a rider
+  to a mount): moving the main token moves the attached ones with the same collisions; moving one
+  alone detaches it.
 
-Le richieste partono dal browser con la chiave dell'utente, che resta nel suo `localStorage` e non
-passa mai dal server di Scryboard. Ogni variante e ogni analisi sono richieste addebitate sul conto Google della
-chiave. Senza chiave le funzioni non compaiono.
+## Scenes
 
-Il GM attiva la griglia dal pulsante dedicato, sceglie se quadrata o esagonale (a punta o piatta)
-e la calibra tracciando un riquadro su una casella della mappa (o attorno a un esagono). I token si agganciano alle caselle; il GM può bloccare qualsiasi oggetto, e finché è
-bloccato nessuno può spostarlo o cancellarlo.
+A room can hold several scenes (a tavern, a dungeon…). In the sidebar the GM creates, renames,
+duplicates and deletes them, and opens one to prepare it while the players stay in the active one
+(a banner reminds you which scene you are looking at). _Move the group here_ brings every player to
+that scene without reloading. Each scene has its own objects, grid, terrain, walls, dice log and
+turns; the players can only open the active scene.
 
-Il GM può dipingere il terreno con 13 biomi (erba, foresta, roccia, sabbia, acqua, lava…), a
-pennello o come regioni dai bordi morbidi; le texture sono generate nel browser e ogni pennellata
-arriva subito ai giocatori.
+## Export and import
 
-Lo strumento Terreno riempie anche le aree chiuse da muri o da altri biomi, copia e incolla porzioni
-di terreno e può dipingere "sotto la nebbia", da rivelare al momento giusto. I timbri aggiungono
-alberi, rocce e mobili, con rotazione e taglia casuali.
+_Export the room_ (Share panel, GM only) downloads a `.scryboard` file with all the scenes, the
+hidden objects and the images in use (up to 200 MB); tokens, players and private messages are not
+included. _Import a room_ on the home page turns such a file into a new room with new links. The
+file is not trusted: only valid data is accepted and images must match their names.
 
-Con lo strumento Percorso il GM traccia sentieri, strade sterrate o lastricate, ruscelli e fiumi:
-la curva passa per i punti cliccati, ogni punto ha la sua larghezza e i corsi d'acqua si
-assottigliano alle estremità. Selezionando un percorso se ne trascinano i punti.
+## Generation with Gemini
 
-Con lo strumento Muri il GM disegna polilinee agganciate agli incroci della griglia (Alt le lascia
-libere), porte, finestre e muri invisibili. Può anche generare i muri dal contorno di un bioma.
-I muri fermano i token trascinati; i giocatori vedono solo le icone delle porte e possono aprire o
-chiudere quelle non chiuse a chiave. Selezionando un muro il GM ne modifica i vertici o lo elimina.
+With a Gemini API key, saved from Settings, three features appear:
+- the **Generate** tab of the image library, to create a token's image from a description
+  (portrait, top-down view or silhouette);
+- the **Generate map** toolbar button, GM only: from a description, a type (dungeon or interior,
+  exterior, region map) and a format it produces up to 3 variants; the chosen one is scaled down
+  to 2048 px and placed at the center of the view as an image on the map layer;
+- the **Trace walls with Gemini** button of the Walls tool, GM only: Gemini reads the largest map
+  image (the first frame, for animated maps) and traces its walls, doors and windows, snapped to
+  the grid if it is on. It is a starting point to touch up, and a single Ctrl+Z undoes everything.
+  The model that reads the images is chosen in Settings; by default it is the most recent "flash"
+  model among those available with the key.
 
-Con le luci attive, la luce ambientale (giorno, crepuscolo, notte) cambia anche i colori: lo
-sfondo della lavagna e le immagini caricate si fanno più scuri e freddi al crepuscolo e di notte.
+Requests are sent from the browser with the user's own key, which stays in their `localStorage`
+and never goes through the Scryboard server. Every variant and every analysis is a request
+charged to the key's Google account. Without a key the features do not appear.
 
-Con la visione dinamica attiva (strumento Luce) ogni giocatore vede solo ciò che vedono i suoi
-token: i muri e le porte chiuse fermano la vista; di notte servono luci (fisse o portate dai
-token) o scurovisione. Le zone già viste restano in penombra. Il GM imposta visione, luce portata
-e giocatore di ogni token dal pannello di selezione e può vedere la lavagna come un giocatore.
+## Grid, tokens and images
 
-Il GM può nascondere qualsiasi oggetto ai giocatori (o crearlo già nascosto): gli oggetti nascosti
-e le loro immagini non arrivano proprio ai browser dei giocatori. La nebbia copre mappa e token;
-il GM la vede semitrasparente, i giocatori opaca.
+The GM turns the grid on from its dedicated button, chooses whether it is square or hexagonal
+(pointy or flat) and calibrates it by tracing a box on one cell of the map (or around one hex).
+Tokens snap to the cells; the GM can lock any object, and while it is locked nobody can move or
+delete it.
 
-## Messaggi privati
+A token can be a colored circle with initials, an uploaded image (cropped to a circle), one of
+about 80 silhouettes of the built-in library (searchable by Italian or English name) or a
+generated image. The _Uploaded_ tab of the library lists the images already in the room and lets
+you add new ones without placing them, to prepare tokens in advance. Tokens come in five sizes;
+the GM can assign a token to a player and set its vision, darkvision and carried light.
 
-Nella barra laterale ogni partecipante può scrivere in privato: il GM a qualunque giocatore, i
-giocatori al GM o tra loro. Il GM riceve una copia di tutti i messaggi e legge anche le
-conversazioni tra giocatori (senza poter rispondere lì); i giocatori lo sanno, il pannello lo
-dice. Ogni giocatore ha una casella di posta che solo lui può aprire: il server la lega all'id del
-profilo e a un segreto che resta nel suo browser, e scrive i messaggi soltanto nelle caselle di
-mittente, destinatario e GM. Chi non è coinvolto non li riceve nemmeno.
+## Maps, terrain and scenery
 
-## Produzione
+The GM can paint the terrain with 13 biomes (grass, forest, rock, sand, water, lava…), with a
+brush or as regions with soft edges; the textures are generated in the browser and every stroke
+reaches the players immediately.
+
+The Terrain tool also fills areas enclosed by walls or other biomes, copies and pastes portions of
+terrain, and can paint "under the fog", to be revealed at the right moment. Stamps add trees,
+rocks and furniture, with random rotation and size.
+
+With the Path tool the GM draws trails, dirt or paved roads, streams and rivers: the curve passes
+through the clicked points, each point has its own width and watercourses taper at the ends.
+Selecting a path lets you drag its points.
+
+Maps can also be **animated**: a WebM or MP4 video (up to 50 MB, GM only) can be used as a map; it
+loops without sound for everyone. WebM is the safest format, since MP4/H.264 is not played by
+every browser.
+
+## Walls, lights and vision
+
+With the Walls tool the GM draws polylines snapped to the grid intersections (Alt leaves them
+free), doors, windows and invisible walls. It can also generate walls from a biome's outline.
+Walls stop dragged tokens; players only see the door icons and can open or close the ones that
+are not locked. Selecting a wall lets the GM edit its vertices or delete it.
+
+Two special kinds change what can be seen: **one-way walls** (cliffs, ledges) can be seen through
+from one side only, shown by arrows that _Reverse direction_ flips; **terrain walls** (pillars,
+rocks) do not block sight on their own, but the second one along a line of sight does, so you see
+the front face but not the back.
+
+With lights on, the ambient light (day, twilight, night) also changes the colors: the
+whiteboard background and the uploaded images become darker and colder at twilight and at night.
+(Videos are not tinted.)
+
+With dynamic vision on (Light tool) each player only sees what their tokens see: walls and closed
+doors block sight; at night you need lights (fixed or carried by tokens) or darkvision. Areas
+already seen stay in half-light. The GM sets the vision, carried light and controlling player of
+each token from the selection panel, and can view the whiteboard as a player.
+
+The GM can hide any object from the players (or create it already hidden): hidden objects and
+their images never reach the players' browsers at all. The fog covers map and tokens; the GM
+sees it semi-transparent, the players opaque.
+
+## Private messages
+
+In the sidebar every participant can write in private: the GM to any player, players to the GM or
+to each other. The GM receives a copy of all messages and also reads the conversations between
+players (without being able to reply there); the players know it, the panel says so. Each player
+has a mailbox that only they can open: the server ties it to the profile id and to a secret that
+stays in their browser, and writes messages only into the mailboxes of the sender, the recipient
+and the GM. Anyone not involved does not receive them at all.
+
+## Production
 
 ```bash
 docker build -t scryboard .
 docker run -p 3000:3000 -v scryboard-data:/data scryboard
 ```
 
-Il container serve API, WebSocket e web app sulla porta 3000 e salva database e immagini in
-`/data`. Su Google Cloud Run i dati possono stare su un bucket: il database è replicato con
-Litestream e le immagini sono salvate direttamente nel bucket (`DATA_BUCKET=<bucket>
-scripts/deploy-cloud-run.sh`). Dopo 10 minuti senza attività i client si disconnettono, così
-Cloud Run può spegnere il container; alla prima interazione riprendono da soli. Istruzioni per
-Fly.io, Google Cloud Run, per una VPS con Docker Compose e per la pulizia delle stanze inattive
-in [docs/DEPLOY.md](docs/DEPLOY.md).
+The container serves the API, the WebSocket and the web app on port 3000 and stores the database
+and images in `/data`. On Google Cloud Run the data can live in a bucket: the database is
+replicated with Litestream and the images are saved directly in the bucket (`DATA_BUCKET=<bucket>
+scripts/deploy-cloud-run.sh`); the script forces automatic scaling, so the service can scale to
+zero. After 10 minutes without activity the clients disconnect, so Cloud Run can shut the
+container down; at the first interaction they resume on their own. Instructions for Fly.io, Google
+Cloud Run, a VPS with Docker Compose, the rate limits and for cleaning up inactive rooms are in
+[docs/DEPLOY.md](docs/DEPLOY.md) (in Italian).
 
-## Come funzionano le stanze
+## How rooms work
 
-- Chi crea una stanza diventa GM e riceve un link con il token segreto nel frammento dell'URL
-  (`/r/<id>#gm=<token>`), che il browser non invia mai al server nelle richieste HTTP.
-- Il link senza frammento è quello da dare ai giocatori.
-- Ogni stanza ha due documenti Yjs: `room:<id>:public` per tutti e `room:<id>:gm`, a cui il
-  server dà accesso solo con il token GM. Gli oggetti nascosti vivranno nel secondo (milestone M3).
+- Whoever creates a room becomes the GM and gets a link with the secret token in the URL
+  fragment (`/r/<id>#gm=<token>`), which the browser never sends to the server in HTTP requests.
+- The link without the fragment is the one to give to the players.
+- Each scene has two Yjs documents: a public one for everyone and one for the GM, to which the
+  server only gives access with the GM token; hidden objects live in the second. The room's first
+  scene uses `room:<id>:public` and `room:<id>:gm`, the others `room:<id>:s:<scene>:public` and
+  `…:gm`. Players can only open the active scene's public document.
+- `room:<id>:meta` is a read-only document written by the server that holds the active scene, and
+  each participant has a private mailbox (`room:<id>:mail:<id>`) for messages.
+- Dice rolls are written by the server into the scene's public document, so nobody can forge them.
