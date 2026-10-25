@@ -60,7 +60,7 @@ export function planTileUpdate(
   const relevant = ops.filter((op) => boxesIntersect(bounds(op), box));
   if (relevant.length === 0)
     return state && state.drawn.size > 0 ? { kind: "clear" } : { kind: "none" };
-  if (!state) return { kind: "full", ops: relevant };
+  if (!state || state.drawn.size === 0) return { kind: "full", ops: relevant };
   const ids = new Set(relevant.map((op) => op.id));
   for (const id of state.drawn) if (!ids.has(id)) return { kind: "full", ops: relevant };
   const added = relevant.filter((op) => !state.drawn.has(op.id));
@@ -152,7 +152,7 @@ export class TerrainTiles {
           if (relevant.length === 0) this.clear(tile);
         }
       } else {
-        const plan = planTileUpdate(tile, ops, this.bounds, box);
+        const plan = planTileUpdate(tile?.canvas ? tile : undefined, ops, this.bounds, box);
         if (plan.kind === "full") {
           tile ??= this.create(key, box, resolution, now);
           tile.job = {
@@ -214,12 +214,16 @@ export class TerrainTiles {
       const job = tile?.job;
       if (!tile || !job) continue;
       const ctx = prepare(job.canvas, tile);
+      const before = job.index;
       while (job.index < job.ops.length && performance.now() < deadline) {
         drawTerrainOp(ctx, job.ops[job.index] as TerrainOp);
         job.index++;
       }
       // Un tassello ancora vuoto mostra il disegno mentre procede.
-      if (!tile.canvas) changed = true;
+      if (!tile.canvas && job.index > before) {
+        tile.version++;
+        changed = true;
+      }
       if (job.index === job.ops.length) {
         tile.canvas = job.canvas;
         tile.drawn = new Set(job.ops.map((op) => op.id));
@@ -246,13 +250,13 @@ export class TerrainTiles {
         current.push({ key, canvas: tile.canvas, box: tile.box, version: tile.version });
         continue;
       }
-      if (tile?.job) {
+      if (tile?.job && tile.job.index > 0) {
         // Primo disegno in corso: si mostra parziale, sopra i tasselli di riserva.
         current.push({
           key,
           canvas: tile.job.canvas,
           box: tile.box,
-          version: tile.version * 100000 + tile.job.index,
+          version: tile.version,
         });
       }
       if (!tile?.job) continue;

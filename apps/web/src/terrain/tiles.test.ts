@@ -47,6 +47,10 @@ describe("terrain tiles", () => {
   it("ignores strokes elsewhere and clears tiles left empty", () => {
     expect(planTileUpdate(undefined, [op("far", 1, 500)], bounds, tile)).toEqual({ kind: "none" });
     expect(planTileUpdate(state(["a"], 1), [], bounds, tile)).toEqual({ kind: "clear" });
+    expect(planTileUpdate(state([], -Infinity), [op("b", 2)], bounds, tile)).toEqual({
+      kind: "full",
+      ops: [op("b", 2)],
+    });
     expect(planTileUpdate(state(["a"], 1), [op("a", 1)], bounds, tile)).toEqual({ kind: "none" });
   });
 });
