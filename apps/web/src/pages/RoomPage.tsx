@@ -91,6 +91,7 @@ const STATUS_LABEL: Record<ConnectionStatus, string> = {
   connecting: "Connessione…",
   connected: "Connesso",
   disconnected: "Disconnesso, riconnessione…",
+  idle: "Inattivo: tocca per riprendere",
   denied: "Accesso negato",
 };
 

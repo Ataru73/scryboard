@@ -9,7 +9,16 @@ import {
 import { useEffect, useState } from "react";
 import * as Y from "yjs";
 
-export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "denied";
+export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "idle" | "denied";
+
+/**
+ * Dopo tanto tempo senza attività (propria o degli altri nella stanza) ci si disconnette: senza
+ * connessioni aperte il server può spegnersi. Alla prima interazione si riprende.
+ */
+export const IDLE_DISCONNECT_MS = 10 * 60 * 1000;
+/** Gli eventi dell'utente rimandano il timer al massimo una volta a questo intervallo. */
+const ACTIVITY_THROTTLE_MS = 1000;
+const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
 
 export interface ConnectedUser extends PresenceUser {
   clientId: number;
@@ -42,15 +51,52 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
     const socket = new HocuspocusProviderWebsocket({ url: collabUrl() });
     const role = gmToken ? "gm" : "player";
 
+    let idle = false;
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    let lastActivity = 0;
+    const goIdle = () => {
+      idle = true;
+      socket.disconnect();
+      setStatus("idle");
+    };
+    const armIdleTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(goIdle, IDLE_DISCONNECT_MS);
+    };
+    /** Attività propria: se eravamo disconnessi per inattività, si riconnette. */
+    const onUserActivity = () => {
+      const now = Date.now();
+      if (!idle && now - lastActivity < ACTIVITY_THROTTLE_MS) return;
+      lastActivity = now;
+      if (idle) {
+        idle = false;
+        setStatus("connecting");
+        void socket.connect();
+      }
+      armIdleTimer();
+    };
+    /** Attività altrui: modifiche al documento o presenze, solo mentre siamo connessi. */
+    const onRemoteActivity = () => {
+      if (!idle) armIdleTimer();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") onUserActivity();
+    };
+    for (const type of ACTIVITY_EVENTS) window.addEventListener(type, onUserActivity);
+    document.addEventListener("visibilitychange", onVisibility);
+    armIdleTimer();
+
     const publicProvider = new HocuspocusProvider({
       websocketProvider: socket,
       name: roomDocumentName(roomId, "public"),
       document: new Y.Doc(),
       // Il server assegna il ruolo in base al token; i giocatori ne inviano uno qualsiasi.
       token: gmToken ?? "player",
-      onStatus: ({ status }) => setStatus((prev) => (prev === "denied" ? prev : status)),
+      onStatus: ({ status }) =>
+        setStatus((prev) => (prev === "denied" || (idle && prev === "idle") ? prev : status)),
       onAuthenticationFailed: () => setStatus("denied"),
       onAwarenessChange: ({ states }) => {
+        onRemoteActivity();
         const selfId = publicProvider.awareness?.clientID;
         const next = states
           .filter((s) => s.user)
@@ -74,6 +120,7 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
     let usersKey = "";
     const user: PresenceUser = { id: profile.id, name: profile.name, color: profile.color, role };
     publicProvider.setAwarenessField("user", user);
+    publicProvider.document.on("update", onRemoteActivity);
     publicProvider.attach();
     setProvider(publicProvider);
 
@@ -99,6 +146,9 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
     setMailProvider(mailProvider);
 
     return () => {
+      clearTimeout(idleTimer);
+      for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onUserActivity);
+      document.removeEventListener("visibilitychange", onVisibility);
       setProvider(null);
       setGmProvider(null);
       setMailProvider(null);
