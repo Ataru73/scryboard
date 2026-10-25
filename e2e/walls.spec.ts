@@ -242,3 +242,32 @@ test("doors under the fog are invisible to players and cannot be opened blindly"
   await click(player, 315, 280);
   await expect.poll(async () => (await findNodes(gm, ".door-open")).length).toBe(1);
 });
+
+test("the eraser removes walls and doors for the GM, in one undo step each", async ({
+  browser,
+}) => {
+  const { gm, player } = await setupTable(browser);
+  await gm.keyboard.press("w");
+  await click(gm, 100, 300);
+  await click(gm, 300, 300);
+  await gm.keyboard.press("Enter");
+  await gm
+    .getByRole("toolbar", { name: "Muri", exact: true })
+    .getByRole("button", { name: "Porta" })
+    .click();
+  await click(gm, 100, 400);
+  await click(gm, 300, 400);
+  await expect(board(gm)).toHaveAttribute("data-wall-count", "2");
+  await expect(board(player)).toHaveAttribute("data-wall-count", "2");
+
+  await gm.keyboard.press("e");
+  await click(gm, 200, 300);
+  await expect(board(gm)).toHaveAttribute("data-wall-count", "1");
+  // La porta si cancella anche cliccando sulla sua icona.
+  await click(gm, 200, 400);
+  await expect(board(gm)).toHaveAttribute("data-wall-count", "0");
+  await expect(board(player)).toHaveAttribute("data-wall-count", "0");
+
+  await gm.keyboard.press("Control+z");
+  await expect(board(gm)).toHaveAttribute("data-wall-count", "1");
+});

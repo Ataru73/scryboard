@@ -437,8 +437,15 @@ export function Board({ store, provider, roomId, role }: Props) {
   }
 
   function eraseAt(screen: Point) {
-    const id = findItemId(stageRef.current?.getIntersection(screen) ?? null);
-    if (id && canEdit(store.get(id))) store.remove([id]);
+    const hit = stageRef.current?.getIntersection(screen) ?? null;
+    const id = findItemId(hit);
+    if (id && canEdit(store.get(id))) {
+      store.remove([id]);
+      return;
+    }
+    // I muri li vede e li modifica solo il GM.
+    const wallId = role === "gm" ? findWallId(hit) : null;
+    if (wallId) store.removeWalls([wallId]);
   }
 
   function base(layer: BoardItem["layer"], at: Point) {
