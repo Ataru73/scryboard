@@ -451,4 +451,19 @@ describe("public document guard", () => {
     expect(player.getMap("fog").has("f")).toBe(true);
     close();
   });
+
+  it("lets only the GM summon players or set the turn", async () => {
+    const { gm, player, close } = await table();
+    const summon = { id: "s1", x: 10, y: 20, scale: 1 };
+    player.getMap("settings").set("summon", summon);
+    player.getMap("settings").set("turn", { activeId: null, round: 5 });
+    await settle();
+    expect(gm.getMap("settings").has("summon")).toBe(false);
+    expect(gm.getMap("settings").has("turn")).toBe(false);
+
+    gm.getMap("settings").set("summon", summon);
+    await settle();
+    expect(player.getMap("settings").get("summon")).toEqual(summon);
+    close();
+  });
 });

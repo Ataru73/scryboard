@@ -325,6 +325,18 @@ export const DEFAULT_LIGHTING: LightingSettings = {
   explorationEpoch: 0,
 };
 
+/**
+ * Richiamo del GM: porta i giocatori su un punto con un certo ingrandimento. Si distingue un
+ * richiamo dall'altro dall'id; lo scrive solo il GM (impostazioni).
+ */
+export const summonSchema = z.object({
+  id: z.string().min(1).max(64),
+  x: z.number(),
+  y: z.number(),
+  scale: z.number().min(0.05).max(8),
+});
+export type Summon = z.infer<typeof summonSchema>;
+
 /** Turno corrente: token attivo (se c'è ancora) e numero del round. Lo scrive solo il GM. */
 export const turnSettingsSchema = z.object({
   activeId: z.string().max(64).nullable(),

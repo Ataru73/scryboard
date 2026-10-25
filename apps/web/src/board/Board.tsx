@@ -66,6 +66,7 @@ import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from
 import { InitiativePanel } from "./InitiativePanel";
 import { ItemNode, SELECTION_COLOR, StampContent } from "./ItemNode";
 import { formatDistance, pathCells, snapRulerPoint } from "./measure";
+import { PingArrows } from "./PingArrows";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
 import { SelectionPanel } from "./SelectionPanel";
@@ -79,7 +80,7 @@ import { Toolbar } from "./Toolbar";
 import { useBoardUi } from "./tools";
 import { isSupportedImage, UploadError, uploadImage } from "./upload";
 import { useBoardShortcuts } from "./useBoardShortcuts";
-import { fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
+import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
 import { WallSelectionPanel } from "./WallPanel";
 
 interface Props {
@@ -121,6 +122,9 @@ const FIT_VIEW_MAX_SCALE = 2;
 
 /** Tempo di pressione, senza muoversi, che lancia un ping. */
 const PING_HOLD_MS = 550;
+
+/** Durata dello spostamento della vista quando il GM richiama i giocatori. */
+const SUMMON_MS = 450;
 
 /** Tempo in cui una sagoma non fissata resta visibile dopo il rilascio. */
 const TEMPLATE_LINGER_MS = 4000;
@@ -513,6 +517,35 @@ export function Board({ store, provider, roomId, role }: Props) {
     fitToContent();
   }, [synced, size.width, fitToContent, store]);
 
+  // Richiamo del GM: i giocatori vengono portati sul punto con una breve animazione. Quello già
+  // presente all'ingresso è vecchio e si ignora.
+  const summon = useSyncExternalStore(store.subscribe, store.getSummon);
+  const summonSeen = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!synced) return;
+    if (summonSeen.current === undefined) {
+      summonSeen.current = summon?.id ?? null;
+      return;
+    }
+    if (!summon || summon.id === summonSeen.current) return;
+    summonSeen.current = summon.id;
+    if (role === "gm" || size.width === 0) return;
+    const from = useBoardUi.getState().viewport;
+    const to = centerOn(summon, summon.scale, size);
+    const start = performance.now();
+    let frame = requestAnimationFrame(function tick(now) {
+      const t = Math.min(1, (now - start) / SUMMON_MS);
+      const k = 1 - (1 - t) ** 3;
+      useBoardUi.getState().setViewport({
+        x: from.x + (to.x - from.x) * k,
+        y: from.y + (to.y - from.y) * k,
+        scale: from.scale + (to.scale - from.scale) * k,
+      });
+      if (t < 1) frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [summon, synced, role, size]);
+
   // Tiene il Transformer agganciato ai nodi selezionati (che possono cambiare da remoto).
   // biome-ignore lint/correctness/useExhaustiveDependencies: i nodi Konva cambiano con `items`.
   useEffect(() => {
@@ -581,7 +614,7 @@ export function Board({ store, provider, roomId, role }: Props) {
   }
 
   /** Clic prolungato senza muoversi: un ping animato visibile a tutti per un paio di secondi. */
-  function startPress(p: { screen: Point; world: Point }) {
+  function startPress(p: { screen: Point; world: Point }, summon = false) {
     cancelPress();
     pressRef.current = {
       screen: p.screen,
@@ -589,6 +622,8 @@ export function Board({ store, provider, roomId, role }: Props) {
         pressRef.current = null;
         setInteraction(null);
         provider.setAwarenessField("ping", { id: newItemId(), x: p.world.x, y: p.world.y });
+        // Maiusc + pressione prolungata: il GM porta anche i giocatori su quel punto.
+        if (summon && role === "gm") store.summon(p.world, viewport.scale);
       }, PING_HOLD_MS),
     };
   }
@@ -599,7 +634,7 @@ export function Board({ store, provider, roomId, role }: Props) {
     cancelPress();
     if (e.evt.button === 1 || (e.evt.button === 0 && panMode)) {
       setInteraction({ type: "pan", start: p.screen, viewport });
-      if (e.evt.button === 0) startPress(p);
+      if (e.evt.button === 0) startPress(p, e.evt.shiftKey);
       return;
     }
     if (e.evt.button !== 0) return;
@@ -627,7 +662,7 @@ export function Board({ store, provider, roomId, role }: Props) {
             end: p.world,
             additive: e.evt.shiftKey,
           });
-          startPress(p);
+          startPress(p, e.evt.shiftKey);
           return;
         }
         if (e.evt.shiftKey) {
@@ -1835,6 +1870,12 @@ export function Board({ store, provider, roomId, role }: Props) {
         {measureText}
       </div>
       <RollToasts provider={provider} />
+      <PingArrows
+        provider={provider}
+        viewport={viewport}
+        size={size}
+        onFocus={(point) => setViewport(centerOn(point, viewport.scale, size))}
+      />
       {initiativeOpen && (
         <InitiativePanel
           store={store}

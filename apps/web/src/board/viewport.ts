@@ -37,6 +37,40 @@ export function zoomAt(vp: Viewport, anchor: Point, factor: number): Viewport {
   return { scale, x: anchor.x - world.x * scale, y: anchor.y - world.y * scale };
 }
 
+/** Viewport che mette al centro di uno schermo `size` il punto del mondo `point`. */
+export function centerOn(
+  point: Point,
+  scale: number,
+  size: { width: number; height: number },
+): Viewport {
+  const s = clampScale(scale);
+  return { scale: s, x: size.width / 2 - point.x * s, y: size.height / 2 - point.y * s };
+}
+
+/**
+ * Per un punto fuori dallo schermo: dove mettere la freccia sul bordo (a `margin` pixel) e in che
+ * direzione punta, in gradi. `null` se il punto è già visibile.
+ */
+export function edgeIndicator(
+  screen: Point,
+  size: { width: number; height: number },
+  margin = 28,
+): { position: Point; angle: number } | null {
+  const halfW = size.width / 2 - margin;
+  const halfH = size.height / 2 - margin;
+  const dx = screen.x - size.width / 2;
+  const dy = screen.y - size.height / 2;
+  if (Math.abs(dx) <= halfW && Math.abs(dy) <= halfH) return null;
+  const t = Math.min(
+    dx === 0 ? Infinity : halfW / Math.abs(dx),
+    dy === 0 ? Infinity : halfH / Math.abs(dy),
+  );
+  return {
+    position: { x: size.width / 2 + dx * t, y: size.height / 2 + dy * t },
+    angle: (Math.atan2(dy, dx) * 180) / Math.PI,
+  };
+}
+
 /** Viewport che mostra `bounds` centrato in uno schermo `size`, senza ingrandire oltre il 100%. */
 export function fitBounds(
   bounds: Box,

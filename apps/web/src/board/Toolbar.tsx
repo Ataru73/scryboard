@@ -19,6 +19,7 @@ import {
   ImageIcon,
   MapGenerateIcon,
   RedoIcon,
+  SummonIcon,
   TOOL_ICONS,
   TrashIcon,
   TurnsIcon,
@@ -32,7 +33,7 @@ import type { BoardStore } from "./store";
 import { TerrainPanel } from "./TerrainPanel";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { type Tool, useBoardUi } from "./tools";
-import { clampScale, zoomAt } from "./viewport";
+import { clampScale, screenToWorld, zoomAt } from "./viewport";
 import { WallPanel } from "./WallPanel";
 
 const TOOLS: { tool: Tool; label: string; key: string }[] = [
@@ -385,6 +386,17 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         >
           {TOOL_ICONS.ruler}
         </button>
+        {role === "gm" && (
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Porta qui i giocatori"
+            title="Porta qui i giocatori: centrano la loro vista su questo punto (Maiusc + pressione prolungata sul punto che vuoi)"
+            onClick={() => store.summon(screenToWorld(viewport, center), viewport.scale)}
+          >
+            {SummonIcon}
+          </button>
+        )}
         <button
           type="button"
           className="icon-button"

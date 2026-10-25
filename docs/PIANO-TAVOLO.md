@@ -171,6 +171,17 @@ T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta 
 
 ### T5 — Ping fuori schermo e "porta qui i giocatori" (≈ 3 giorni)
 
+**Stato**: completata. Note rispetto al piano:
+- Il richiamo non passa dall'awareness (che il server non controlla): è `settings.summon`
+  (`{ id, x, y, scale }`), scrivibile solo dal GM, quindi un giocatore non può spostare la vista
+  degli altri. I giocatori reagiscono solo a un id nuovo dopo la sincronizzazione, con una breve
+  animazione; il GM non si muove. Il richiamo non entra nello storico di annulla.
+- Si lancia dal pulsante «Porta qui i giocatori» (barra dello zoom, solo GM), che usa il centro e
+  lo zoom attuali, oppure con Maiusc + pressione prolungata su un punto, che fa anche il ping.
+- La freccia sul bordo è un pulsante HTML (`PingArrows`), non un oggetto Konva: resta cliccabile,
+  accessibile e testabile. Compare per 5 secondi se il ping altrui cade fuori vista; il clic
+  centra la vista.
+
 **Cosa vede l'utente**
 - Se un ping cade fuori dalla vista, una freccia sul bordo dello schermo ne indica la direzione;
   cliccandola si centra la vista.

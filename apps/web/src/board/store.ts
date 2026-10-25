@@ -16,7 +16,9 @@ import {
   type LightingSettings,
   lightingSettingsSchema,
   SETTINGS_MAP,
+  type Summon,
   stepTurn,
+  summonSchema,
   TERRAIN_MAP,
   type TerrainOp,
   type TokenItem,
@@ -59,6 +61,7 @@ export class BoardStore {
   private grid: GridSettings = DEFAULT_GRID;
   private lighting: LightingSettings = DEFAULT_LIGHTING;
   private turn: TurnSettings = DEFAULT_TURN;
+  private summonState: Summon | null = null;
   private fog: FogOp[] = [];
   private terrain: TerrainOp[] = [];
   private walls: Wall[] = [];
@@ -139,6 +142,10 @@ export class BoardStore {
     const turn = turnSettingsSchema.safeParse(this.settings.get("turn"));
     const nextTurn = turn.success ? turn.data : DEFAULT_TURN;
     if (JSON.stringify(nextTurn) !== JSON.stringify(this.turn)) this.turn = nextTurn;
+    const summon = summonSchema.safeParse(this.settings.get("summon"));
+    const nextSummon = summon.success ? summon.data : null;
+    if (JSON.stringify(nextSummon) !== JSON.stringify(this.summonState))
+      this.summonState = nextSummon;
   }
 
   private loadFog() {
@@ -193,6 +200,17 @@ export class BoardStore {
   getGrid = (): GridSettings => this.grid;
   getLighting = (): LightingSettings => this.lighting;
   getTurn = (): TurnSettings => this.turn;
+  getSummon = (): Summon | null => this.summonState;
+
+  /**
+   * Porta i giocatori su un punto (solo il GM può scrivere le impostazioni). Non entra nello
+   * storico: annullare un'azione non deve richiamare di nuovo i giocatori.
+   */
+  summon(point: { x: number; y: number }, scale: number) {
+    const next: Summon = { id: newItemId(), x: point.x, y: point.y, scale };
+    if (!summonSchema.safeParse(next).success) return;
+    this.pub.doc.transact(() => this.settings.set("summon", next), "summon");
+  }
   getFog = (): FogOp[] => this.fog;
   getTerrain = (): TerrainOp[] => this.terrain;
   getWalls = (): Wall[] => this.walls;
