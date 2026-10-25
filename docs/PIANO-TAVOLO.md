@@ -279,6 +279,16 @@ perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
 
 ### T8 — Raccolta degli asset della stanza (≈ 4 giorni)
 
+**Stato**: completata. Note rispetto al piano:
+- `GET /api/rooms/:id/assets` elenca le immagini della stanza (le 200 più recenti, dalla tabella
+  `assets`): il GM le vede tutte, con un'etichetta «GM» su quelle ancora private; i giocatori solo
+  le pubbliche. Le immagini caricate prima di quella tabella non compaiono.
+- Nuova scheda «Caricati» nella libreria di immagini (sempre presente, senza bisogno di una
+  chiave di Gemini), con miniature e il pulsante «Aggiungi alla raccolta»: carica (con il
+  ritaglio a cerchio dei token) senza piazzare nulla. Scegliere un'immagine la assegna al token in
+  modifica o allo strumento Token, come per le altre schede. Non c'è un trascinamento sulla
+  lavagna: il riuso passa dal token.
+
 **Cosa vede l'utente**
 - Nel selettore dei ritratti una scheda **Caricati**: le immagini già caricate nella stanza,
   da trascinare sulla lavagna. Il GM può caricare senza piazzare ("Aggiungi alla raccolta").

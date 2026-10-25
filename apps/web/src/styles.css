@@ -967,6 +967,7 @@ button.danger {
 }
 
 .generated-button {
+  position: relative;
   padding: 0;
   overflow: hidden;
   aspect-ratio: 1;
@@ -1291,4 +1292,23 @@ button.danger {
   color: var(--accent-text);
   font-size: 0.9rem;
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
+}
+
+.uploaded-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.asset-private {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 0 0.3rem;
+  border-radius: 4px;
+  background: #1d1a24;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
 }

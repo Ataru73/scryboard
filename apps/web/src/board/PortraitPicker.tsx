@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { storage } from "../lib/storage";
 import { GeneratePanel } from "./GeneratePanel";
 import { loadPortraitPaths, usePortraitPath } from "./portraitPaths";
+import { UploadedAssets } from "./UploadedAssets";
 
 type Portrait = (typeof PORTRAITS)[number];
 
@@ -44,7 +45,7 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
   const [category, setCategory] = useState<string | null>(null);
   // La scheda Genera esiste solo con una chiave di Gemini.
   const [apiKey] = useState(() => storage.getGeminiKey());
-  const [tab, setTab] = useState<"library" | "generate">("library");
+  const [tab, setTab] = useState<"library" | "uploaded" | "generate">("library");
   const [recent] = useState(() => storage.getRecentPortraits());
   // Le anteprime si disegnano appena il chunk è scaricato.
   useEffect(() => {
@@ -89,11 +90,14 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
       }}
     >
       <h2 id={titleId}>Libreria di immagini</h2>
-      {apiKey && (
-        <fieldset className="portrait-categories" aria-label="Origine">
-          <button type="button" aria-pressed={tab === "library"} onClick={() => setTab("library")}>
-            Libreria
-          </button>
+      <fieldset className="portrait-categories" aria-label="Origine">
+        <button type="button" aria-pressed={tab === "library"} onClick={() => setTab("library")}>
+          Libreria
+        </button>
+        <button type="button" aria-pressed={tab === "uploaded"} onClick={() => setTab("uploaded")}>
+          Caricati
+        </button>
+        {apiKey && (
           <button
             type="button"
             aria-pressed={tab === "generate"}
@@ -101,9 +105,11 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
           >
             Genera
           </button>
-        </fieldset>
-      )}
-      {tab === "generate" && apiKey ? (
+        )}
+      </fieldset>
+      {tab === "uploaded" ? (
+        <UploadedAssets roomId={roomId} onPickAsset={onPickAsset} />
+      ) : tab === "generate" && apiKey ? (
         <GeneratePanel
           roomId={roomId}
           apiKey={apiKey}

@@ -24,7 +24,7 @@ interface Props {
 }
 
 /** Miniatura di un'immagine già caricata nella stanza (stessa autorizzazione dei token). */
-function AssetThumb({ roomId, assetId }: { roomId: string; assetId: string }) {
+export function AssetThumb({ roomId, assetId }: { roomId: string; assetId: string }) {
   const image = useImage(assetUrl(roomId, assetId));
   if (!image) return <span className="generated-missing" />;
   return <img src={image.src} alt="" />;

@@ -1,4 +1,5 @@
-import { and, eq } from "drizzle-orm";
+import { MAX_LISTED_ASSETS, type RoomAsset } from "@scryboard/shared";
+import { and, desc, eq } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { assets } from "../db/schema";
 
@@ -25,6 +26,19 @@ export class AssetAccess {
       insert
         .onConflictDoUpdate({ target: [assets.roomId, assets.assetId], set: { public: true } })
         .run();
+  }
+
+  /** Immagini della stanza, le più recenti per prime: il GM le vede tutte, gli altri le pubbliche. */
+  list(roomId: string, isGm: boolean): RoomAsset[] {
+    return this.db
+      .select({ assetId: assets.assetId, createdAt: assets.createdAt, public: assets.public })
+      .from(assets)
+      .where(
+        isGm ? eq(assets.roomId, roomId) : and(eq(assets.roomId, roomId), eq(assets.public, true)),
+      )
+      .orderBy(desc(assets.createdAt))
+      .limit(MAX_LISTED_ASSETS)
+      .all();
   }
 
   async canRead(roomId: string, assetId: string, isGm: boolean): Promise<boolean> {

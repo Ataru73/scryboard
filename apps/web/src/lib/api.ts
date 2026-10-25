@@ -1,5 +1,6 @@
 import type {
   CreateRoomResponse,
+  ListAssetsResponse,
   Roll,
   RollRequest,
   RoomInfo,
@@ -145,6 +146,11 @@ export const api = {
       headers: {
         authorization: "gmToken" in auth ? `Bearer ${auth.gmToken}` : `Player ${auth.credentials}`,
       },
+    }),
+  /** Immagini della stanza: il GM (con il token) le vede tutte, gli altri solo le pubbliche. */
+  listAssets: (roomId: string, gmToken: string | null) =>
+    request<ListAssetsResponse>(`/rooms/${encodeURIComponent(roomId)}/assets`, {
+      headers: gmToken ? gmHeaders(gmToken) : {},
     }),
   /** Con il token del GM l'immagine resta privata finché un oggetto che la usa non è visibile. */
   uploadAsset: (roomId: string, file: Blob, gmToken: string | null) =>

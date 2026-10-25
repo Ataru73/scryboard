@@ -105,6 +105,40 @@ describe("hidden assets", () => {
   const url = (roomId: string, assetId: string) =>
     `${server.baseUrl}/api/rooms/${roomId}/assets/${assetId}`;
 
+  it("lists the room's images: everything for the GM, only public ones for players", async () => {
+    const room = await createRoom(server);
+    const base = `${server.baseUrl}/api/rooms/${room.id}/assets`;
+    const gmUpload = await fetch(base, {
+      method: "POST",
+      headers: { authorization: `Bearer ${room.gmToken}` },
+      body: PNG,
+    });
+    const { assetId: secret } = (await gmUpload.json()) as { assetId: string };
+    const list = async (token?: string) =>
+      (
+        (await (
+          await fetch(base, { headers: token ? { authorization: `Bearer ${token}` } : {} })
+        ).json()) as {
+          assets: { assetId: string; public: boolean }[];
+        }
+      ).assets;
+
+    expect(await list(room.gmToken)).toEqual([
+      expect.objectContaining({ assetId: secret, public: false }),
+    ]);
+    expect(await list()).toEqual([]);
+
+    // Un'immagine caricata da un giocatore è subito pubblica.
+    const other = new Uint8Array([...PNG, 1]);
+    const playerUpload = await fetch(base, { method: "POST", body: other });
+    const { assetId: shared } = (await playerUpload.json()) as { assetId: string };
+    expect((await list()).map((a) => a.assetId)).toEqual([shared]);
+    expect((await list(room.gmToken)).map((a) => a.assetId).sort()).toEqual(
+      [secret, shared].sort(),
+    );
+    expect((await fetch(`${server.baseUrl}/api/rooms/doesnotexist1/assets`)).status).toBe(404);
+  });
+
   it("keeps GM uploads private until an item using them is public", async () => {
     const room = await createRoom(server);
     const gmHeaders = { authorization: `Bearer ${room.gmToken}` };

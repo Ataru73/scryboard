@@ -1,6 +1,7 @@
 import {
   createRoomRequestSchema,
   DiceError,
+  type ListAssetsResponse,
   MAX_ARCHIVE_BYTES,
   MAX_ASSET_BYTES,
   parsePlayerCredentials,
@@ -285,6 +286,14 @@ export function createApi(
       return c.json({ ok: true });
     }),
   );
+
+  // Elenco delle immagini della stanza (cassetto «Caricati»): i giocatori vedono solo le pubbliche.
+  api.get("/rooms/:id/assets", (c) => {
+    const room = findRoom(c.req.param("id"));
+    if (!room) return c.json({ error: "Stanza non trovata" }, 404);
+    const isGm = isGmRequest(room.id, c.req.header("authorization"));
+    return c.json({ assets: access.list(room.id, isGm) } satisfies ListAssetsResponse);
+  });
 
   api.get("/rooms/:id/assets/:assetId", async (c) => {
     const roomId = c.req.param("id");
