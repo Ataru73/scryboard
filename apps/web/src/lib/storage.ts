@@ -46,10 +46,28 @@ const GEMINI_KEY = "scryboard:gemini-key";
 const GEMINI_MODEL_KEY = "scryboard:gemini-model";
 const MAX_GENERATED = 24;
 
+const geminiKeyListeners = new Set<() => void>();
+
+/** Per useSyncExternalStore: avvisa quando la chiave cambia, anche da un'altra scheda. */
+export function subscribeGeminiKey(listener: () => void): () => void {
+  geminiKeyListeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === GEMINI_KEY) listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    geminiKeyListeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
 export const storage = {
   /** Chiave API di Gemini: resta in questo browser, non si invia mai al server di Scryboard. */
   getGeminiKey: () => read(GEMINI_KEY),
-  setGeminiKey: (key: string | null) => write(GEMINI_KEY, key?.trim() || null),
+  setGeminiKey: (key: string | null) => {
+    write(GEMINI_KEY, key?.trim() || null);
+    for (const listener of geminiKeyListeners) listener();
+  },
   getGeminiModel: () => read(GEMINI_MODEL_KEY),
   setGeminiModel: (model: string | null) => write(GEMINI_MODEL_KEY, model?.trim() || null),
   /** Immagini generate in questa stanza (id degli asset caricati), le più recenti per prime. */

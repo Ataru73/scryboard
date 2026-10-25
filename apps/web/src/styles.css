@@ -965,6 +965,25 @@ button.danger {
   object-fit: cover;
 }
 
+.modal-wide {
+  width: min(calc(100% - 2rem), 34rem);
+}
+
+.map-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.5rem;
+}
+
+.map-results .generated-button {
+  aspect-ratio: auto;
+}
+
+.map-results .generated-button img {
+  height: auto;
+  object-fit: contain;
+}
+
 .cropper-canvas {
   align-self: center;
   width: min(100%, 20rem);

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  buildMapPrompt,
   buildPrompt,
   GeminiError,
   generateImage,
@@ -19,6 +20,34 @@ function mockFetch(status: number, body: unknown) {
 }
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe("buildMapPrompt", () => {
+  it("asks for a top-down map without characters or text, or a parchment for regions", () => {
+    const dungeon = buildMapPrompt("  cripta con altare  ", "dungeon");
+    expect(dungeon).toContain("cripta con altare.");
+    expect(dungeon).toContain("Top-down battle map");
+    expect(dungeon).toContain("no grid lines");
+    expect(dungeon).toContain("no characters");
+    expect(buildMapPrompt("isola", "region")).toContain("parchment");
+  });
+});
+
+describe("generateImage aspect ratio", () => {
+  it("sends the requested aspect ratio, square by default", async () => {
+    const bodies: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        bodies.push(init.body as string);
+        return new Response(JSON.stringify(ok([image("AAAA")])), { status: 200 });
+      }),
+    );
+    await generateImage({ apiKey: "k", model: "m", prompt: "p", aspectRatio: "16:9" });
+    await generateImage({ apiKey: "k", model: "m", prompt: "p" });
+    const ratios = bodies.map((b) => JSON.parse(b).generationConfig.imageConfig.aspectRatio);
+    expect(ratios).toEqual(["16:9", "1:1"]);
+  });
+});
 
 describe("buildPrompt", () => {
   it("combines the description with the style template and the framing rules", () => {

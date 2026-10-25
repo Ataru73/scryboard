@@ -1,6 +1,7 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { DRAW_COLORS, type Role, STROKE_WIDTHS } from "@scryboard/shared";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
+import { storage, subscribeGeminiKey } from "../lib/storage";
 import { COLOR_NAMES } from "./colors";
 import { FogPanel } from "./FogPanel";
 import { GridPanel } from "./GridPanel";
@@ -10,12 +11,14 @@ import {
   FitIcon,
   GridIcon,
   ImageIcon,
+  MapGenerateIcon,
   RedoIcon,
   TOOL_ICONS,
   TrashIcon,
   UndoIcon,
 } from "./icons";
 import { LightPanel } from "./LightPanel";
+import { MapGenerator } from "./MapGenerator";
 import { PathPanel } from "./PathPanel";
 import { StampPanel } from "./StampPanel";
 import type { BoardStore } from "./store";
@@ -77,6 +80,9 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
   const canRedo = useSyncExternalStore(store.subscribe, () => store.canRedo());
   const isEmpty = useSyncExternalStore(store.subscribe, () => store.isEmpty());
   const [clearModalOpen, setClearModalOpen] = useState(false);
+  const [mapModalOpen, setMapModalOpen] = useState(false);
+  // Generare mappe richiede una chiave di Gemini; senza, il pulsante non compare.
+  const geminiKey = useSyncExternalStore(subscribeGeminiKey, storage.getGeminiKey);
   const clearTitleId = useId();
   const clearDescId = useId();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -108,6 +114,17 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         >
           {ImageIcon}
         </button>
+        {role === "gm" && geminiKey && (
+          <button
+            type="button"
+            className="icon-button"
+            title="Genera una mappa con Gemini"
+            aria-label="Genera mappa"
+            onClick={() => setMapModalOpen(true)}
+          >
+            {MapGenerateIcon}
+          </button>
+        )}
         {role === "gm" && (
           <button
             type="button"
@@ -184,6 +201,14 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
           </>
         )}
       </div>
+
+      {role === "gm" && geminiKey && mapModalOpen && (
+        <MapGenerator
+          apiKey={geminiKey}
+          onPick={(file) => onUpload([file])}
+          onClose={() => setMapModalOpen(false)}
+        />
+      )}
 
       {role === "gm" && clearModalOpen && (
         // biome-ignore lint/a11y/useKeyWithClickEvents: Esc chiude nativamente <dialog>.

@@ -28,6 +28,33 @@ export const GEMINI_STYLES = [
 ] as const;
 export type GeminiStyleId = (typeof GEMINI_STYLES)[number]["id"];
 
+export const MAP_STYLES = [
+  {
+    id: "dungeon",
+    label: "Dungeon o interno",
+    template: "Top-down battle map of a dungeon or building interior for a fantasy tabletop RPG:",
+  },
+  {
+    id: "outdoor",
+    label: "Esterno o natura",
+    template: "Top-down battle map of an outdoor location for a fantasy tabletop RPG:",
+  },
+  {
+    id: "region",
+    label: "Mappa di una regione",
+    template: "Illustrated fantasy region map on aged parchment, cartographer style:",
+  },
+] as const;
+export type MapStyleId = (typeof MAP_STYLES)[number]["id"];
+
+export const MAP_FORMATS = [
+  { id: "16:9", label: "Orizzontale (16:9)" },
+  { id: "4:3", label: "Orizzontale (4:3)" },
+  { id: "1:1", label: "Quadrata" },
+  { id: "3:4", label: "Verticale (3:4)" },
+] as const;
+export type MapFormatId = (typeof MAP_FORMATS)[number]["id"];
+
 export type GeminiErrorCode =
   | "invalid-key"
   | "quota"
@@ -68,6 +95,18 @@ export function buildPrompt(description: string, style: GeminiStyleId): string {
     `${template} ${description.trim()}.`,
     "Single subject, centered, filling most of a square frame, plain uniform background,",
     "no text, no letters, no border, no frame, suitable for cropping into a circle.",
+  ].join(" ");
+}
+
+/** Descrizione della mappa più le regole che la rendono usabile sulla lavagna. */
+export function buildMapPrompt(description: string, style: MapStyleId): string {
+  const template = MAP_STYLES.find((s) => s.id === style)?.template ?? MAP_STYLES[0].template;
+  return [
+    `${template} ${description.trim()}.`,
+    style === "region"
+      ? "Seen from above, no text, no letters, no labels, no border, no frame."
+      : "Orthographic view from directly above, evenly lit, no grid lines, no characters, no creatures, no tokens, no text, no letters, no border, no frame.",
+    "The image fills the whole canvas edge to edge.",
   ].join(" ");
 }
 
@@ -130,12 +169,16 @@ async function call(url: string, apiKey: string, init: RequestInit = {}): Promis
   return body;
 }
 
-/** Genera un'immagine quadrata; per più varianti si fanno più richieste (vedi `generateVariants`). */
-export async function generateImage(opts: {
+export interface GenerateOptions {
   apiKey: string;
   model: string;
   prompt: string;
-}): Promise<GeneratedImage> {
+  /** Proporzioni dell'immagine, per esempio "16:9". Default: quadrata. */
+  aspectRatio?: string;
+}
+
+/** Genera un'immagine; per più varianti si fanno più richieste (vedi `generateVariants`). */
+export async function generateImage(opts: GenerateOptions): Promise<GeneratedImage> {
   const body = await call(
     `${ENDPOINT}/models/${encodeURIComponent(opts.model)}:generateContent`,
     opts.apiKey,
@@ -143,7 +186,10 @@ export async function generateImage(opts: {
       method: "POST",
       body: JSON.stringify({
         contents: [{ parts: [{ text: opts.prompt }] }],
-        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } },
+        generationConfig: {
+          responseModalities: ["IMAGE"],
+          imageConfig: { aspectRatio: opts.aspectRatio ?? "1:1" },
+        },
       }),
     },
   );
@@ -152,7 +198,7 @@ export async function generateImage(opts: {
 
 /** Fa `count` richieste in parallelo: ognuna è una variante, e una che fallisce non ferma le altre. */
 export async function generateVariants(
-  opts: { apiKey: string; model: string; prompt: string },
+  opts: GenerateOptions,
   count: number,
 ): Promise<GeneratedImage[]> {
   const results = await Promise.allSettled(

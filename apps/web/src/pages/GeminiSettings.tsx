@@ -82,7 +82,8 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
           <h2 id={titleId}>Impostazioni</h2>
           <p className="small">
             Con una chiave API di Gemini puoi generare le immagini dei token dalla scheda{" "}
-            <strong>Genera</strong> della libreria. Senza chiave la funzione non compare.
+            <strong>Genera</strong> della libreria e, da GM, le mappe dal pulsante{" "}
+            <strong>Genera mappa</strong>. Senza chiave le funzioni non compaiono.
           </p>
           <label className="field" htmlFor={keyId}>
             <span>Chiave API di Gemini</span>

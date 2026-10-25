@@ -42,10 +42,15 @@ const imageReply = {
 
 /** L'API di Gemini è sempre simulata: nessuna chiamata reale e nessuna chiave nella CI. */
 async function mockGemini(page: Page, reply: { status: number; body: unknown } | null = null) {
-  const calls: { method: string; url: string; key: string | undefined }[] = [];
+  const calls: { method: string; url: string; key: string | undefined; body: string | null }[] = [];
   await page.route(GEMINI, async (route) => {
     const req = route.request();
-    calls.push({ method: req.method(), url: req.url(), key: req.headers()["x-goog-api-key"] });
+    calls.push({
+      method: req.method(),
+      url: req.url(),
+      key: req.headers()["x-goog-api-key"],
+      body: req.postData(),
+    });
     const { status, body } = reply ?? {
       status: 200,
       body: req.method() === "POST" ? imageReply : modelsReply,
@@ -205,4 +210,38 @@ test("Gemini refusals and quota errors are shown clearly", async ({ browser }) =
     await dialog.getByRole("button", { name: "Chiudi" }).click();
     await gm.keyboard.press("Escape");
   }
+});
+
+test("the GM generates a map from a description and it lands on the board as a map image", async ({
+  browser,
+}) => {
+  const { gm, player } = await setupTable(browser);
+  // Senza chiave il pulsante non c'è, neanche per il GM.
+  await expect(gm.getByRole("button", { name: "Genera mappa" })).toHaveCount(0);
+  const calls = await mockGemini(gm);
+  await saveKey(gm);
+  await expect(gm.getByRole("button", { name: "Genera mappa" })).toBeVisible();
+  // I giocatori non generano mappe.
+  await expect(player.getByRole("button", { name: "Genera mappa" })).toHaveCount(0);
+
+  await gm.getByRole("button", { name: "Genera mappa" }).click();
+  const dialog = gm.getByRole("dialog", { name: "Genera una mappa" });
+  await dialog.getByLabel("Descrizione").fill("cripta con un altare");
+  await dialog.getByLabel("Formato").selectOption("4:3");
+  await dialog.getByRole("button", { name: "Genera", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: /Usa la mappa/ })).toHaveCount(2);
+
+  const requests = calls.filter((c) => c.method === "POST");
+  expect(requests).toHaveLength(2);
+  const sent = JSON.parse(requests[0]?.body ?? "{}");
+  expect(sent.generationConfig.imageConfig.aspectRatio).toBe("4:3");
+  expect(sent.contents[0].parts[0].text).toContain("cripta con un altare");
+  const upload = gm.waitForResponse(
+    (r) => r.url().includes("/assets") && r.request().method() === "POST",
+  );
+  await dialog.getByRole("button", { name: "Usa la mappa 1" }).click();
+  expect((await upload).ok()).toBe(true);
+  await expect(dialog).toHaveCount(0);
+  await expect(board(gm)).toHaveAttribute("data-item-count", "1");
+  await expect(board(player)).toHaveAttribute("data-item-count", "1");
 });

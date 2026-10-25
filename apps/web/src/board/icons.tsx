@@ -118,6 +118,14 @@ export const ImageIcon = (
   </Icon>
 );
 
+export const MapGenerateIcon = (
+  <Icon>
+    <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" />
+    <path d="M9 4v14M15 6v14" />
+    <path d="M19 1v4M17 3h4" />
+  </Icon>
+);
+
 export const UndoIcon = (
   <Icon>
     <path d="M9 14L4 9l5-5" />

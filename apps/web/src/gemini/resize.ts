@@ -30,3 +30,22 @@ export async function toTokenImage(image: GeneratedImage): Promise<File> {
   if (!blob) throw new Error("Impossibile ridurre l'immagine.");
   return new File([blob], "token.webp", { type: "image/webp" });
 }
+
+const MAP_MAX_SIDE = 2048;
+
+/** Riduce una mappa generata a 2048 px sul lato lungo, in WebP: mantiene le proporzioni. */
+export async function toMapImage(image: GeneratedImage): Promise<File> {
+  const bytes = Uint8Array.from(atob(image.data), (c) => c.charCodeAt(0));
+  const bitmap = await createImageBitmap(new Blob([bytes], { type: image.mimeType }));
+  const scale = Math.min(1, MAP_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", 0.9),
+  );
+  if (!blob) throw new Error("Impossibile ridurre l'immagine.");
+  return new File([blob], "mappa.webp", { type: "image/webp" });
+}
