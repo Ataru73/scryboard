@@ -15,7 +15,7 @@ import {
   ITEMS_MAP,
   lightingSettingsSchema,
   MAX_ARCHIVE_BYTES,
-  MAX_ASSET_BYTES,
+  MAX_VIDEO_BYTES,
   roomDocumentName,
   SETTINGS_MAP,
   TERRAIN_MAP,
@@ -41,7 +41,7 @@ const MAX_UNZIPPED_BYTES = 600 * 1024 * 1024;
 const MAX_FILES = 2000;
 
 const ENTRY_PATH =
-  /^(?:manifest\.json|scenes\/\d{1,2}\/(?:public|gm)\.ydoc|assets\/[0-9a-f]{64}\.(?:png|jpg|webp|gif))$/;
+  /^(?:manifest\.json|scenes\/\d{1,2}\/(?:public|gm)\.ydoc|assets\/[0-9a-f]{64}\.(?:png|jpg|webp|gif|webm|mp4))$/;
 
 /** Esportazione e importazione di una stanza in un archivio `.scryboard`. */
 export class ArchiveService {
@@ -130,7 +130,7 @@ export class ArchiveService {
             file.name === "manifest.json"
               ? MAX_MANIFEST_BYTES
               : file.name.startsWith("assets/")
-                ? MAX_ASSET_BYTES
+                ? MAX_VIDEO_BYTES
                 : MAX_DOC_BYTES;
           total += file.originalSize;
           if (++count > MAX_FILES || file.originalSize > limit || total > MAX_UNZIPPED_BYTES) {

@@ -1,20 +1,23 @@
 import {
   createRoomRequestSchema,
   DiceError,
+  IMAGE_MIME_TYPES,
   type ListAssetsResponse,
   MAX_ARCHIVE_BYTES,
   MAX_ASSET_BYTES,
+  MAX_VIDEO_BYTES,
   parsePlayerCredentials,
   ROOM_ID_PATTERN,
   rollRequestSchema,
   sceneNameRequestSchema,
   sendMessageRequestSchema,
   type UploadAssetResponse,
+  VIDEO_MIME_TYPES,
 } from "@scryboard/shared";
 import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { AssetAccess } from "../assets/access";
-import { type AssetStore, UnsupportedAssetError } from "../assets/store";
+import { type AssetStore, detectAssetType, UnsupportedAssetError } from "../assets/store";
 import { MessageError, type MessageService, type Sender } from "../collab/messages";
 import type { RollService } from "../collab/rolls";
 import type { SceneCollab } from "../collab/scenes";
@@ -30,6 +33,31 @@ export interface ApiOptions {
 }
 
 const TEN_MINUTES = 10 * 60 * 1000;
+
+/**
+ * Un solo intervallo «bytes=a-b», «bytes=a-» o «bytes=-n»; `null` se l'header manca o non lo si
+ * capisce (si risponde con tutto il file), «unsatisfiable» se cade fuori dal file.
+ */
+export function parseByteRange(
+  header: string | undefined,
+  size: number,
+): { start: number; end: number } | "unsatisfiable" | null {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header?.trim() ?? "");
+  if (!match || (match[1] === "" && match[2] === "")) return null;
+  let start: number;
+  let end: number;
+  if (match[1] === "") {
+    // Ultimi n byte.
+    const length = Number(match[2]);
+    if (length === 0) return "unsatisfiable";
+    start = Math.max(0, size - length);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+  }
+  return start >= size || start > end ? "unsatisfiable" : { start, end };
+}
 
 export function createApi(
   rooms: RoomService,
@@ -158,22 +186,35 @@ export function createApi(
   api.post(
     "/rooms/:id/assets",
     limitUploads,
+    // Il tetto vale per i video; le immagini, più piccole, si controllano dopo averle riconosciute.
     bodyLimit({
-      maxSize: MAX_ASSET_BYTES,
-      onError: (c) => c.json({ error: "Immagine troppo grande (max 20 MB)" }, 413),
+      maxSize: MAX_VIDEO_BYTES,
+      onError: (c) =>
+        c.json({ error: "File troppo grande (video max 50 MB, immagini 20 MB)" }, 413),
     }),
     async (c) => {
       const room = findRoom(c.req.param("id"));
       if (!room) return c.json({ error: "Stanza non trovata" }, 404);
       const data = new Uint8Array(await c.req.arrayBuffer());
       if (data.length === 0) return c.json({ error: "File vuoto" }, 400);
+      const byGm = isGmRequest(room.id, c.req.header("authorization"));
+      const type = detectAssetType(data);
+      if (type && type in VIDEO_MIME_TYPES && !byGm) {
+        return c.json({ error: "Solo il GM può caricare video" }, 403);
+      }
+      if (type && type in IMAGE_MIME_TYPES && data.length > MAX_ASSET_BYTES) {
+        return c.json({ error: "Immagine troppo grande (max 20 MB)" }, 413);
+      }
       try {
         const assetId = await assets.put(room.id, data);
-        access.recordUpload(room.id, assetId, isGmRequest(room.id, c.req.header("authorization")));
+        access.recordUpload(room.id, assetId, byGm);
         return c.json({ assetId } satisfies UploadAssetResponse, 201);
       } catch (error) {
         if (error instanceof UnsupportedAssetError) {
-          return c.json({ error: "Formato non supportato: usa PNG, JPEG, WebP o GIF" }, 415);
+          return c.json(
+            { error: "Formato non supportato: usa PNG, JPEG, WebP, GIF, WebM o MP4" },
+            415,
+          );
         }
         throw error;
       }
@@ -304,14 +345,31 @@ export function createApi(
     // Stessa risposta per "non esiste" e "non puoi vederla": non si rivela nulla.
     const asset = allowed ? await assets.get(roomId, assetId) : null;
     if (!asset) return c.json({ error: "Immagine non trovata" }, 404);
-    return c.body(asset.body, 200, {
+    const headers = {
       "content-type": asset.contentType,
-      "content-length": String(asset.size),
+      "accept-ranges": "bytes",
       // L'id è l'hash del contenuto: il file non cambia mai.
       // Mai in cache condivise: alcune immagini sono riservate al GM.
       "cache-control": "private, max-age=31536000, immutable",
       "x-content-type-options": "nosniff",
-    });
+    };
+    // I video si guardano a pezzi (scorrimento, ripetizione): serve il supporto a «Range».
+    const range = parseByteRange(c.req.header("range"), asset.size);
+    if (range === "unsatisfiable") {
+      await asset.body.cancel();
+      return c.body(null, 416, { "content-range": `bytes */${asset.size}` });
+    }
+    if (range) {
+      await asset.body.cancel();
+      const part = await assets.get(roomId, assetId, range);
+      if (!part) return c.json({ error: "Immagine non trovata" }, 404);
+      return c.body(part.body, 206, {
+        ...headers,
+        "content-length": String(range.end - range.start + 1),
+        "content-range": `bytes ${range.start}-${range.end}/${asset.size}`,
+      });
+    }
+    return c.body(asset.body, 200, { ...headers, "content-length": String(asset.size) });
   });
 
   return api;

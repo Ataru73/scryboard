@@ -1,7 +1,13 @@
 import { Readable } from "node:stream";
 import { Storage } from "@google-cloud/storage";
 import { ASSET_ID_PATTERN } from "@scryboard/shared";
-import { type AssetStore, assetIdFor, contentTypeOf, type StoredAsset } from "./store";
+import {
+  type AssetStore,
+  assetIdFor,
+  type ByteRange,
+  contentTypeOf,
+  type StoredAsset,
+} from "./store";
 
 /**
  * Immagini su un bucket Google Cloud Storage, una cartella per stanza. Le credenziali sono
@@ -22,13 +28,13 @@ export class GcsAssetStore implements AssetStore {
     return assetId;
   }
 
-  async get(roomId: string, assetId: string): Promise<StoredAsset | null> {
+  async get(roomId: string, assetId: string, range?: ByteRange): Promise<StoredAsset | null> {
     if (!ASSET_ID_PATTERN.test(assetId)) return null;
     const file = this.bucket.file(`${roomId}/${assetId}`);
     const [metadata] = await file.getMetadata().catch(() => [null]);
     if (!metadata) return null;
     return {
-      body: Readable.toWeb(file.createReadStream()) as ReadableStream<Uint8Array>,
+      body: Readable.toWeb(file.createReadStream(range)) as ReadableStream<Uint8Array>,
       size: Number(metadata.size),
       contentType: contentTypeOf(assetId),
     };

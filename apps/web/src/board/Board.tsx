@@ -79,7 +79,13 @@ import { TextEditor } from "./TextEditor";
 import { TokenList } from "./TokenList";
 import { Toolbar } from "./Toolbar";
 import { useBoardUi } from "./tools";
-import { isSupportedImage, UploadError, uploadImage } from "./upload";
+import {
+  isSupportedImage,
+  isSupportedVideo,
+  UploadError,
+  uploadImage,
+  uploadVideo,
+} from "./upload";
 import { useBoardShortcuts } from "./useBoardShortcuts";
 import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
 import { WallSelectionPanel } from "./WallPanel";
@@ -1380,9 +1386,12 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   }
 
   async function addImages(files: File[], at: Point) {
-    const images = files.filter(isSupportedImage);
+    // I video (mappe animate) li carica solo il GM.
+    const videos = role === "gm" ? files.filter(isSupportedVideo) : [];
+    const images = [...files.filter(isSupportedImage), ...videos];
     if (images.length === 0) {
-      if (files.length > 0) setNotice("Formato non supportato: usa PNG, JPEG, WebP o GIF.");
+      if (files.some(isSupportedVideo)) setNotice("Solo il GM può usare i video come mappa.");
+      else if (files.length > 0) setNotice("Formato non supportato: usa PNG, JPEG, WebP o GIF.");
       return;
     }
     // Le immagini del GM vanno sul livello mappa; quelle dei giocatori sopra, tra i disegni.
@@ -1394,7 +1403,9 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     const placed: { x: number; y: number; width: number; height: number }[] = [];
     for (const file of images) {
       try {
-        const { assetId, width, height } = await uploadImage(roomId, file, gmToken);
+        const { assetId, width, height } = await (isSupportedVideo(file)
+          ? uploadVideo
+          : uploadImage)(roomId, file, gmToken);
         placed.push({ x: at.x - width / 2 + offset, y: at.y - height / 2 + offset, width, height });
         addItems([
           {

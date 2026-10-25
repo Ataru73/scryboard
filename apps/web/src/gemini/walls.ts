@@ -93,9 +93,30 @@ export function parseWallTrace(json: unknown): TracedWall[] {
   return walls;
 }
 
+/** Primo fotogramma di un video (WebM o MP4) come immagine. */
+async function firstFrame(blob: Blob): Promise<ImageBitmap> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const video = document.createElement("video");
+    video.muted = true;
+    video.preload = "auto";
+    video.src = url;
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve();
+      video.onerror = () => reject(new Error("Impossibile leggere il video."));
+    });
+    return await createImageBitmap(video);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** Riduce l'immagine e la codifica in JPEG base64, pronta da inviare a Gemini. */
 export async function prepareForAnalysis(blob: Blob): Promise<{ mimeType: string; data: string }> {
-  const bitmap = await createImageBitmap(blob);
+  // Per una mappa animata si analizza il primo fotogramma.
+  const bitmap = blob.type.startsWith("video/")
+    ? await firstFrame(blob)
+    : await createImageBitmap(blob);
   const scale = Math.min(1, ANALYSIS_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);

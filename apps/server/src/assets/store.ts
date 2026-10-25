@@ -8,22 +8,29 @@ import type { Config } from "../config";
 
 export interface StoredAsset {
   body: ReadableStream<Uint8Array>;
+  /** Dimensione dell'intero file, anche se `body` ne contiene solo un intervallo. */
   size: number;
   contentType: AssetMimeType;
+}
+
+/** Intervallo di byte (estremi inclusi), per far scorrere e ripetere i video senza scaricarli tutti. */
+export interface ByteRange {
+  start: number;
+  end: number;
 }
 
 /** Archivio delle immagini caricate: su disco (`LocalAssetStore`) o su un bucket (`GcsAssetStore`). */
 export interface AssetStore {
   put(roomId: string, data: Uint8Array): Promise<string>;
-  get(roomId: string, assetId: string): Promise<StoredAsset | null>;
+  get(roomId: string, assetId: string, range?: ByteRange): Promise<StoredAsset | null>;
   /** Elimina tutte le immagini di una stanza. */
   deleteRoom(roomId: string): Promise<void>;
 }
 
 /** Nome dell'immagine: l'hash del contenuto, così lo stesso file non viene salvato due volte. */
 export function assetIdFor(data: Uint8Array): string {
-  const type = detectImageType(data);
-  if (!type) throw new UnsupportedAssetError("Formato immagine non supportato");
+  const type = detectAssetType(data);
+  if (!type) throw new UnsupportedAssetError("Formato non supportato");
   return `${createHash("sha256").update(data).digest("hex")}.${ASSET_MIME_TYPES[type]}`;
 }
 
@@ -31,7 +38,21 @@ export function contentTypeOf(assetId: string): AssetMimeType {
   return CONTENT_TYPE_BY_EXTENSION[assetId.split(".").pop() as string] as AssetMimeType;
 }
 
-/** Riconosce il formato dai primi byte: il Content-Type dichiarato dal client non è affidabile. */
+/** Immagini o video, dai primi byte (il Content-Type dichiarato dal client non è affidabile). */
+export function detectAssetType(data: Uint8Array): AssetMimeType | null {
+  const image = detectImageType(data);
+  if (image) return image;
+  // WebM (Matroska): intestazione EBML. MP4: «ftyp» nei byte 4-7.
+  if (data[0] === 0x1a && data[1] === 0x45 && data[2] === 0xdf && data[3] === 0xa3) {
+    return "video/webm";
+  }
+  if (data[4] === 0x66 && data[5] === 0x74 && data[6] === 0x79 && data[7] === 0x70) {
+    return "video/mp4";
+  }
+  return null;
+}
+
+/** Riconosce il formato delle sole immagini dai primi byte. */
 export function detectImageType(data: Uint8Array): AssetMimeType | null {
   const startsWith = (bytes: number[], offset = 0) => bytes.every((b, i) => data[offset + i] === b);
   if (startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
@@ -64,13 +85,13 @@ export class LocalAssetStore implements AssetStore {
     return assetId;
   }
 
-  async get(roomId: string, assetId: string): Promise<StoredAsset | null> {
+  async get(roomId: string, assetId: string, range?: ByteRange): Promise<StoredAsset | null> {
     if (!ASSET_ID_PATTERN.test(assetId)) return null;
     const path = join(this.root, roomId, assetId);
     const info = await stat(path).catch(() => null);
     if (!info?.isFile()) return null;
     return {
-      body: Readable.toWeb(createReadStream(path)) as ReadableStream<Uint8Array>,
+      body: Readable.toWeb(createReadStream(path, range)) as ReadableStream<Uint8Array>,
       size: info.size,
       contentType: contentTypeOf(assetId),
     };

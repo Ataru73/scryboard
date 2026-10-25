@@ -1,4 +1,4 @@
-import { MAX_ASSET_BYTES, type RoomAsset } from "@scryboard/shared";
+import { isVideoAsset, MAX_ASSET_BYTES, type RoomAsset } from "@scryboard/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, describeApiError } from "../lib/api";
 import { useAssetAuth } from "./assetAuth";
@@ -25,7 +25,10 @@ export function UploadedAssets({ roomId, onPickAsset }: Props) {
 
   const load = useCallback(async () => {
     try {
-      setAssets((await api.listAssets(roomId, gmToken)).assets);
+      // I video sono mappe animate: non si usano come immagine di un token.
+      setAssets(
+        (await api.listAssets(roomId, gmToken)).assets.filter((a) => !isVideoAsset(a.assetId)),
+      );
     } catch (e) {
       setError(describeApiError(e));
     }

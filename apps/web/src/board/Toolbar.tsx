@@ -182,7 +182,11 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <input
           ref={fileInput}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif"
+          accept={
+            role === "gm"
+              ? "image/png,image/jpeg,image/webp,image/gif,video/webm,video/mp4"
+              : "image/png,image/jpeg,image/webp,image/gif"
+          }
           multiple
           hidden
           onChange={(e) => {

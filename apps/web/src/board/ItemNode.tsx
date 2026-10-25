@@ -2,6 +2,7 @@ import {
   assetUrl,
   type BoardItem,
   type ImageItem,
+  isVideoAsset,
   type LightItem,
   type LightingSettings,
   type PathItem,
@@ -9,11 +10,12 @@ import {
   type TemplateItem,
   type TokenItem,
 } from "@scryboard/shared";
-import type Konva from "konva";
-import { memo, useMemo } from "react";
+import Konva from "konva";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Ellipse, Group, Image, Line, Path, Rect, Text } from "react-konva";
 import { PathShape } from "../paths/PathShape";
 import { stampImage } from "../stamps/generate";
+import { useAssetAuth } from "./assetAuth";
 import { normalizeBox } from "./geometry";
 import { tokenInitials } from "./grid";
 import { usePortraitPath } from "./portraitPaths";
@@ -130,7 +132,11 @@ function ItemContent({
 }) {
   switch (item.kind) {
     case "image":
-      return <ImageContent item={item} roomId={roomId} ambient={ambient} />;
+      return isVideoAsset(item.assetId) ? (
+        <VideoContent item={item} roomId={roomId} />
+      ) : (
+        <ImageContent item={item} roomId={roomId} ambient={ambient} />
+      );
     case "stroke":
       return (
         <Line
@@ -199,6 +205,65 @@ function tinted(image: HTMLImageElement, color: string): HTMLCanvasElement {
   ctx.globalCompositeOperation = "destination-in";
   ctx.drawImage(image, 0, 0);
   return canvas;
+}
+
+/**
+ * Mappa animata: un <video> muto in loop disegnato come immagine. Una `Konva.Animation` ridisegna
+ * il livello a ogni fotogramma finché il video è sulla lavagna. Il GM lo scarica con il suo token
+ * (un <video> non può inviare header); i giocatori lo leggono a pezzi con le richieste Range.
+ */
+function VideoContent({ item, roomId }: { item: ImageItem; roomId: string }) {
+  const token = useAssetAuth();
+  const url = assetUrl(roomId, item.assetId);
+  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+  const imageRef = useRef<Konva.Image>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    const element = document.createElement("video");
+    element.muted = true;
+    element.loop = true;
+    element.autoplay = true;
+    element.playsInline = true;
+    element.preload = "auto";
+    (async () => {
+      if (token) {
+        const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
+        if (!res.ok || cancelled) return;
+        objectUrl = URL.createObjectURL(await res.blob());
+        element.src = objectUrl;
+      } else {
+        element.src = url;
+      }
+      await element.play().catch(() => {});
+      if (!cancelled) setVideo(element);
+    })().catch(() => {});
+    return () => {
+      cancelled = true;
+      element.pause();
+      element.removeAttribute("src");
+      element.load();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url, token]);
+
+  useEffect(() => {
+    const layer = imageRef.current?.getLayer();
+    if (!video || !layer) return;
+    const animation = new Konva.Animation(() => {}, layer);
+    animation.start();
+    return () => {
+      animation.stop();
+    };
+  }, [video]);
+
+  if (!video) {
+    return (
+      <Rect width={item.width} height={item.height} fill="#8884" stroke="#8888" dash={[8, 8]} />
+    );
+  }
+  return <Image ref={imageRef} image={video} width={item.width} height={item.height} />;
 }
 
 function ImageContent({

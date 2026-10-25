@@ -1,15 +1,30 @@
 export const MAX_ASSET_BYTES = 20 * 1024 * 1024;
 
-export const ASSET_MIME_TYPES = {
+export const IMAGE_MIME_TYPES = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
   "image/gif": "gif",
 } as const;
+
+/** Mappe animate: solo il GM le carica e si usano solo come mappa, in loop e senza audio. */
+export const VIDEO_MIME_TYPES = {
+  "video/webm": "webm",
+  "video/mp4": "mp4",
+} as const;
+
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
+export const ASSET_MIME_TYPES = { ...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES } as const;
 export type AssetMimeType = keyof typeof ASSET_MIME_TYPES;
 
 /** Id dell'asset: SHA-256 del contenuto + estensione (es. `ab12….png`). */
-export const ASSET_ID_PATTERN = /^[0-9a-f]{64}\.(png|jpg|webp|gif)$/;
+export const ASSET_ID_PATTERN = /^[0-9a-f]{64}\.(png|jpg|webp|gif|webm|mp4)$/;
+
+/** Il file è un video (si riconosce dall'estensione dell'id). */
+export function isVideoAsset(assetId: string): boolean {
+  return assetId.endsWith(".webm") || assetId.endsWith(".mp4");
+}
 
 /** Un'immagine caricata nella stanza, per il cassetto «Caricati». */
 export interface RoomAsset {

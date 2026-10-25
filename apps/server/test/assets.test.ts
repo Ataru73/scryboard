@@ -1,6 +1,7 @@
 import { roomDocumentName } from "@scryboard/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { detectImageType } from "../src/assets/store";
+import { detectAssetType, detectImageType } from "../src/assets/store";
+import { parseByteRange } from "../src/http/app";
 import { connect, createRoom, startTestServer, type TestServer, tempDatabasePath } from "./helpers";
 
 // PNG 1x1 trasparente.
@@ -16,6 +17,35 @@ describe("detectImageType", () => {
     expect(detectImageType(Buffer.from("GIF89a"))).toBe("image/gif");
     expect(detectImageType(Buffer.from("RIFF\0\0\0\0WEBPVP8 "))).toBe("image/webp");
     expect(detectImageType(Buffer.from("<svg></svg>"))).toBeNull();
+  });
+});
+
+// Intestazioni minime di un MP4 («ftyp») e di un WebM (EBML), seguite da dati qualsiasi.
+const MP4 = Buffer.concat([
+  Buffer.from([0, 0, 0, 24]),
+  Buffer.from("ftypmp42"),
+  Buffer.alloc(40, 7),
+]);
+const WEBM = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(40, 9)]);
+
+describe("video detection and ranges", () => {
+  it("recognises videos by signature, and still rejects text", () => {
+    expect(detectAssetType(MP4)).toBe("video/mp4");
+    expect(detectAssetType(WEBM)).toBe("video/webm");
+    expect(detectAssetType(PNG)).toBe("image/png");
+    expect(detectAssetType(Buffer.from("not a video at all"))).toBeNull();
+    expect(detectImageType(MP4)).toBeNull();
+  });
+
+  it("parses single byte ranges", () => {
+    expect(parseByteRange("bytes=0-9", 100)).toEqual({ start: 0, end: 9 });
+    expect(parseByteRange("bytes=90-", 100)).toEqual({ start: 90, end: 99 });
+    expect(parseByteRange("bytes=-10", 100)).toEqual({ start: 90, end: 99 });
+    expect(parseByteRange("bytes=50-500", 100)).toEqual({ start: 50, end: 99 });
+    expect(parseByteRange("bytes=100-", 100)).toBe("unsatisfiable");
+    expect(parseByteRange("bytes=9-3", 100)).toBe("unsatisfiable");
+    expect(parseByteRange("bytes=0-1,5-6", 100)).toBeNull();
+    expect(parseByteRange(undefined, 100)).toBeNull();
   });
 });
 
@@ -52,6 +82,36 @@ describe("assets API", () => {
     expect(get.headers.get("content-type")).toBe("image/png");
     expect(get.headers.get("cache-control")).toContain("immutable");
     expect(Buffer.from(await get.arrayBuffer()).equals(PNG)).toBe(true);
+  });
+
+  it("lets only the GM upload videos, and serves them in ranges", async () => {
+    const room = await createRoom(server);
+    const base = `${server.baseUrl}/api/rooms/${room.id}/assets`;
+    expect((await fetch(base, { method: "POST", body: MP4 })).status).toBe(403);
+    const res = await fetch(base, {
+      method: "POST",
+      headers: { authorization: `Bearer ${room.gmToken}` },
+      body: MP4,
+    });
+    expect(res.status).toBe(201);
+    const { assetId } = (await res.json()) as { assetId: string };
+    expect(assetId).toMatch(/^[0-9a-f]{64}\.mp4$/);
+
+    const gm = { authorization: `Bearer ${room.gmToken}` };
+    const whole = await fetch(`${base}/${assetId}`, { headers: gm });
+    expect(whole.status).toBe(200);
+    expect(whole.headers.get("content-type")).toBe("video/mp4");
+    expect(whole.headers.get("accept-ranges")).toBe("bytes");
+
+    const part = await fetch(`${base}/${assetId}`, { headers: { ...gm, range: "bytes=4-7" } });
+    expect(part.status).toBe(206);
+    expect(part.headers.get("content-range")).toBe(`bytes 4-7/${MP4.length}`);
+    expect(Buffer.from(await part.arrayBuffer()).toString()).toBe("ftyp");
+    const tail = await fetch(`${base}/${assetId}`, { headers: { ...gm, range: "bytes=-4" } });
+    expect(Buffer.from(await tail.arrayBuffer()).equals(MP4.subarray(MP4.length - 4))).toBe(true);
+    const beyond = await fetch(`${base}/${assetId}`, { headers: { ...gm, range: "bytes=999-" } });
+    expect(beyond.status).toBe(416);
+    expect(beyond.headers.get("content-range")).toBe(`bytes */${MP4.length}`);
   });
 
   it("deduplicates identical uploads", async () => {

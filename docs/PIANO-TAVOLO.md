@@ -359,6 +359,21 @@ perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
 
 ### T11 — Mappe animate (≈ 1 settimana)
 
+**Stato**: completata. Note rispetto al piano:
+- Formati WebM e MP4, massimo 50 MB (le immagini restano a 20 MB): il limite è basso perché il
+  server carica il file in memoria prima di salvarlo e per i costi del bucket. Li carica solo il
+  GM (403 per gli altri) e l'id resta l'hash del contenuto, con le firme dei file controllate dal
+  server (WebM: intestazione EBML, MP4: «ftyp»). Archivi `.scryboard` inclusi.
+- `GET …/assets/:id` ora supporta `Range` (206/416) e `Accept-Ranges`: i browser lo usano per far
+  scorrere e ripetere il video senza scaricarlo tutto. Il GM lo scarica con il suo token (un
+  `<video>` non può inviare header), i giocatori lo leggono direttamente.
+- Si rende come immagine Konva con un `<video>` muto, in loop e senza controlli, e una
+  `Konva.Animation` che ridisegna il livello finché il video c'è. La tinta della luce ambientale
+  (giorno/crepuscolo/notte) non si applica ai video.
+- Il tracciamento dei muri con Gemini usa il primo fotogramma; la scheda «Caricati» non mostra i
+  video tra le immagini dei token. Il browser deve saper riprodurre il codec (MP4/H.264 non è
+  supportato da tutti i Chromium; WebM è la scelta più sicura).
+
 **Cosa vede l'utente**
 - Si possono caricare video WebM/MP4 come mappa; girano in loop, senza audio.
 
