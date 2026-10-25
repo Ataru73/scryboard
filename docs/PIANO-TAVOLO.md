@@ -79,6 +79,16 @@ T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta 
 
 ### T2 — Sagome d'area e aure (≈ 1,5 settimane)
 
+**Stato**: completata. Note rispetto al piano:
+- Le forme (cerchio, cono, cubo, raggio) sono modalità dello strumento Righello (`M`).
+  Origine sugli incroci, direzioni a 15° e lunghezze intere con la griglia (Alt: libero). Rilasciata,
+  la sagoma resta 4 secondi per tutti; con Maiusc diventa un `TemplateItem` sul livello disegno.
+- Le sagome fissate si spostano e si cancellano ma non si ridimensionano né ruotano (niente
+  Transformer): se ne traccia una nuova. Un token è "toccato" se il suo centro è dentro la
+  sagoma; i token che chi guarda non vede non vengono evidenziati.
+- Logica in `apps/web/src/board/areas.ts` (non in `packages/shared`, come per T1). L'aura si
+  imposta dal pannello di selezione del token, accanto a stile e visione.
+
 **Cosa vede l'utente**
 - Nel righello, quattro forme: **linea, cerchio, cono, cubo**. Rilasciando, la sagoma resta
   come anteprima per qualche secondo; con `Shift` (o un pulsante "Fissa") diventa un oggetto

@@ -1,8 +1,10 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import type { GridSettings, PresenceUser } from "@scryboard/shared";
+import type { GridSettings, PresenceUser, TokenItem } from "@scryboard/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Circle, Group, Label, Line, Path, Tag, Text } from "react-konva";
+import type { TemplateGeometry } from "./areas";
 import { RulerShape, type RulerState } from "./Ruler";
+import { AreaPreview } from "./Templates";
 import type { Point } from "./viewport";
 
 /** Tratto a mano libera ancora in corso, condiviso per mostrarlo mentre lo si disegna. */
@@ -68,6 +70,7 @@ interface RemoteState {
   draft: DraftStroke | null;
   ping: Ping | null;
   ruler: RulerState | null;
+  template: TemplateGeometry | null;
 }
 
 interface ActivePing extends Ping {
@@ -84,10 +87,13 @@ export function Presence({
   provider,
   scale,
   grid,
+  tokens,
 }: {
   provider: HocuspocusProvider;
   scale: number;
   grid: GridSettings;
+  /** Token che chi guarda può vedere: quelli toccati da una sagoma si evidenziano. */
+  tokens: TokenItem[];
 }) {
   const [states, setStates] = useState<RemoteState[]>([]);
   const [pings, setPings] = useState<ActivePing[]>([]);
@@ -116,6 +122,7 @@ export function Presence({
           draft: (state.draft as DraftStroke | null) ?? null,
           ping,
           ruler: (state.ruler as RulerState | null) ?? null,
+          template: (state.template as TemplateGeometry | null) ?? null,
         });
       });
       setStates(next);
@@ -166,6 +173,19 @@ export function Presence({
               points={ruler.points}
               color={user.color}
               grid={grid}
+              scale={scale}
+            />
+          ),
+      )}
+      {others.map(
+        ({ clientId, user, template }) =>
+          template && (
+            <AreaPreview
+              key={`template-${clientId}`}
+              geometry={template}
+              color={user.color}
+              grid={grid}
+              tokens={tokens}
               scale={scale}
             />
           ),

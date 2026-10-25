@@ -1,5 +1,11 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { DRAW_COLORS, type Role, STROKE_WIDTHS } from "@scryboard/shared";
+import {
+  DRAW_COLORS,
+  type Role,
+  STROKE_WIDTHS,
+  TEMPLATE_SHAPES,
+  type TemplateShape,
+} from "@scryboard/shared";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 import { storage, subscribeGeminiKey } from "../lib/storage";
 import { COLOR_NAMES } from "./colors";
@@ -48,6 +54,11 @@ const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
   { tool: "fog", label: "Nebbia", key: "F" },
 ];
 
+const RULER_MODES: { id: "ruler" | TemplateShape; label: string }[] = [
+  { id: "ruler", label: "Distanza" },
+  ...TEMPLATE_SHAPES,
+];
+
 const DRAWING_TOOLS: Tool[] = ["pen", "line", "rect", "ellipse", "text"];
 
 interface Props {
@@ -61,8 +72,17 @@ interface Props {
 }
 
 export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewportSize }: Props) {
-  const { tool, color, strokeWidth, filled, viewport, tokenDraft, gridPanelOpen, createHidden } =
-    useBoardUi();
+  const {
+    tool,
+    color,
+    strokeWidth,
+    filled,
+    viewport,
+    tokenDraft,
+    gridPanelOpen,
+    createHidden,
+    rulerShape,
+  } = useBoardUi();
   const {
     setTool,
     setColor,
@@ -72,6 +92,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     setTokenDraft,
     setGridPanelOpen,
     setCreateHidden,
+    setRulerShape,
     select,
     setEditingText,
   } = useBoardUi.getState();
@@ -261,6 +282,27 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       {tool === "stamp" && role === "gm" && <StampPanel />}
       {tool === "light" && role === "gm" && <LightPanel store={store} provider={provider} />}
       {tool === "wall" && role === "gm" && <WallPanel store={store} roomId={roomId} />}
+
+      {tool === "ruler" && (
+        <div className="toolbar toolbar-style" role="toolbar" aria-label="Righello">
+          {RULER_MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={rulerShape === m.id}
+              onClick={() => setRulerShape(m.id)}
+            >
+              {m.label}
+            </button>
+          ))}
+          <span className="toolbar-separator" />
+          <span className="small muted">
+            {rulerShape === "ruler"
+              ? "Spazio aggiunge una tappa."
+              : "Maiusc al rilascio fissa la sagoma. Alt: senza griglia."}
+          </span>
+        </div>
+      )}
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">

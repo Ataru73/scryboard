@@ -1,5 +1,6 @@
 import { type BoardItem, DEFAULT_GRID } from "@scryboard/shared";
 import { pathBounds } from "../paths/geometry";
+import { templateLocalBox } from "./areas";
 import type { Box, Point } from "./viewport";
 
 export function normalizeBox(a: Point, b: Point): Box {
@@ -23,6 +24,8 @@ export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
     }
     case "path":
       return pathBounds(item.points);
+    case "template":
+      return templateLocalBox(item, cellSize);
     case "stamp": {
       const r = (item.size * cellSize) / 2;
       return { x: -r, y: -r, width: 2 * r, height: 2 * r };
@@ -118,6 +121,7 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
     case "token":
     case "path":
     case "light":
+    case "template":
       // Niente Transformer: la taglia dei token e i punti dei percorsi si cambiano a parte.
       return {};
     case "text":

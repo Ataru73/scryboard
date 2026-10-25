@@ -101,6 +101,11 @@ export const tokenItemSchema = z.object({
   light: lightSpecSchema.nullable().optional(),
   /** Utenti (id del profilo) che vedono attraverso il token, oltre a chi l'ha creato. */
   owners: z.array(z.string().max(64)).max(20).optional(),
+  /** Aura attorno al token (raggio in caselle dal bordo), visibile a tutti. */
+  aura: z
+    .object({ radius: z.number().positive().max(100), color })
+    .nullable()
+    .optional(),
 });
 
 /** Sorgente di luce fissa piazzata dal GM (sul livello mappa, quindi solo il GM la modifica). */
@@ -136,6 +141,30 @@ export const stampItemSchema = z.object({
   stamp: z.enum(STAMP_IDS),
   size: z.number().positive().max(20),
   variant: z.number().int().min(0).max(1_000_000),
+});
+
+/** Sagome d'area: cerchio, cono (largo quanto è lungo), cubo e linea larga `width` caselle. */
+export const TEMPLATE_SHAPES = [
+  { id: "circle", label: "Cerchio" },
+  { id: "cone", label: "Cono" },
+  { id: "cube", label: "Cubo" },
+  { id: "line", label: "Raggio" },
+] as const;
+export type TemplateShape = (typeof TEMPLATE_SHAPES)[number]["id"];
+
+/**
+ * Sagoma d'area persistente, sul livello disegno così la piazzano anche i giocatori. (x, y) è
+ * il punto d'origine (centro del cerchio, vertice del cono, lato del cubo o della linea) e
+ * `rotation` la direzione in gradi; `size` e `width` sono in caselle.
+ */
+export const templateItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("template"),
+  shape: z.enum(["circle", "cone", "cube", "line"]),
+  size: z.number().positive().max(200),
+  /** Larghezza della linea; ignorata dalle altre forme. */
+  width: z.number().positive().max(50).optional(),
+  color,
 });
 
 /** Luci tipiche, con raggi in caselle (come in D&D: 1 casella = 1,5 m). */
@@ -184,6 +213,7 @@ export const boardItemSchema = z.discriminatedUnion("kind", [
   pathItemSchema,
   lightItemSchema,
   stampItemSchema,
+  templateItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
@@ -194,6 +224,7 @@ export type TokenItem = z.infer<typeof tokenItemSchema>;
 export type PathItem = z.infer<typeof pathItemSchema>;
 export type LightItem = z.infer<typeof lightItemSchema>;
 export type StampItem = z.infer<typeof stampItemSchema>;
+export type TemplateItem = z.infer<typeof templateItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 

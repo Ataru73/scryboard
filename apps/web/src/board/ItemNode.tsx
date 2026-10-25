@@ -6,6 +6,7 @@ import {
   type LightingSettings,
   type PathItem,
   type StampItem,
+  type TemplateItem,
   type TokenItem,
 } from "@scryboard/shared";
 import type Konva from "konva";
@@ -16,6 +17,7 @@ import { stampImage } from "../stamps/generate";
 import { normalizeBox } from "./geometry";
 import { tokenInitials } from "./grid";
 import { usePortraitPath } from "./portraitPaths";
+import { TemplateBody } from "./Templates";
 import { useImage } from "./useImage";
 
 export const FONT_FAMILY = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
@@ -75,6 +77,8 @@ export const ItemNode = memo(function ItemNode({
         <PathShape points={item.points} style={item.style} selected={selected} />
       ) : item.kind === "stamp" ? (
         <StampContent item={item} cellSize={cellSize} selected={selected} />
+      ) : item.kind === "template" ? (
+        <TemplateContent item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "light" ? (
         <LightIcon color={item.color} cellSize={cellSize} selected={selected} />
       ) : (
@@ -84,12 +88,30 @@ export const ItemNode = memo(function ItemNode({
   );
 });
 
+/** Sagoma d'area piazzata: l'origine è il punto del gruppo, la direzione la sua rotazione. */
+function TemplateContent({
+  item,
+  cellSize,
+  selected,
+}: {
+  item: TemplateItem;
+  cellSize: number;
+  selected: boolean;
+}) {
+  return (
+    <>
+      <TemplateBody geometry={item} color={item.color} cell={cellSize} />
+      {selected && <Circle radius={6} fill={SELECTION_COLOR} />}
+    </>
+  );
+}
+
 function ItemContent({
   item,
   roomId,
   ambient,
 }: {
-  item: Exclude<BoardItem, TokenItem | PathItem | LightItem | StampItem>;
+  item: Exclude<BoardItem, TokenItem | PathItem | LightItem | StampItem | TemplateItem>;
   roomId: string;
   ambient?: LightingSettings["ambient"];
 }) {
@@ -202,6 +224,17 @@ function TokenContent({
   const labelSize = Math.max(10, cellSize * 0.22);
   return (
     <>
+      {item.aura && (
+        <Circle
+          radius={r + item.aura.radius * cellSize}
+          fill={item.aura.color}
+          opacity={0.18}
+          stroke={item.aura.color}
+          strokeWidth={2}
+          dash={[10, 6]}
+          listening={false}
+        />
+      )}
       {selected && (
         <Circle radius={r + ring + 3} stroke={SELECTION_COLOR} strokeWidth={3} dash={[6, 4]} />
       )}

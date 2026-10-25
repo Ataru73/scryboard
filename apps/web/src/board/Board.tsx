@@ -6,6 +6,7 @@ import type {
   Role,
   ShapeItem,
   StrokeItem,
+  TemplateShape,
   TerrainOp,
   TextItem,
   TokenItem,
@@ -55,6 +56,7 @@ import { movementFraction, wallSegments } from "../walls/geometry";
 import { useWallDrawing } from "../walls/useWallDrawing";
 import { WallHandles } from "../walls/WallHandles";
 import { WallLayer } from "../walls/WallLayer";
+import { type TemplateGeometry, templateFromDrag, templateLabel } from "./areas";
 import { useAssetAuth } from "./assetAuth";
 import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
@@ -67,6 +69,7 @@ import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
 import { type BoardStore, newItemId } from "./store";
+import { AreaHighlights, AreaPreview, tokensInside } from "./Templates";
 import { TerrainLayer } from "./TerrainLayer";
 import { TextEditor } from "./TextEditor";
 import { TokenList } from "./TokenList";
@@ -92,6 +95,8 @@ type Interaction =
   | { type: "calibrate"; start: Point; end: Point }
   /** Righello: tappe fisse e punto sotto il cursore. */
   | { type: "ruler"; points: Point[]; cursor: Point }
+  /** Sagoma d'area (cerchio, cono, cubo, raggio) tracciata dall'origine al cursore. */
+  | { type: "template"; shape: TemplateShape; start: Point; end: Point; free: boolean }
   | { type: "fogRect"; start: Point; end: Point }
   | { type: "fogBrush"; points: number[] }
   | { type: "marquee"; start: Point; end: Point; additive: boolean }
@@ -114,6 +119,9 @@ const FIT_VIEW_MAX_SCALE = 2;
 
 /** Tempo di pressione, senza muoversi, che lancia un ping. */
 const PING_HOLD_MS = 550;
+
+/** Tempo in cui una sagoma non fissata resta visibile dopo il rilascio. */
+const TEMPLATE_LINGER_MS = 4000;
 
 interface Notice {
   text: string;
@@ -269,6 +277,22 @@ export function Board({ store, provider, roomId, role }: Props) {
   const broadcastCursor = useAwarenessBroadcast<Point>(provider, "cursor");
   const broadcastDraft = useAwarenessBroadcast<DraftStroke>(provider, "draft");
   const broadcastRuler = useAwarenessBroadcast<RulerState>(provider, "ruler");
+  const broadcastTemplate = useAwarenessBroadcast<TemplateGeometry>(provider, "template");
+  /** Sagoma appena rilasciata: resta in vista qualche secondo, a meno che la si fissi con Maiusc. */
+  const [lingering, setLingering] = useState<TemplateGeometry | null>(null);
+  const lingerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearLinger = () => {
+    if (lingerTimer.current) clearTimeout(lingerTimer.current);
+    lingerTimer.current = null;
+    setLingering(null);
+    broadcastTemplate(null);
+  };
+  useEffect(
+    () => () => {
+      if (lingerTimer.current) clearTimeout(lingerTimer.current);
+    },
+    [],
+  );
   /** Distanza di un token trascinato: tappe fisse e posizione attuale. */
   const [dragMeasure, setDragMeasureState] = useState<{ points: Point[]; cursor: Point } | null>(
     null,
@@ -304,10 +328,10 @@ export function Board({ store, provider, roomId, role }: Props) {
     interaction?.type === "ruler"
       ? [...interaction.points, interaction.cursor]
       : dragMeasure && [...dragMeasure.points, dragMeasure.cursor];
-  const measureText = measurePoints ? formatDistance(pathCells(measurePoints, grid), grid) : "";
 
   // Spazio aggiunge una tappa alla misura in corso, Esc annulla il righello.
-  const measuring = interaction?.type === "ruler" || dragMeasure !== null;
+  const measuring =
+    interaction?.type === "ruler" || interaction?.type === "template" || dragMeasure !== null;
   useEffect(() => {
     useBoardUi.getState().setMeasuring(measuring);
     return () => useBoardUi.getState().setMeasuring(false);
@@ -329,6 +353,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       } else if (e.key === "Escape" && !dragMeasureRef.current) {
         setInteraction(null);
         broadcastRuler(null);
+        broadcastTemplate(null);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -345,6 +370,24 @@ export function Board({ store, provider, roomId, role }: Props) {
     [items, role, visionPreview, store],
   );
   const vision = useVision({ items: viewerItems, walls, grid, lighting, viewerId });
+  const visibleTokens = items.filter(
+    (i): i is TokenItem => i.kind === "token" && (!vision.active || vision.isVisible(i)),
+  );
+  const areaShown =
+    interaction?.type === "template"
+      ? templateFromDrag(
+          interaction.shape,
+          interaction.start,
+          interaction.end,
+          grid,
+          interaction.free,
+        )
+      : lingering;
+  const measureText = measurePoints
+    ? formatDistance(pathCells(measurePoints, grid), grid)
+    : areaShown
+      ? `${templateLabel(areaShown, grid)} · ${tokensInside(areaShown, visibleTokens, grid.size).length} token`
+      : "";
   const [exploredVersion, setExploredVersion] = useState(0);
   const explored = useMemo(
     () =>
@@ -477,7 +520,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       .filter(
         (id) =>
           canEdit(store.get(id)) &&
-          !["token", "path"].includes(store.get(id)?.kind ?? "") &&
+          !["token", "path", "template"].includes(store.get(id)?.kind ?? "") &&
           id !== editingTextId,
       )
       .map((id) => stage.findOne((node: Konva.Node) => node.hasName("item") && node.id() === id))
@@ -634,6 +677,18 @@ export function Board({ store, provider, roomId, role }: Props) {
         setInteraction({ type: "calibrate", start: p.world, end: p.world });
         return;
       case "ruler": {
+        clearLinger();
+        const shape = useBoardUi.getState().rulerShape;
+        if (shape !== "ruler") {
+          setInteraction({
+            type: "template",
+            shape,
+            start: p.world,
+            end: p.world,
+            free: e.evt.altKey,
+          });
+          return;
+        }
         const start = snapRulerPoint(p.world, grid, e.evt.altKey);
         setInteraction({ type: "ruler", points: [start], cursor: start });
         return;
@@ -953,6 +1008,15 @@ export function Board({ store, provider, roomId, role }: Props) {
         broadcastRuler({ points: flattenPoints([...interaction.points, cursor]) });
         return;
       }
+      case "template": {
+        setInteraction({ ...interaction, end: p.world, free: e.evt.altKey });
+        if (!(role === "gm" && createHidden)) {
+          broadcastTemplate(
+            templateFromDrag(interaction.shape, interaction.start, p.world, grid, e.evt.altKey),
+          );
+        }
+        return;
+      }
       case "shape":
       case "calibrate":
       case "fogRect":
@@ -992,7 +1056,7 @@ export function Board({ store, provider, roomId, role }: Props) {
     }
   }
 
-  function onPointerUp() {
+  function onPointerUp(e: Konva.KonvaEventObject<PointerEvent>) {
     cancelPress();
     if (tool === "path") pathDrawing.up();
     const current = interaction;
@@ -1000,6 +1064,38 @@ export function Board({ store, provider, roomId, role }: Props) {
     if (!current) return;
     if (current.type === "ruler") {
       broadcastRuler(null);
+      return;
+    }
+    if (current.type === "template") {
+      const moved = Math.hypot(current.end.x - current.start.x, current.end.y - current.start.y);
+      if (moved < grid.size * 0.3) {
+        broadcastTemplate(null);
+        return;
+      }
+      const geometry = templateFromDrag(
+        current.shape,
+        current.start,
+        current.end,
+        grid,
+        current.free,
+      );
+      if (e.evt.shiftKey) {
+        // Maiusc al rilascio: la sagoma diventa un oggetto che si sposta e si cancella.
+        broadcastTemplate(null);
+        addItems([
+          {
+            ...base("draw", geometry),
+            rotation: geometry.rotation,
+            kind: "template",
+            shape: geometry.shape,
+            size: geometry.size,
+            color: /^#[0-9a-fA-F]{6}$/.test(myColor) ? myColor : "#e5484d",
+          },
+        ]);
+        return;
+      }
+      setLingering(geometry);
+      lingerTimer.current = setTimeout(clearLinger, TEMPLATE_LINGER_MS);
       return;
     }
     if (current.type === "stampScatter") {
@@ -1655,7 +1751,33 @@ export function Board({ store, provider, roomId, role }: Props) {
                 strokeWidth={1.5 / viewport.scale}
               />
             ))}
-            <Presence provider={provider} scale={viewport.scale} grid={grid} />
+            <Presence
+              provider={provider}
+              scale={viewport.scale}
+              grid={grid}
+              tokens={visibleTokens}
+            />
+            {items.map(
+              (item) =>
+                item.kind === "template" && (
+                  <AreaHighlights
+                    key={`area-${item.id}`}
+                    geometry={item}
+                    color={item.color}
+                    grid={grid}
+                    tokens={visibleTokens}
+                  />
+                ),
+            )}
+            {areaShown && (
+              <AreaPreview
+                geometry={areaShown as TemplateGeometry}
+                color={myColor}
+                grid={grid}
+                tokens={visibleTokens}
+                scale={viewport.scale}
+              />
+            )}
             {interaction?.type === "ruler" && (
               <RulerShape
                 points={flattenPoints([...interaction.points, interaction.cursor])}

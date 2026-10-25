@@ -2,6 +2,7 @@ import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { BoardItem, Role } from "@scryboard/shared";
 import { canModify } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
+import { AuraFields } from "./AuraFields";
 import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
 import { LightFields, VisionFields } from "./LightFields";
 import { PathFields } from "./PathFields";
@@ -43,6 +44,7 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
             onChange={(patch) => store.update({ [single.id]: patch })}
           />
           <span className="toolbar-separator" />
+          <AuraFields token={single} store={store} />
         </>
       )}
       {single?.kind === "token" && role === "gm" && canModify(single, role) && (

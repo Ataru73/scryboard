@@ -56,6 +56,24 @@ describe("isAllowedPlayerItemChange", () => {
     expect(isAllowedPlayerItemChange("delete", "t", token("t"), undefined)).toBe(true);
   });
 
+  it("lets players place templates and give tokens an aura", () => {
+    const template = {
+      ...base,
+      id: "a",
+      kind: "template",
+      layer: "draw",
+      locked: false,
+      shape: "cone",
+      size: 4,
+      color: "#e5484d",
+    };
+    expect(isAllowedPlayerItemChange("add", "a", undefined, template)).toBe(true);
+    expect(isAllowedPlayerItemChange("delete", "a", template, undefined)).toBe(true);
+    expect(isAllowedPlayerItemChange("add", "a", undefined, { ...template, size: 0 })).toBe(false);
+    const aura = { radius: 2, color: "#e5484d" };
+    expect(isAllowedPlayerItemChange("update", "t", token("t"), token("t", { aura }))).toBe(true);
+  });
+
   it("rejects map items, locked items, invalid data and kind changes", () => {
     expect(isAllowedPlayerItemChange("add", "m", undefined, mapImage("m"))).toBe(false);
     const river = {

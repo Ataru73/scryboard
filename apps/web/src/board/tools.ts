@@ -7,6 +7,7 @@ import {
   type PathStyleId,
   STROKE_WIDTHS,
   type StampId,
+  type TemplateShape,
   type TerrainOp,
   type WallKind,
 } from "@scryboard/shared";
@@ -102,6 +103,8 @@ interface BoardUiState {
   spacePan: boolean;
   /** Misura in corso (righello o trascinamento di un token): Spazio aggiunge una tappa. */
   measuring: boolean;
+  /** Cosa traccia lo strumento Righello: una misura o una sagoma d'area. */
+  rulerShape: "ruler" | TemplateShape;
   tokenDraft: TokenDraft;
   gridPanelOpen: boolean;
   fogMode: FogMode;
@@ -144,6 +147,7 @@ interface BoardUiState {
   setViewport: (viewport: Viewport) => void;
   setSpacePan: (on: boolean) => void;
   setMeasuring: (on: boolean) => void;
+  setRulerShape: (shape: BoardUiState["rulerShape"]) => void;
   setTokenDraft: (patch: Partial<TokenDraft>) => void;
   setGridPanelOpen: (open: boolean) => void;
   setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
@@ -202,6 +206,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   viewport: { x: 0, y: 0, scale: 1 },
   spacePan: false,
   measuring: false,
+  rulerShape: "ruler",
   tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null, portrait: null },
   gridPanelOpen: false,
   fogMode: "cover",
@@ -234,6 +239,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setViewport: (viewport) => set({ viewport }),
   setSpacePan: (spacePan) => set({ spacePan }),
   setMeasuring: (measuring) => set({ measuring }),
+  setRulerShape: (rulerShape) => set({ rulerShape }),
   setTokenDraft: (patch) => set((s) => ({ tokenDraft: { ...s.tokenDraft, ...patch } })),
   setGridPanelOpen: (gridPanelOpen) => set({ gridPanelOpen }),
   setFog: (patch) => set(patch),
