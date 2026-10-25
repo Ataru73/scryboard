@@ -71,7 +71,23 @@ Per i test end-to-end serve Chromium, da installare una volta con
 | Trascinare su uno spazio vuoto         | Selezione a riquadro (con Shift si aggiunge)                                 |
 
 Le immagini si aggiungono con il pulsante della barra, trascinandole sulla lavagna o incollandole.
-Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificare.
+Quelle del GM finiscono sul livello mappa, che i giocatori non possono modificare. Le luci (lo
+strumento Luce) restano sempre sopra le mappe. La gomma cancella gli oggetti e, per il GM, anche
+muri e porte.
+
+## Generazione con Gemini
+
+Con una chiave API di Gemini, salvata dalle Impostazioni, compaiono due funzioni:
+
+- la scheda **Genera** della libreria di immagini, per creare l'immagine di un token da una
+  descrizione (ritratto, vista dall'alto o sagoma);
+- il pulsante **Genera mappa** della barra, solo per il GM: da una descrizione, un tipo (dungeon
+  o interno, esterno, mappa di una regione) e un formato produce fino a 3 varianti; quella scelta
+  viene ridotta a 2048 px e messa al centro della vista come immagine del livello mappa.
+
+Le richieste partono dal browser con la chiave dell'utente, che resta nel suo `localStorage` e non
+passa mai dal server di Scryboard. Ogni variante è una richiesta addebitata sul conto Google della
+chiave. Senza chiave le funzioni non compaiono.
 
 Il GM attiva la griglia dal pulsante dedicato, sceglie se quadrata o esagonale (a punta o piatta)
 e la calibra tracciando un riquadro su una casella della mappa (o attorno a un esagono). I token si agganciano alle caselle; il GM può bloccare qualsiasi oggetto, e finché è
@@ -93,6 +109,9 @@ Con lo strumento Muri il GM disegna polilinee agganciate agli incroci della grig
 libere), porte, finestre e muri invisibili. Può anche generare i muri dal contorno di un bioma.
 I muri fermano i token trascinati; i giocatori vedono solo le icone delle porte e possono aprire o
 chiudere quelle non chiuse a chiave. Selezionando un muro il GM ne modifica i vertici o lo elimina.
+
+Con le luci attive, la luce ambientale (giorno, crepuscolo, notte) cambia anche i colori: lo
+sfondo della lavagna e le immagini caricate si fanno più scuri e freddi al crepuscolo e di notte.
 
 Con la visione dinamica attiva (strumento Luce) ogni giocatore vede solo ciò che vedono i suoi
 token: i muri e le porte chiuse fermano la vista; di notte servono luci (fisse o portate dai
@@ -120,8 +139,12 @@ docker run -p 3000:3000 -v scryboard-data:/data scryboard
 ```
 
 Il container serve API, WebSocket e web app sulla porta 3000 e salva database e immagini in
-`/data`. Istruzioni per Fly.io, Google Cloud Run, per una VPS con Docker Compose e per la
-pulizia delle stanze inattive in [docs/DEPLOY.md](docs/DEPLOY.md).
+`/data`. Su Google Cloud Run i dati possono stare su un bucket: il database è replicato con
+Litestream e le immagini sono salvate direttamente nel bucket (`DATA_BUCKET=<bucket>
+scripts/deploy-cloud-run.sh`). Dopo 10 minuti senza attività i client si disconnettono, così
+Cloud Run può spegnere il container; alla prima interazione riprendono da soli. Istruzioni per
+Fly.io, Google Cloud Run, per una VPS con Docker Compose e per la pulizia delle stanze inattive
+in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Come funzionano le stanze
 
