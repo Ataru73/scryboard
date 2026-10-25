@@ -1,5 +1,7 @@
 import { DIAGONAL_RULES, GRID_TYPES, type GridSettings } from "@scryboard/shared";
 import { useId, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
+import { catalogLabel } from "../i18n/catalog";
 import { normalizeGridOffsets } from "./grid";
 import type { BoardStore } from "./store";
 import { useBoardUi } from "./tools";
@@ -11,6 +13,7 @@ interface Props {
 
 /** Impostazioni della griglia, solo per il GM. */
 export function GridPanel({ store, onClose }: Props) {
+  const { t } = useTranslation();
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const setTool = useBoardUi((s) => s.setTool);
   const ids = {
@@ -35,10 +38,15 @@ export function GridPanel({ store, onClose }: Props) {
   };
 
   return (
-    <section className="panel grid-panel" aria-label="Griglia">
+    <section className="panel grid-panel" aria-label={t("core.grid.label")}>
       <header>
-        <h2>Griglia</h2>
-        <button type="button" className="icon-button" aria-label="Chiudi" onClick={onClose}>
+        <h2>{t("core.grid.label")}</h2>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={t("core.grid.close")}
+          onClick={onClose}
+        >
           ×
         </button>
       </header>
@@ -49,23 +57,23 @@ export function GridPanel({ store, onClose }: Props) {
           checked={grid.enabled}
           onChange={(e) => store.updateGrid({ enabled: e.target.checked })}
         />
-        Mostra la griglia
+        {t("core.grid.show")}
       </label>
       <div className="grid-fields">
-        <label htmlFor={ids.type}>Tipo</label>
+        <label htmlFor={ids.type}>{t("core.grid.type")}</label>
         <select
           id={ids.type}
           value={grid.type}
           onChange={(e) => update({ type: e.target.value as GridSettings["type"] })}
         >
-          {GRID_TYPES.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
+          {GRID_TYPES.map((type) => (
+            <option key={type.id} value={type.id}>
+              {catalogLabel(t, "gridTypes", type.id, type.label)}
             </option>
           ))}
         </select>
-        <label htmlFor={ids.size} title="Per gli esagoni: la distanza tra due lati opposti">
-          Casella (px)
+        <label htmlFor={ids.size} title={t("core.grid.cellSizeHint")}>
+          {t("core.grid.cellSize")}
         </label>
         <input
           id={ids.size}
@@ -79,7 +87,7 @@ export function GridPanel({ store, onClose }: Props) {
             if (size >= 8 && size <= 1000) update({ size });
           }}
         />
-        <label htmlFor={ids.x}>Sposta X</label>
+        <label htmlFor={ids.x}>{t("core.grid.offsetX")}</label>
         <input
           id={ids.x}
           type="number"
@@ -87,7 +95,7 @@ export function GridPanel({ store, onClose }: Props) {
           value={grid.offsetX}
           onChange={(e) => update({ offsetX: number(e.target.value, grid.offsetX) })}
         />
-        <label htmlFor={ids.y}>Sposta Y</label>
+        <label htmlFor={ids.y}>{t("core.grid.offsetY")}</label>
         <input
           id={ids.y}
           type="number"
@@ -97,10 +105,10 @@ export function GridPanel({ store, onClose }: Props) {
         />
       </div>
       <details className="grid-measure">
-        <summary>Righello</summary>
+        <summary>{t("core.grid.ruler")}</summary>
         <div className="grid-fields">
-          <label htmlFor={ids.amount} title="Quanto vale una casella per il righello">
-            Una casella =
+          <label htmlFor={ids.amount} title={t("core.grid.cellScaleHint")}>
+            {t("core.grid.oneCell")}
           </label>
           <span className="grid-scale">
             <input
@@ -118,14 +126,14 @@ export function GridPanel({ store, onClose }: Props) {
               id={ids.unit}
               type="text"
               maxLength={8}
-              aria-label="Unità di misura"
+              aria-label={t("core.grid.unit")}
               value={grid.scale.unit}
               onChange={(e) => store.updateGrid({ scale: { ...grid.scale, unit: e.target.value } })}
             />
           </span>
           {grid.type === "square" && (
             <>
-              <label htmlFor={ids.diagonals}>Diagonali</label>
+              <label htmlFor={ids.diagonals}>{t("core.grid.diagonals")}</label>
               <select
                 id={ids.diagonals}
                 value={grid.diagonals}
@@ -133,9 +141,9 @@ export function GridPanel({ store, onClose }: Props) {
                   store.updateGrid({ diagonals: e.target.value as GridSettings["diagonals"] })
                 }
               >
-                {DIAGONAL_RULES.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
+                {DIAGONAL_RULES.map((rule) => (
+                  <option key={rule.id} value={rule.id}>
+                    {catalogLabel(t, "diagonalRules", rule.id, rule.label)}
                   </option>
                 ))}
               </select>
@@ -144,13 +152,10 @@ export function GridPanel({ store, onClose }: Props) {
         </div>
       </details>
       <button type="button" className="primary" onClick={() => setTool("calibrate")}>
-        Calibra sulla mappa
+        {t("core.grid.calibrate")}
       </button>
       <p className="muted small">
-        {grid.type === "square"
-          ? "Traccia un riquadro su una casella della mappa: la griglia prenderà la stessa misura."
-          : "Traccia un riquadro attorno a un esagono della mappa: la griglia ne prenderà misura e posizione."}{" "}
-        Poi rifinisci con i campi qui sopra.
+        {t(grid.type === "square" ? "core.grid.helpSquare" : "core.grid.helpHex")}
       </p>
     </section>
   );

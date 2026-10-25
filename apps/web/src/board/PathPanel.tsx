@@ -1,12 +1,15 @@
 import { PATH_STYLES } from "@scryboard/shared";
+import { useTranslation } from "react-i18next";
+import { catalogLabel } from "../i18n/catalog";
 import { PATH_LOOKS } from "../paths/styles";
 import { PATH_WIDTHS, useBoardUi } from "./tools";
 
 /** Stili e larghezza dello strumento Percorso (solo GM). */
 export function PathPanel() {
+  const { t } = useTranslation();
   const { pathStyle, pathWidth, setPathStyle, setPathWidth } = useBoardUi();
   return (
-    <div className="toolbar toolbar-style" role="toolbar" aria-label="Percorso">
+    <div className="toolbar toolbar-style" role="toolbar" aria-label={t("tools.path.label")}>
       {PATH_STYLES.map((style) => (
         <button
           key={style.id}
@@ -16,7 +19,7 @@ export function PathPanel() {
           onClick={() => setPathStyle(style.id)}
         >
           <span className="path-swatch" style={{ background: PATH_LOOKS[style.id].preview }} />
-          {style.label}
+          {catalogLabel(t, "paths", style.id, style.label)}
         </button>
       ))}
       <span className="toolbar-separator" />
@@ -26,17 +29,14 @@ export function PathPanel() {
           type="button"
           className="icon-button"
           aria-pressed={pathWidth === width}
-          aria-label={`Larghezza ${width} caselle`}
-          title={`Larghezza ${width} ${width === 1 ? "casella" : "caselle"} ([ e ] per regolarla)`}
+          aria-label={t("tools.path.widthLabel", { count: width })}
+          title={t("tools.path.widthTitle", { count: width })}
           onClick={() => setPathWidth(width)}
         >
           <span className="width-dot" style={{ width: 4 + width * 5, height: 4 + width * 5 }} />
         </button>
       ))}
-      <span className="muted small fog-hint">
-        Clic per i punti (o trascina a mano libera), doppio clic o Invio per finire. [ e ] cambiano
-        la larghezza dei punti successivi.
-      </span>
+      <span className="muted small fog-hint">{t("tools.path.hint")}</span>
     </div>
   );
 }

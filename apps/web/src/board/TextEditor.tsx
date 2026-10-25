@@ -1,5 +1,6 @@
 import type { TextItem } from "@scryboard/shared";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FONT_FAMILY, LINE_HEIGHT } from "./ItemNode";
 import { type Viewport, worldToScreen } from "./viewport";
 
@@ -11,6 +12,7 @@ interface Props {
 
 /** Textarea sovrapposta al canvas, allineata al testo che si sta modificando. */
 export function TextEditor({ item, viewport, onCommit }: Props) {
+  const { t } = useTranslation();
   const [text, setText] = useState(item.text);
   const ref = useRef<HTMLTextAreaElement>(null);
   const committed = useRef(false);
@@ -41,7 +43,7 @@ export function TextEditor({ item, viewport, onCommit }: Props) {
       ref={ref}
       className="text-editor"
       value={text}
-      aria-label="Modifica testo"
+      aria-label={t("core.textEditor.label")}
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {

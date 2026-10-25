@@ -1,5 +1,7 @@
 import { PORTRAIT_CATEGORIES, PORTRAITS } from "@scryboard/shared";
 import { useEffect, useId, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { catalogLabel } from "../i18n/catalog";
 import { storage } from "../lib/storage";
 import { GeneratePanel } from "./GeneratePanel";
 import { loadPortraitPaths, usePortraitPath } from "./portraitPaths";
@@ -40,6 +42,7 @@ interface Props {
 
 /** Finestra con la libreria di immagini: ricerca, categorie e immagini usate di recente. */
 export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, onClose }: Props) {
+  const { t } = useTranslation();
   const titleId = useId();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -57,24 +60,30 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
     return PORTRAITS.filter(
       (p) =>
         (!category || p.category === category) &&
-        (!q || normalize(`${p.label} ${p.aliases.join(" ")}`).includes(q)),
+        (!q ||
+          normalize(
+            `${catalogLabel(t, "portraits", p.id, p.label)} ${p.label} ${p.aliases.join(" ")}`,
+          ).includes(q)),
     );
-  }, [query, category]);
+  }, [query, category, t]);
   const recentEntries = recent.flatMap((id) => PORTRAITS.find((p) => p.id === id) ?? []);
 
-  const button = (p: Portrait) => (
-    <button
-      key={p.id}
-      type="button"
-      className="portrait-button"
-      title={p.label}
-      aria-label={p.label}
-      onClick={() => onPick(p)}
-    >
-      <PortraitGlyph id={p.id} color={color} />
-      <span>{p.label}</span>
-    </button>
-  );
+  const button = (p: Portrait) => {
+    const label = catalogLabel(t, "portraits", p.id, p.label);
+    return (
+      <button
+        key={p.id}
+        type="button"
+        className="portrait-button"
+        title={label}
+        aria-label={label}
+        onClick={() => onPick({ ...p, label } as Portrait)}
+      >
+        <PortraitGlyph id={p.id} color={color} />
+        <span>{label}</span>
+      </button>
+    );
+  };
 
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: Esc chiude nativamente <dialog>.
@@ -89,13 +98,13 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <h2 id={titleId}>Libreria di immagini</h2>
-      <fieldset className="portrait-categories" aria-label="Origine">
+      <h2 id={titleId}>{t("assets.portraitPicker.title")}</h2>
+      <fieldset className="portrait-categories" aria-label={t("assets.portraitPicker.source")}>
         <button type="button" aria-pressed={tab === "library"} onClick={() => setTab("library")}>
-          Libreria
+          {t("assets.portraitPicker.libraryTab")}
         </button>
         <button type="button" aria-pressed={tab === "uploaded"} onClick={() => setTab("uploaded")}>
-          Caricati
+          {t("assets.portraitPicker.uploadedTab")}
         </button>
         {apiKey && (
           <button
@@ -103,7 +112,7 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
             aria-pressed={tab === "generate"}
             onClick={() => setTab("generate")}
           >
-            Genera
+            {t("assets.portraitPicker.generateTab")}
           </button>
         )}
       </fieldset>
@@ -120,18 +129,21 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
         <>
           <input
             type="search"
-            aria-label="Cerca nella libreria"
-            placeholder="Cerca (es. goblin, dragon)"
+            aria-label={t("assets.portraitPicker.search")}
+            placeholder={t("assets.portraitPicker.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <fieldset className="portrait-categories" aria-label="Categorie">
+          <fieldset
+            className="portrait-categories"
+            aria-label={t("assets.portraitPicker.categories")}
+          >
             <button
               type="button"
               aria-pressed={category === null}
               onClick={() => setCategory(null)}
             >
-              Tutte
+              {t("assets.portraitPicker.allCategories")}
             </button>
             {PORTRAIT_CATEGORIES.map((c) => (
               <button
@@ -140,22 +152,24 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
                 aria-pressed={category === c.id}
                 onClick={() => setCategory(c.id)}
               >
-                {c.label}
+                {catalogLabel(t, "portraitCategories", c.id, c.label)}
               </button>
             ))}
           </fieldset>
           {recentEntries.length > 0 && !query && !category && (
-            <section aria-label="Recenti">
-              <h3 className="muted small">Recenti</h3>
+            <section aria-label={t("assets.portraitPicker.recent")}>
+              <h3 className="muted small">{t("assets.portraitPicker.recent")}</h3>
               <div className="portrait-grid">{recentEntries.map(button)}</div>
             </section>
           )}
           <div className="portrait-grid">{shown.map(button)}</div>
-          {shown.length === 0 && <p className="muted small">Nessuna immagine trovata.</p>}
+          {shown.length === 0 && (
+            <p className="muted small">{t("assets.portraitPicker.noResults")}</p>
+          )}
         </>
       )}
       <p className="muted small">
-        Sagome di{" "}
+        {t("assets.portraitPicker.iconsFrom")}{" "}
         <a href="https://game-icons.net" target="_blank" rel="noreferrer">
           game-icons.net
         </a>{" "}
@@ -163,7 +177,7 @@ export function PortraitPicker({ color, roomId, tokenName, onPick, onPickAsset, 
       </p>
       <div className="modal-actions">
         <button type="button" onClick={onClose}>
-          Chiudi
+          {t("assets.portraitPicker.close")}
         </button>
       </div>
     </dialog>

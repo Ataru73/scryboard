@@ -1,6 +1,7 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { describeRoll, type Roll } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { describeApiError } from "../lib/api";
 import { type Auth, rollFormula, useLocalRolls, useRolls } from "./rolls";
 
@@ -15,6 +16,7 @@ interface Props {
 
 /** Scheda «Tavolo»: dadi e registro dei tiri, visibili a tutti. */
 export function RollPanel({ roomId, provider, myName, auth }: Props) {
+  const { t } = useTranslation();
   const shared = useRolls(provider);
   const hiddenRolls = useLocalRolls((s) => s.hidden);
   const isGm = "gmToken" in auth;
@@ -64,7 +66,7 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
     <div className="roll-panel">
       <form className="roll-form" onSubmit={submit}>
         <label htmlFor={formulaId} className="visually-hidden">
-          Formula dei dadi
+          {t("social.dice.formulaLabel")}
         </label>
         <input
           id={formulaId}
@@ -75,7 +77,7 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
           onChange={(e) => setFormula(e.target.value)}
         />
         <button type="submit" className="primary" disabled={busy || !formula.trim()}>
-          Tira
+          {t("social.dice.roll")}
         </button>
       </form>
       <div className="roll-quick">
@@ -88,7 +90,7 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
       {isGm && (
         <label className="checkbox small">
           <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />
-          Tira di nascosto (solo tu lo vedi)
+          {t("social.dice.hiddenLabel")}
         </label>
       )}
       {error && (
@@ -96,8 +98,8 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
           {error}
         </p>
       )}
-      <ol className="roll-log" ref={listRef} aria-label="Registro dei tiri">
-        {log.length === 0 && <li className="muted small">Ancora nessun tiro.</li>}
+      <ol className="roll-log" ref={listRef} aria-label={t("social.dice.logLabel")}>
+        {log.length === 0 && <li className="muted small">{t("social.dice.empty")}</li>}
         {log.map(({ roll, secret }) => (
           <RollEntry key={`${secret ? "h" : "s"}-${roll.id}`} roll={roll} secret={secret} />
         ))}
@@ -107,14 +109,16 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
 }
 
 function RollEntry({ roll, secret }: { roll: Roll; secret: boolean }) {
+  const { t } = useTranslation();
+
   return (
     <li className={secret ? "roll-entry secret" : "roll-entry"}>
       <span className="roll-head">
         <strong>{roll.name}</strong> <span className="muted">{roll.formula}</span>
-        {secret && <span className="muted small"> (nascosto)</span>}
+        {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}
       </span>
       <span className="roll-detail muted small">{describeRoll(roll)}</span>
-      <output className="roll-total" aria-label={`Totale di ${roll.name}`}>
+      <output className="roll-total" aria-label={t("social.dice.total", { name: roll.name })}>
         {roll.total}
       </output>
     </li>

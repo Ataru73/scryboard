@@ -64,7 +64,8 @@ h2 {
 }
 
 input,
-button {
+button,
+select {
   font: inherit;
   color: inherit;
 }
@@ -216,9 +217,34 @@ button.danger {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 10rem 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
+}
+
+.language-switcher {
+  position: fixed;
+  top: 0.75rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.language-switcher select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.language-switcher select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .room-header h1 {
@@ -872,6 +898,19 @@ button.danger {
   .room {
     display: flex;
     flex-direction: column;
+  }
+
+  .room-header {
+    gap: 0.5rem;
+    padding-right: 7.5rem;
+  }
+
+  .language-switcher {
+    right: 0.5rem;
+  }
+
+  .language-switcher > span {
+    display: none;
   }
 
   .board-area {

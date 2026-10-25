@@ -1,4 +1,5 @@
 import { GM_MAILBOX, type Message } from "@scryboard/shared";
+import i18n from "../i18n";
 
 export interface Conversation {
   /** Interlocutore ("gm" o id del profilo); per il GM che legge due giocatori, la coppia "a|b". */
@@ -42,7 +43,7 @@ export function groupConversations(
     if (m.from === me || m.to === me) {
       partner = m.from === me ? m.to : m.from;
       key = partner;
-      title = names.get(partner) ?? "Giocatore";
+      title = names.get(partner) ?? i18n.t("social.messages.unknownPlayer");
     } else {
       // Solo il GM vede messaggi che non sono suoi: quelli tra due giocatori.
       const [a, b] = [m.from, m.to].sort() as [string, string];

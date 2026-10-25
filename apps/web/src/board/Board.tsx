@@ -33,6 +33,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { Circle, Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
 import { RollToasts } from "../dice/RollToasts";
 import {
@@ -140,6 +141,7 @@ const TEMPLATE_LINGER_MS = 4000;
 
 interface Notice {
   text: string;
+  kind?: "loading";
   action?: { label: string; run: () => void };
 }
 
@@ -201,6 +203,7 @@ function findWallId(node: Konva.Node | null): string | null {
 }
 
 export function Board({ store, provider, roomId, sceneId = "main", role }: Props) {
+  const { t } = useTranslation();
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const fog = useSyncExternalStore(store.subscribe, store.getFog);
@@ -218,8 +221,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const [interaction, setInteraction] = useState<Interaction | null>(null);
   const [notice, setNoticeState] = useState<Notice | null>(null);
   const setNotice = useCallback(
-    (text: string | null, action?: Notice["action"]) =>
-      setNoticeState(text ? { text, action } : null),
+    (text: string | null, action?: Notice["action"], kind?: Notice["kind"]) =>
+      setNoticeState(text ? { text, action, kind } : null),
     [],
   );
   /** Poligono di nebbia in costruzione: vertici già fissati e posizione del puntatore. */
@@ -404,7 +407,10 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const measureText = measurePoints
     ? formatDistance(pathCells(measurePoints, grid), grid)
     : areaShown
-      ? `${templateLabel(areaShown, grid)} · ${tokensInside(areaShown, visibleTokens, grid.size).length} token`
+      ? t("core.templates.summary", {
+          label: templateLabel(areaShown, grid),
+          count: tokensInside(areaShown, visibleTokens, grid.size).length,
+        })
       : "";
   const [exploredVersion, setExploredVersion] = useState(0);
   const explored = useMemo(
@@ -910,7 +916,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   function fillTerrainAt(at: Point) {
     const bounds = contentBounds();
     if (!bounds) {
-      setNotice("Niente da riempire: dipingi o traccia prima dei bordi chiusi.");
+      setNotice(t("core.board.notices.fillEmpty"));
       return;
     }
     const margin = grid.size * 2;
@@ -946,13 +952,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     if (box.width * viewport.scale < 4 || box.height * viewport.scale < 4) return;
     const ops = store.getTerrain().filter((op) => boxesIntersect(terrainOpBounds(op), box));
     if (ops.length === 0) {
-      setNotice("Nel riquadro non c'è terreno da copiare.");
+      setNotice(t("core.board.notices.copyEmpty"));
       return;
     }
     useBoardUi.getState().setTerrain({ terrainClipboard: { box, ops }, terrainMode: "paste" });
-    setNotice(
-      `Copiate ${ops.length} ${ops.length === 1 ? "pennellata" : "pennellate"}: clicca dove incollarle.`,
-    );
+    setNotice(t("core.board.notices.copied", { count: ops.length }));
   }
 
   /** Incolla il terreno copiato centrandolo sul clic, ritagliato al riquadro di origine. */
@@ -1217,13 +1221,13 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     } else if (current.type === "calibrate") {
       const calibration = calibrateFromBox(normalizeBox(current.start, current.end), grid.type);
       if (!calibration) {
-        setNotice("Riquadro troppo piccolo: traccia il bordo di una casella della mappa.");
+        setNotice(t("core.board.notices.calibrationTooSmall"));
         return;
       }
       store.updateGrid({ ...calibration, enabled: true });
       setTool("select");
       setGridPanelOpen(true);
-      setNotice(`Griglia calibrata: caselle di ${calibration.size} px.`);
+      setNotice(t("core.board.notices.gridCalibrated", { size: calibration.size }));
     } else if (current.type === "shape") {
       const dx = current.end.x - current.start.x;
       const dy = current.end.y - current.start.y;
@@ -1390,15 +1394,13 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     const videos = role === "gm" ? files.filter(isSupportedVideo) : [];
     const images = [...files.filter(isSupportedImage), ...videos];
     if (images.length === 0) {
-      if (files.some(isSupportedVideo)) setNotice("Solo il GM può usare i video come mappa.");
-      else if (files.length > 0) setNotice("Formato non supportato: usa PNG, JPEG, WebP o GIF.");
+      if (files.some(isSupportedVideo)) setNotice(t("core.board.notices.onlyGmVideo"));
+      else if (files.length > 0) setNotice(t("core.board.notices.unsupportedFormat"));
       return;
     }
     // Le immagini del GM vanno sul livello mappa; quelle dei giocatori sopra, tra i disegni.
     const layer = role === "gm" ? "map" : "draw";
-    setNotice(
-      images.length === 1 ? "Caricamento immagine…" : `Caricamento di ${images.length} immagini…`,
-    );
+    setNotice(t("core.board.notices.uploading", { count: images.length }), undefined, "loading");
     let offset = 0;
     const placed: { x: number; y: number; width: number; height: number }[] = [];
     for (const file of images) {
@@ -1425,14 +1427,14 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         ]);
         offset += 24 / viewport.scale;
       } catch (error) {
-        setNotice(error instanceof UploadError ? error.message : "Caricamento non riuscito.");
+        setNotice(error instanceof UploadError ? error.message : t("core.upload.failed"));
         return;
       }
     }
     if (layer === "map") {
       // Una mappa nuova di solito va scoperta poco alla volta.
-      setNotice(images.length === 1 ? "Mappa caricata." : "Mappe caricate.", {
-        label: "Coprila con la nebbia",
+      setNotice(t("core.board.notices.mapUploaded", { count: images.length }), {
+        label: t("core.board.notices.coverWithFog", { count: images.length }),
         run: () => {
           for (const b of placed) {
             store.addFog({ mode: "cover", shape: "rect", points: [b.x, b.y, b.width, b.height] });
@@ -1477,7 +1479,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   }
 
   useEffect(() => {
-    if (!notice || notice.text.startsWith("Caricamento")) return;
+    if (!notice || notice.kind === "loading") return;
     const timer = setTimeout(() => setNotice(null), notice.action ? 10000 : 5000);
     return () => clearTimeout(timer);
   }, [notice, setNotice]);
@@ -1579,7 +1581,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       ref={containerRef}
       className="board"
       role="application"
-      aria-label="Lavagna"
+      aria-label={t("core.board.label")}
       data-item-count={items.length}
       data-fog-count={fog.length}
       data-terrain-count={terrain.length}
@@ -1924,7 +1926,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         <SelectionPanel store={store} role={role} roomId={roomId} provider={provider} />
       )}
       {tool === "select" && selectedWallId && <WallSelectionPanel store={store} />}
-      <div className="visually-hidden" role="status" aria-label="Distanza misurata">
+      <div className="visually-hidden" role="status" aria-label={t("core.board.measuredDistance")}>
         {measureText}
       </div>
       <RollToasts provider={provider} />

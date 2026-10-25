@@ -1,27 +1,25 @@
 import { BIOMES, type BiomeId } from "@scryboard/shared";
 import { useId, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { catalogLabel } from "../i18n/catalog";
 import { biomeTexture } from "../terrain/textures";
 import type { BoardStore } from "./store";
 import { TERRAIN_SIZES, type TerrainMode, useBoardUi } from "./tools";
 
-const MODES: { mode: TerrainMode; label: string }[] = [
-  { mode: "brush", label: "Pennello" },
-  { mode: "region", label: "Regione" },
-  { mode: "erase", label: "Gomma" },
-  { mode: "fill", label: "Riempi" },
-  { mode: "copy", label: "Copia" },
-  { mode: "paste", label: "Incolla" },
+const MODES: { mode: TerrainMode }[] = [
+  { mode: "brush" },
+  { mode: "region" },
+  { mode: "erase" },
+  { mode: "fill" },
+  { mode: "copy" },
+  { mode: "paste" },
 ];
 
-const HINTS: Partial<Record<TerrainMode, string>> = {
-  region: "Clic per i vertici, doppio clic o Invio per chiudere.",
-  fill: "Clic dentro un'area chiusa da muri o da altri biomi.",
-  copy: "Trascina un riquadro sul terreno da copiare.",
-  paste: "Clic dove incollare il terreno copiato.",
-};
+const HINT_MODES: TerrainMode[] = ["region", "fill", "copy", "paste"];
 
 /** Tavolozza dei biomi e opzioni dello strumento Terreno (solo GM). */
 export function TerrainPanel({ store }: { store: BoardStore }) {
+  const { t } = useTranslation();
   const {
     terrainBiome,
     terrainMode,
@@ -47,38 +45,50 @@ export function TerrainPanel({ store }: { store: BoardStore }) {
       >,
     [],
   );
+  const hint = HINT_MODES.includes(terrainMode) ? t(`tools.terrain.hints.${terrainMode}`) : null;
   return (
-    <div className="toolbar toolbar-style terrain-panel" role="toolbar" aria-label="Terreno">
-      <fieldset className="recent-biomes" aria-label="Biomi recenti">
-        {recentBiomes.map((id, i) => (
-          <button
-            key={id}
-            type="button"
-            className="biome-button recent-biome"
-            aria-pressed={terrainBiome === id}
-            aria-label={`${i + 1}: ${BIOMES.find((b) => b.id === id)?.label}`}
-            title={`${BIOMES.find((b) => b.id === id)?.label} (tasto ${i + 1})`}
-            style={{ backgroundImage: `url(${previews[id]})` }}
-            onClick={() => pick(id)}
-          >
-            <span className="recent-key">{i + 1}</span>
-          </button>
-        ))}
+    <div
+      className="toolbar toolbar-style terrain-panel"
+      role="toolbar"
+      aria-label={t("tools.terrain.label")}
+    >
+      <fieldset className="recent-biomes" aria-label={t("tools.terrain.recent")}>
+        {recentBiomes.map((id, i) => {
+          const fallback = BIOMES.find((b) => b.id === id)?.label ?? id;
+          const label = catalogLabel(t, "biomes", id, fallback);
+          return (
+            <button
+              key={id}
+              type="button"
+              className="biome-button recent-biome"
+              aria-pressed={terrainBiome === id}
+              aria-label={t("tools.terrain.recentLabel", { index: i + 1, label })}
+              title={t("tools.terrain.recentTitle", { label, key: i + 1 })}
+              style={{ backgroundImage: `url(${previews[id]})` }}
+              onClick={() => pick(id)}
+            >
+              <span className="recent-key">{i + 1}</span>
+            </button>
+          );
+        })}
       </fieldset>
       <span className="toolbar-separator" />
       <div className="biome-palette">
-        {BIOMES.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            className="biome-button"
-            aria-pressed={terrainBiome === b.id && terrainMode !== "erase"}
-            aria-label={b.label}
-            title={b.label}
-            style={{ backgroundImage: `url(${previews[b.id]})` }}
-            onClick={() => pick(b.id)}
-          />
-        ))}
+        {BIOMES.map((b) => {
+          const label = catalogLabel(t, "biomes", b.id, b.label);
+          return (
+            <button
+              key={b.id}
+              type="button"
+              className="biome-button"
+              aria-pressed={terrainBiome === b.id && terrainMode !== "erase"}
+              aria-label={label}
+              title={label}
+              style={{ backgroundImage: `url(${previews[b.id]})` }}
+              onClick={() => pick(b.id)}
+            />
+          );
+        })}
       </div>
       <span className="toolbar-separator" />
       {MODES.map((m) => (
@@ -90,7 +100,7 @@ export function TerrainPanel({ store }: { store: BoardStore }) {
           disabled={m.mode === "paste" && !terrainClipboard}
           onClick={() => setTerrain({ terrainMode: m.mode })}
         >
-          {m.label}
+          {t(`tools.terrain.modes.${m.mode}`)}
         </button>
       ))}
       {(terrainMode === "brush" || terrainMode === "erase") && (
@@ -102,8 +112,8 @@ export function TerrainPanel({ store }: { store: BoardStore }) {
               type="button"
               className="icon-button"
               aria-pressed={terrainSize === size}
-              aria-label={`Larghezza ${size} caselle`}
-              title={`Larghezza ${size} ${size === 1 ? "casella" : "caselle"}`}
+              aria-label={t("tools.terrain.widthLabel", { count: size })}
+              title={t("tools.terrain.widthTitle", { count: size })}
               onClick={() => setTerrain({ terrainSize: size })}
             >
               <span className="width-dot" style={{ width: 4 + size * 5, height: 4 + size * 5 }} />
@@ -113,23 +123,19 @@ export function TerrainPanel({ store }: { store: BoardStore }) {
       )}
       <span className="toolbar-separator" />
       <button type="button" className="text-button" onClick={() => store.clearTerrain()}>
-        Cancella terreno
+        {t("tools.terrain.clear")}
       </button>
       <span className="toolbar-separator" />
-      <label
-        className="checkbox small"
-        htmlFor={fogId}
-        title="Ogni pennellata nasce coperta dalla nebbia: la riveli quando vuoi"
-      >
+      <label className="checkbox small" htmlFor={fogId} title={t("tools.terrain.underFog.title")}>
         <input
           id={fogId}
           type="checkbox"
           checked={terrainUnderFog}
           onChange={(e) => setTerrain({ terrainUnderFog: e.target.checked })}
         />
-        Sotto la nebbia
+        {t("tools.terrain.underFog.label")}
       </label>
-      {HINTS[terrainMode] && <span className="muted small fog-hint">{HINTS[terrainMode]}</span>}
+      {hint && <span className="muted small fog-hint">{hint}</span>}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { GM_MAILBOX, MAX_MESSAGE_LENGTH, type PresenceUser } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { RollPanel } from "../dice/RollPanel";
 import { rollFormula } from "../dice/rolls";
 import { api, describeApiError } from "../lib/api";
@@ -25,6 +26,8 @@ interface Props {
  * chiunque e legge anche le conversazioni tra giocatori (in sola lettura).
  */
 export function MessagesPanel({ roomId, me, myName, mailProvider, provider, users, auth }: Props) {
+  const { t, i18n } = useTranslation();
+  const language = i18n.resolvedLanguage;
   const [tab, setTab] = useState<"private" | "table">("private");
   const messages = useMailbox(mailProvider);
   const { lastRead, markRead } = useLastRead(`scryboard:read:${roomId}:${me}`);
@@ -34,9 +37,10 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
       new Map(users.flatMap((u) => (u.id && u.role === "player" ? [[u.id, u.name] as const] : []))),
     [users],
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: la lingua aggiorna anche i titoli di riserva.
   const conversations = useMemo(
     () => groupConversations(messages, me, lastRead, knownNames),
-    [messages, me, lastRead, knownNames],
+    [messages, me, lastRead, knownNames, language],
   );
   const [openKey, setOpenKey] = useState<string | null>(null);
   const unread = conversations.reduce((n, c) => n + c.unread, 0);
@@ -64,14 +68,17 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
   }, [open, markRead]);
 
   return (
-    <section className="messages" aria-label="Messaggi">
-      <h2>Messaggi {unread > 0 && <span className="badge unread-badge">{unread}</span>}</h2>
+    <section className="messages" aria-label={t("social.messages.title")}>
+      <h2>
+        {t("social.messages.title")}{" "}
+        {unread > 0 && <span className="badge unread-badge">{unread}</span>}
+      </h2>
       <div className="tabs">
         <button type="button" aria-pressed={tab === "private"} onClick={() => setTab("private")}>
-          Privati
+          {t("social.messages.privateTab")}
         </button>
         <button type="button" aria-pressed={tab === "table"} onClick={() => setTab("table")}>
-          Tavolo
+          {t("social.messages.tableTab")}
         </button>
       </div>
       {tab === "table" ? (
@@ -95,16 +102,16 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
         />
       ) : (
         <>
-          {!isGm && <p className="muted small">Il GM può leggere tutti i messaggi.</p>}
+          {!isGm && <p className="muted small">{t("social.messages.gmNotice")}</p>}
           <label htmlFor={recipientId} className="visually-hidden">
-            Scrivi a
+            {t("social.messages.writeTo")}
           </label>
           <select
             id={recipientId}
             value=""
             onChange={(e) => e.target.value && setOpenKey(e.target.value)}
           >
-            <option value="">Scrivi a…</option>
+            <option value="">{t("social.messages.writeToPlaceholder")}</option>
             {recipients.map(([id, name]) => (
               <option key={id} value={id}>
                 {name}
@@ -117,7 +124,9 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
                 <button type="button" className="conversation" onClick={() => setOpenKey(c.key)}>
                   <span className="conversation-title">
                     {c.title}
-                    {c.partner === null && <span className="muted small"> (tra giocatori)</span>}
+                    {c.partner === null && (
+                      <span className="muted small"> {t("social.messages.betweenPlayers")}</span>
+                    )}
                   </span>
                   <span className="muted small conversation-preview">
                     {c.messages.at(-1)?.text}
@@ -148,6 +157,8 @@ function Thread({
   onBack: () => void;
   onSend: (text: string) => Promise<void>;
 }) {
+  const { t, i18n } = useTranslation();
+  const timeLocale = i18n.resolvedLanguage?.startsWith("en") ? "en-US" : "it-IT";
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -181,42 +192,45 @@ function Thread({
         <button
           type="button"
           className="icon-button"
-          aria-label="Torna ai messaggi"
+          aria-label={t("social.messages.back")}
           onClick={onBack}
         >
           ‹
         </button>
         <span className="thread-title">{title}</span>
       </header>
-      <ol className="thread-messages" ref={listRef} aria-label={`Conversazione con ${title}`}>
+      <ol
+        className="thread-messages"
+        ref={listRef}
+        aria-label={t("social.messages.conversationWith", { title })}
+      >
         {messages.map((m) => (
           <li key={m.id} className={m.from === me ? "bubble mine" : "bubble"}>
             {m.from !== me && <span className="bubble-author">{m.fromName}</span>}
             <span className="bubble-text">{m.text}</span>
             <time className="bubble-time" dateTime={m.at}>
-              {new Date(m.at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+              {new Date(m.at).toLocaleTimeString(timeLocale, {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </time>
           </li>
         ))}
-        {messages.length === 0 && (
-          <li className="muted small">Nessun messaggio, scrivi tu per primo.</li>
-        )}
+        {messages.length === 0 && <li className="muted small">{t("social.messages.empty")}</li>}
       </ol>
       {readOnly ? (
-        <p className="muted small">
-          Conversazione privata tra giocatori: la leggi solo tu, non puoi rispondere.
-        </p>
+        <p className="muted small">{t("social.messages.readOnly")}</p>
       ) : (
         <form className="composer" onSubmit={submit}>
           <label htmlFor={inputId} className="visually-hidden">
-            Messaggio
+            {t("social.messages.inputLabel")}
           </label>
           <textarea
             id={inputId}
             value={text}
             maxLength={MAX_MESSAGE_LENGTH}
             rows={2}
-            placeholder="Scrivi un messaggio…"
+            placeholder={t("social.messages.placeholder")}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
               // Invio spedisce, Maiusc+Invio va a capo.
@@ -227,7 +241,7 @@ function Thread({
             }}
           />
           <button type="submit" className="primary" disabled={sending || !text.trim()}>
-            Invia
+            {t("social.messages.send")}
           </button>
           {error && <p className="error small">{error}</p>}
         </form>

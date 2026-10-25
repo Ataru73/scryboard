@@ -1,5 +1,6 @@
 import { PORTRAITS } from "@scryboard/shared";
 import { type ReactNode, useId, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 /** Autori delle immagini della libreria, con il numero di sagome di ciascuno. */
 const AUTHORS = Object.entries(
@@ -12,6 +13,7 @@ const AUTHORS = Object.entries(
 /** Pulsante "Crediti" che apre la finestra con autori e licenze, come richiede CC BY. */
 /** Con `icon` il pulsante mostra solo l'icona; il nome resta per screen reader e tooltip. */
 export function CreditsButton({ className, icon }: { className?: string; icon?: ReactNode }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const titleId = useId();
   return (
@@ -19,11 +21,11 @@ export function CreditsButton({ className, icon }: { className?: string; icon?: 
       <button
         type="button"
         className={className}
-        aria-label={icon ? "Crediti" : undefined}
-        title={icon ? "Crediti" : undefined}
+        aria-label={icon ? t("pages.credits.title") : undefined}
+        title={icon ? t("pages.credits.title") : undefined}
         onClick={() => setOpen(true)}
       >
-        {icon ?? "Crediti"}
+        {icon ?? t("pages.credits.title")}
       </button>
       {open && (
         // biome-ignore lint/a11y/useKeyWithClickEvents: Esc chiude nativamente <dialog>.
@@ -38,28 +40,38 @@ export function CreditsButton({ className, icon }: { className?: string; icon?: 
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <h2 id={titleId}>Crediti</h2>
+          <h2 id={titleId}>{t("pages.credits.title")}</h2>
           <p className="small">
-            Le immagini della libreria dei token sono sagome di{" "}
-            <a href="https://game-icons.net" target="_blank" rel="noreferrer">
-              game-icons.net
-            </a>
-            , distribuite con licenza{" "}
-            <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer">
-              Creative Commons Attribution 3.0
-            </a>
-            . Icons made by:
+            <Trans
+              i18nKey="pages.credits.description"
+              components={{
+                gameIcons: (
+                  <a href="https://game-icons.net" target="_blank" rel="noreferrer">
+                    game-icons.net
+                  </a>
+                ),
+                license: (
+                  <a
+                    href="https://creativecommons.org/licenses/by/3.0/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Creative Commons Attribution 3.0
+                  </a>
+                ),
+              }}
+            />
           </p>
           <ul className="credits-list small">
             {AUTHORS.map(([author, count]) => (
               <li key={author}>
-                {author} <span className="muted">({count})</span>
+                {author} <span className="muted">{t("pages.credits.imageCount", { count })}</span>
               </li>
             ))}
           </ul>
           <div className="modal-actions">
             <button type="button" onClick={() => setOpen(false)}>
-              Chiudi
+              {t("pages.credits.close")}
             </button>
           </div>
         </dialog>

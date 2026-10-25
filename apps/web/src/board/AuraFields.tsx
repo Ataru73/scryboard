@@ -1,10 +1,13 @@
 import { DRAW_COLORS, type TokenItem } from "@scryboard/shared";
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
+import { colorLabel } from "../i18n/catalog";
 import { COLOR_NAMES } from "./colors";
 import type { BoardStore } from "./store";
 
 /** Aura attorno a un token: raggio in caselle dal bordo (0 la toglie) e colore. */
 export function AuraFields({ token, store }: { token: TokenItem; store: BoardStore }) {
+  const { t } = useTranslation();
   const radiusId = useId();
   const colorId = useId();
   const aura = token.aura ?? null;
@@ -12,7 +15,7 @@ export function AuraFields({ token, store }: { token: TokenItem; store: BoardSto
     <>
       <span className="field-group">
         <label htmlFor={radiusId} className="small muted">
-          Aura (caselle)
+          {t("effects.aura.radiusLabel")}
         </label>
         <input
           id={radiusId}
@@ -36,7 +39,7 @@ export function AuraFields({ token, store }: { token: TokenItem; store: BoardSto
       {aura && (
         <>
           <label htmlFor={colorId} className="visually-hidden">
-            Colore dell'aura
+            {t("effects.aura.colorLabel")}
           </label>
           <select
             id={colorId}
@@ -47,7 +50,7 @@ export function AuraFields({ token, store }: { token: TokenItem; store: BoardSto
           >
             {DRAW_COLORS.map((c) => (
               <option key={c} value={c}>
-                {COLOR_NAMES[c] ?? c}
+                {colorLabel(t, c, COLOR_NAMES[c] ?? c)}
               </option>
             ))}
             {!(DRAW_COLORS as readonly string[]).includes(aura.color) && (

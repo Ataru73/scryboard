@@ -9,6 +9,7 @@ import type {
   SendMessageRequest,
   UploadAssetResponse,
 } from "@scryboard/shared";
+import { i18n } from "../i18n";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -34,22 +35,22 @@ export class ApiRequestError extends Error {
     /** Spiegazione del server, utile quando riguarda ciò che l'utente ha scritto. */
     readonly detail?: string,
   ) {
-    super(`Richiesta fallita (${status})`);
+    super(i18n.t("core.api.requestFailed", { status }));
   }
 }
 
 /** Messaggio da mostrare all'utente per un errore delle API. */
 export function describeApiError(error: unknown): string {
-  if (!(error instanceof ApiRequestError)) return "Si è verificato un errore imprevisto. Riprova.";
+  if (!(error instanceof ApiRequestError)) return i18n.t("core.api.unexpected");
   // 502/503/504 arrivano dal proxy (Vite in sviluppo) quando il server non risponde.
   if (error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504) {
-    return "Il server di Scryboard non risponde. Controlla che sia avviato e riprova.";
+    return i18n.t("core.api.unreachable");
   }
   if (error.status === 400 && error.detail) return error.detail;
-  if (error.status === 400) return "Dati non validi: controlla quello che hai inserito.";
-  if (error.status === 413) return error.detail ?? "Il file è troppo grande (massimo 20 MB).";
-  if (error.status === 415) return "Formato non supportato: usa PNG, JPEG, WebP o GIF.";
-  return `Il server ha risposto con un errore (${error.status}). Riprova.`;
+  if (error.status === 400) return i18n.t("core.api.invalidData");
+  if (error.status === 413) return error.detail ?? i18n.t("core.api.fileTooLarge");
+  if (error.status === 415) return i18n.t("core.api.unsupportedFormat");
+  return i18n.t("core.api.serverError", { status: error.status });
 }
 
 const gmHeaders = (gmToken: string) => ({ authorization: `Bearer ${gmToken}` });

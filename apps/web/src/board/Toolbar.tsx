@@ -7,6 +7,8 @@ import {
   type TemplateShape,
 } from "@scryboard/shared";
 import { useId, useRef, useState, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
+import { catalogLabel, colorLabel } from "../i18n/catalog";
 import { storage, subscribeGeminiKey } from "../lib/storage";
 import { COLOR_NAMES } from "./colors";
 import { FogPanel } from "./FogPanel";
@@ -36,29 +38,29 @@ import { type Tool, useBoardUi } from "./tools";
 import { clampScale, screenToWorld, zoomAt } from "./viewport";
 import { WallPanel } from "./WallPanel";
 
-const TOOLS: { tool: Tool; label: string; key: string }[] = [
-  { tool: "select", label: "Seleziona", key: "V" },
-  { tool: "hand", label: "Sposta la vista", key: "H" },
-  { tool: "pen", label: "Matita", key: "P" },
-  { tool: "line", label: "Linea", key: "L" },
-  { tool: "rect", label: "Rettangolo", key: "R" },
-  { tool: "ellipse", label: "Ellisse", key: "O" },
-  { tool: "text", label: "Testo", key: "T" },
-  { tool: "eraser", label: "Gomma", key: "E" },
-  { tool: "token", label: "Token", key: "K" },
+const TOOLS: { tool: Tool; key: string }[] = [
+  { tool: "select", key: "V" },
+  { tool: "hand", key: "H" },
+  { tool: "pen", key: "P" },
+  { tool: "line", key: "L" },
+  { tool: "rect", key: "R" },
+  { tool: "ellipse", key: "O" },
+  { tool: "text", key: "T" },
+  { tool: "eraser", key: "E" },
+  { tool: "token", key: "K" },
 ];
-const GM_ONLY: { tool: Tool; label: string; key: string }[] = [
-  { tool: "terrain", label: "Terreno", key: "B" },
-  { tool: "path", label: "Percorso", key: "J" },
-  { tool: "light", label: "Luce", key: "I" },
-  { tool: "stamp", label: "Timbri", key: "S" },
-  { tool: "wall", label: "Muri", key: "W" },
-  { tool: "fog", label: "Nebbia", key: "F" },
+const GM_ONLY: { tool: Tool; key: string }[] = [
+  { tool: "terrain", key: "B" },
+  { tool: "path", key: "J" },
+  { tool: "light", key: "I" },
+  { tool: "stamp", key: "S" },
+  { tool: "wall", key: "W" },
+  { tool: "fog", key: "F" },
 ];
 
-const RULER_MODES: { id: "ruler" | TemplateShape; label: string }[] = [
-  { id: "ruler", label: "Distanza" },
-  ...TEMPLATE_SHAPES,
+const RULER_MODES: ("ruler" | TemplateShape)[] = [
+  "ruler",
+  ...TEMPLATE_SHAPES.map((shape) => shape.id),
 ];
 
 const DRAWING_TOOLS: Tool[] = ["pen", "line", "rect", "ellipse", "text"];
@@ -74,6 +76,7 @@ interface Props {
 }
 
 export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewportSize }: Props) {
+  const { t } = useTranslation();
   const {
     tool,
     color,
@@ -113,29 +116,37 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
   const clearDescId = useId();
   const fileInput = useRef<HTMLInputElement>(null);
   const center = { x: viewportSize.width / 2, y: viewportSize.height / 2 };
+  const rulerModeLabel = (mode: "ruler" | TemplateShape) => {
+    if (mode === "ruler") return t("tools.toolbar.ruler.distance");
+    const shape = TEMPLATE_SHAPES.find((shape) => shape.id === mode);
+    return catalogLabel(t, "templates", mode, shape?.label ?? mode);
+  };
 
   return (
     <>
-      <div className="toolbar toolbar-tools" role="toolbar" aria-label="Strumenti">
-        {[...TOOLS, ...(role === "gm" ? GM_ONLY : [])].map((t) => (
-          <button
-            key={t.tool}
-            type="button"
-            className="icon-button"
-            aria-pressed={tool === t.tool}
-            title={`${t.label} (${t.key})`}
-            aria-label={t.label}
-            onClick={() => setTool(t.tool)}
-          >
-            {TOOL_ICONS[t.tool]}
-          </button>
-        ))}
+      <div className="toolbar toolbar-tools" role="toolbar" aria-label={t("tools.toolbar.label")}>
+        {[...TOOLS, ...(role === "gm" ? GM_ONLY : [])].map((item) => {
+          const label = t(`tools.toolbar.tools.${item.tool}`);
+          return (
+            <button
+              key={item.tool}
+              type="button"
+              className="icon-button"
+              aria-pressed={tool === item.tool}
+              title={t("tools.toolbar.toolTitle", { label, key: item.key })}
+              aria-label={label}
+              onClick={() => setTool(item.tool)}
+            >
+              {TOOL_ICONS[item.tool]}
+            </button>
+          );
+        })}
         <span className="toolbar-separator" />
         <button
           type="button"
           className="icon-button"
-          title="Carica immagine (puoi anche trascinarla o incollarla)"
-          aria-label="Carica immagine"
+          title={t("tools.toolbar.upload.title")}
+          aria-label={t("tools.toolbar.upload.label")}
           onClick={() => fileInput.current?.click()}
         >
           {ImageIcon}
@@ -144,8 +155,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
           <button
             type="button"
             className="icon-button"
-            title="Genera una mappa con Gemini"
-            aria-label="Genera mappa"
+            title={t("tools.toolbar.generateMap.title")}
+            aria-label={t("tools.toolbar.generateMap.label")}
             onClick={() => setMapModalOpen(true)}
           >
             {MapGenerateIcon}
@@ -156,11 +167,11 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
             type="button"
             className="icon-button"
             aria-pressed={createHidden}
-            aria-label="Crea nascosti"
+            aria-label={t("tools.toolbar.createHidden.label")}
             title={
               createHidden
-                ? "I nuovi oggetti sono nascosti ai giocatori (clic per crearli visibili)"
-                : "I nuovi oggetti sono visibili (clic per crearli nascosti)"
+                ? t("tools.toolbar.createHidden.hiddenTitle")
+                : t("tools.toolbar.createHidden.visibleTitle")
             }
             onClick={() => setCreateHidden(!createHidden)}
           >
@@ -171,8 +182,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
           <button
             type="button"
             className="icon-button"
-            title="Griglia"
-            aria-label="Griglia"
+            title={t("tools.toolbar.grid")}
+            aria-label={t("tools.toolbar.grid")}
             aria-pressed={gridPanelOpen}
             onClick={() => setGridPanelOpen(!gridPanelOpen)}
           >
@@ -198,8 +209,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <button
           type="button"
           className="icon-button"
-          title="Annulla (Ctrl+Z)"
-          aria-label="Annulla"
+          title={t("tools.toolbar.undo.title")}
+          aria-label={t("tools.toolbar.undo.label")}
           disabled={!canUndo}
           onClick={() => store.undo()}
         >
@@ -208,8 +219,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <button
           type="button"
           className="icon-button"
-          title="Ripeti (Ctrl+Shift+Z)"
-          aria-label="Ripeti"
+          title={t("tools.toolbar.redo.title")}
+          aria-label={t("tools.toolbar.redo.label")}
           disabled={!canRedo}
           onClick={() => store.redo()}
         >
@@ -221,8 +232,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
             <button
               type="button"
               className="icon-button"
-              title="Svuota lavagna"
-              aria-label="Svuota lavagna"
+              title={t("tools.toolbar.clear.label")}
+              aria-label={t("tools.toolbar.clear.label")}
               disabled={isEmpty}
               onClick={() => setClearModalOpen(true)}
             >
@@ -254,14 +265,13 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
             if (e.target === e.currentTarget) setClearModalOpen(false);
           }}
         >
-          <h2 id={clearTitleId}>Svuotare la lavagna?</h2>
+          <h2 id={clearTitleId}>{t("tools.toolbar.clear.title")}</h2>
           <p id={clearDescId} className="muted small">
-            Verranno rimossi mappe, terreno, percorsi, muri, porte, luci, token, nebbia e disegni.
-            Potrai comunque annullare con Ctrl+Z.
+            {t("tools.toolbar.clear.description")}
           </p>
           <div className="modal-actions">
             <button type="button" onClick={() => setClearModalOpen(false)}>
-              Annulla
+              {t("tools.toolbar.clear.cancel")}
             </button>
             <button
               type="button"
@@ -273,14 +283,18 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
                 setClearModalOpen(false);
               }}
             >
-              Svuota lavagna
+              {t("tools.toolbar.clear.confirm")}
             </button>
           </div>
         </dialog>
       )}
 
       {tool === "token" && (
-        <div className="toolbar toolbar-style" role="toolbar" aria-label="Nuovo token">
+        <div
+          className="toolbar toolbar-style"
+          role="toolbar"
+          aria-label={t("tools.toolbar.newToken")}
+        >
           <TokenStyleFields value={tokenDraft} roomId={roomId} onChange={setTokenDraft} liveName />
         </div>
       )}
@@ -293,42 +307,47 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       {tool === "wall" && role === "gm" && <WallPanel store={store} roomId={roomId} />}
 
       {tool === "ruler" && (
-        <div className="toolbar toolbar-style" role="toolbar" aria-label="Righello">
-          {RULER_MODES.map((m) => (
+        <div
+          className="toolbar toolbar-style"
+          role="toolbar"
+          aria-label={t("tools.toolbar.ruler.label")}
+        >
+          {RULER_MODES.map((mode) => (
             <button
-              key={m.id}
+              key={mode}
               type="button"
-              aria-pressed={rulerShape === m.id}
-              onClick={() => setRulerShape(m.id)}
+              aria-pressed={rulerShape === mode}
+              onClick={() => setRulerShape(mode)}
             >
-              {m.label}
+              {rulerModeLabel(mode)}
             </button>
           ))}
           <span className="toolbar-separator" />
           <span className="small muted">
             {rulerShape === "ruler"
-              ? "Spazio aggiunge una tappa."
-              : "Maiusc al rilascio fissa la sagoma. Alt: senza griglia."}
+              ? t("tools.toolbar.ruler.distanceHint")
+              : t("tools.toolbar.ruler.templateHint")}
           </span>
         </div>
       )}
 
       {attachFrom && (
         <div className="toolbar toolbar-style toolbar-hint attach-hint" role="status">
-          Clicca il token principale a cui agganciare «
-          {store.get(attachFrom)?.kind === "token"
-            ? (store.get(attachFrom) as { name: string }).name || "il token"
-            : "il token"}
-          ». Esc per annullare.
+          {t("tools.toolbar.attach.hint", {
+            name:
+              store.get(attachFrom)?.kind === "token"
+                ? (store.get(attachFrom) as { name: string }).name ||
+                  t("tools.toolbar.attach.tokenFallback")
+                : t("tools.toolbar.attach.tokenFallback"),
+          })}
         </div>
       )}
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">
           {grid.type === "square"
-            ? "Trascina un riquadro sul bordo di una casella della mappa."
-            : "Trascina un riquadro attorno a un esagono della mappa."}{" "}
-          Esc per annullare.
+            ? t("tools.toolbar.calibrate.square")
+            : t("tools.toolbar.calibrate.hex")}
         </div>
       )}
 
@@ -337,19 +356,26 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       )}
 
       {DRAWING_TOOLS.includes(tool) && (
-        <div className="toolbar toolbar-style" role="toolbar" aria-label="Stile">
-          {DRAW_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className="color-button"
-              style={{ background: c }}
-              aria-pressed={color === c}
-              aria-label={COLOR_NAMES[c] ?? c}
-              title={COLOR_NAMES[c] ?? c}
-              onClick={() => setColor(c)}
-            />
-          ))}
+        <div
+          className="toolbar toolbar-style"
+          role="toolbar"
+          aria-label={t("tools.toolbar.style.label")}
+        >
+          {DRAW_COLORS.map((c) => {
+            const label = colorLabel(t, c, COLOR_NAMES[c] ?? c);
+            return (
+              <button
+                key={c}
+                type="button"
+                className="color-button"
+                style={{ background: c }}
+                aria-pressed={color === c}
+                aria-label={label}
+                title={label}
+                onClick={() => setColor(c)}
+              />
+            );
+          })}
           {tool !== "text" && (
             <>
               <span className="toolbar-separator" />
@@ -359,8 +385,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
                   type="button"
                   className="icon-button"
                   aria-pressed={strokeWidth === w}
-                  aria-label={`Spessore ${w}`}
-                  title={`Spessore ${w}`}
+                  aria-label={t("tools.toolbar.style.strokeWidth", { width: w })}
+                  title={t("tools.toolbar.style.strokeWidth", { width: w })}
                   onClick={() => setStrokeWidth(w)}
                 >
                   <span className="width-dot" style={{ width: w + 2, height: w + 2 }} />
@@ -375,8 +401,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
                 type="button"
                 className="icon-button"
                 aria-pressed={filled}
-                title="Riempimento"
-                aria-label="Riempimento"
+                title={t("tools.toolbar.style.fill")}
+                aria-label={t("tools.toolbar.style.fill")}
                 onClick={() => setFilled(!filled)}
               >
                 <span
@@ -389,14 +415,18 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         </div>
       )}
 
-      <div className="toolbar toolbar-zoom" role="toolbar" aria-label="Zoom">
+      <div
+        className="toolbar toolbar-zoom"
+        role="toolbar"
+        aria-label={t("tools.toolbar.zoom.label")}
+      >
         {/* Il righello sta qui: la colonna degli strumenti è già alta quanto la finestra. */}
         <button
           type="button"
           className="icon-button"
           aria-pressed={tool === "ruler"}
-          aria-label="Righello"
-          title="Righello (M)"
+          aria-label={t("tools.toolbar.ruler.label")}
+          title={t("tools.toolbar.ruler.title")}
           onClick={() => setTool("ruler")}
         >
           {TOOL_ICONS.ruler}
@@ -405,8 +435,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
           <button
             type="button"
             className="icon-button"
-            aria-label="Porta qui i giocatori"
-            title="Porta qui i giocatori: centrano la loro vista su questo punto (Maiusc + pressione prolungata sul punto che vuoi)"
+            aria-label={t("tools.toolbar.zoom.summon.label")}
+            title={t("tools.toolbar.zoom.summon.title")}
             onClick={() => store.summon(screenToWorld(viewport, center), viewport.scale)}
           >
             {SummonIcon}
@@ -416,8 +446,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
           type="button"
           className="icon-button"
           aria-pressed={initiativeOpen}
-          aria-label="Turni"
-          title="Ordine dei turni"
+          aria-label={t("tools.toolbar.zoom.turns.label")}
+          title={t("tools.toolbar.zoom.turns.title")}
           onClick={() => setInitiativeOpen(!initiativeOpen)}
         >
           {TurnsIcon}
@@ -426,8 +456,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <button
           type="button"
           className="icon-button"
-          aria-label="Riduci"
-          title="Riduci"
+          aria-label={t("tools.toolbar.zoom.out")}
+          title={t("tools.toolbar.zoom.out")}
           onClick={() => setViewport(zoomAt(viewport, center, 1 / 1.25))}
         >
           −
@@ -435,8 +465,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <button
           type="button"
           className="zoom-level"
-          title="Zoom al 100% (Shift+0)"
-          aria-label="Zoom al 100%"
+          title={t("tools.toolbar.zoom.reset.title")}
+          aria-label={t("tools.toolbar.zoom.reset.label")}
           onClick={() => setViewport(zoomAt(viewport, center, clampScale(1) / viewport.scale))}
         >
           {Math.round(viewport.scale * 100)}%
@@ -444,8 +474,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <button
           type="button"
           className="icon-button"
-          aria-label="Ingrandisci"
-          title="Ingrandisci"
+          aria-label={t("tools.toolbar.zoom.in")}
+          title={t("tools.toolbar.zoom.in")}
           onClick={() => setViewport(zoomAt(viewport, center, 1.25))}
         >
           +
@@ -453,8 +483,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <button
           type="button"
           className="icon-button"
-          aria-label="Adatta al contenuto"
-          title="Adatta al contenuto (Shift+1)"
+          aria-label={t("tools.toolbar.zoom.fit.label")}
+          title={t("tools.toolbar.zoom.fit.title")}
           onClick={onFit}
         >
           {FitIcon}

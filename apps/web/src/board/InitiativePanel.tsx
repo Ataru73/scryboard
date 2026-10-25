@@ -1,5 +1,6 @@
 import { initiativeOrder, type Role, type TokenItem, type TurnSettings } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
 import type { BoardStore } from "./store";
 import { useBoardUi } from "./tools";
 
@@ -18,6 +19,7 @@ function parseValue(text: string): number | null {
 
 /** Ordine dei turni: il GM lo gestisce, i giocatori lo vedono e ritoccano i valori. */
 export function InitiativePanel({ store, role, tokens, onClose }: Props) {
+  const { t } = useTranslation();
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   const turn: TurnSettings = useSyncExternalStore(store.subscribe, store.getTurn);
   const selectedIds = useBoardUi((s) => s.selectedIds);
@@ -30,38 +32,45 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
   });
 
   return (
-    <section className="panel initiative-panel" aria-label="Turni">
+    <section className="panel initiative-panel" aria-label={t("effects.initiative.title")}>
       <header>
-        <h2>Turni</h2>
-        <span className="muted small">Round {turn.round}</span>
-        <button type="button" className="icon-button" aria-label="Chiudi" onClick={onClose}>
+        <h2>{t("effects.initiative.title")}</h2>
+        <span className="muted small">{t("effects.initiative.round", { round: turn.round })}</span>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={t("effects.initiative.close")}
+          onClick={onClose}
+        >
           ×
         </button>
       </header>
       {order.length === 0 ? (
         <p className="muted small">
-          {gm
-            ? "Seleziona dei token e premi «Aggiungi selezione»."
-            : "Il GM non ha ancora fissato l'ordine dei turni."}
+          {gm ? t("effects.initiative.emptyGm") : t("effects.initiative.emptyPlayer")}
         </p>
       ) : (
         <ol className="initiative-list">
-          {order.map((t) => (
-            <li key={t.id} aria-current={t.id === turn.activeId ? "step" : undefined}>
+          {order.map((token) => (
+            <li key={token.id} aria-current={token.id === turn.activeId ? "step" : undefined}>
               <span className="initiative-name">
-                {t.name || "Senza nome"}
-                {gm && store.isHidden(t.id) && <span className="muted small"> (nascosto)</span>}
+                {token.name || t("effects.initiative.unnamed")}
+                {gm && store.isHidden(token.id) && (
+                  <span className="muted small"> ({t("effects.initiative.hidden")})</span>
+                )}
               </span>
               <input
                 type="number"
-                aria-label={`Iniziativa di ${t.name || "token"}`}
-                defaultValue={t.initiative as number}
-                key={`${t.id}-${t.initiative}`}
-                disabled={t.locked && !gm}
+                aria-label={t("effects.initiative.initiativeFor", {
+                  name: token.name || t("effects.initiative.token"),
+                })}
+                defaultValue={token.initiative as number}
+                key={`${token.id}-${token.initiative}`}
+                disabled={token.locked && !gm}
                 onBlur={(e) => {
                   const value = parseValue(e.target.value);
-                  if (value === null) e.target.value = String(t.initiative);
-                  else if (value !== t.initiative) store.setInitiative([t.id], value);
+                  if (value === null) e.target.value = String(token.initiative);
+                  else if (value !== token.initiative) store.setInitiative([token.id], value);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") (e.target as HTMLInputElement).blur();
@@ -71,8 +80,10 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
                 <button
                   type="button"
                   className="icon-button"
-                  aria-label={`Togli ${t.name || "token"} dall'ordine`}
-                  onClick={() => store.setInitiative([t.id], null)}
+                  aria-label={t("effects.initiative.removeFromOrder", {
+                    name: token.name || t("effects.initiative.token"),
+                  })}
+                  onClick={() => store.setInitiative([token.id], null)}
                 >
                   ×
                 </button>
@@ -83,7 +94,7 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
       )}
       {turn.activeId && !activeShown && order.length > 0 && (
         <p className="muted small" role="status">
-          Turno di qualcuno che non vedi.
+          {t("effects.initiative.hiddenActiveTurn")}
         </p>
       )}
       {gm && (
@@ -93,29 +104,29 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
             disabled={addable.length === 0}
             onClick={() => store.setInitiative(addable, 0)}
           >
-            Aggiungi selezione
+            {t("effects.initiative.addSelection")}
           </button>
           <button
             type="button"
-            title="Turno precedente"
+            title={t("effects.initiative.previousTurnTitle")}
             disabled={order.length === 0}
             onClick={() => store.advanceTurn(-1)}
           >
-            Indietro
+            {t("effects.initiative.previousTurn")}
           </button>
           <button
             type="button"
             className="primary"
-            title="Turno successivo (N)"
+            title={t("effects.initiative.nextTurnTitle")}
             disabled={order.length === 0}
             onClick={() => store.advanceTurn(1)}
           >
-            Avanti
+            {t("effects.initiative.nextTurn")}
           </button>
           <button
             type="button"
             disabled={order.length === 0 && !turn.activeId}
-            title="Toglie tutti dall'ordine e riparte dal round 1"
+            title={t("effects.initiative.endCombatTitle")}
             onClick={() => {
               store.setInitiative(
                 store.getInitiativeOrder().map((t) => t.id),
@@ -124,7 +135,7 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
               store.resetTurn();
             }}
           >
-            Fine combattimento
+            {t("effects.initiative.endCombat")}
           </button>
         </div>
       )}

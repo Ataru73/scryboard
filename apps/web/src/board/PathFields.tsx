@@ -1,5 +1,7 @@
 import { PATH_STYLES, type PathItem, type PathStyleId } from "@scryboard/shared";
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
+import { catalogLabel } from "../i18n/catalog";
 import { toFlat, toPathPoints } from "../paths/geometry";
 import type { BoardStore } from "./store";
 import { useBoardUi } from "./tools";
@@ -17,12 +19,14 @@ export function PathFields({
   store: BoardStore;
   cellSize: number;
 }) {
+  const { t } = useTranslation();
   const pathPoint = useBoardUi((s) => s.pathPoint);
   const setPathPoint = useBoardUi((s) => s.setPathPoint);
   const styleId = useId();
   const points = toPathPoints(path.points);
   const point = pathPoint !== null && pathPoint < points.length ? pathPoint : null;
   const width = point !== null ? (points[point]?.w ?? 0) : Math.max(...points.map((p) => p.w));
+  const displayWidth = (width / cellSize).toFixed(1);
 
   const scaleWidth = (factor: number) => {
     const next = points.map((p, i) =>
@@ -36,7 +40,7 @@ export function PathFields({
   return (
     <>
       <label htmlFor={styleId} className="visually-hidden">
-        Stile del percorso
+        {t("tools.pathFields.style")}
       </label>
       <select
         id={styleId}
@@ -45,7 +49,7 @@ export function PathFields({
       >
         {PATH_STYLES.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.label}
+            {catalogLabel(t, "paths", s.id, s.label)}
           </option>
         ))}
       </select>
@@ -53,20 +57,24 @@ export function PathFields({
       <button
         type="button"
         className="icon-button"
-        aria-label="Restringi"
-        title={point !== null ? "Restringi il punto selezionato" : "Restringi tutto il percorso"}
+        aria-label={t("tools.pathFields.narrow")}
+        title={
+          point !== null ? t("tools.pathFields.narrowPoint") : t("tools.pathFields.narrowPath")
+        }
         onClick={() => scaleWidth(0.8)}
       >
         −
       </button>
-      <span className="path-width" title="Larghezza in caselle">
-        {(width / cellSize).toFixed(1)} {point !== null ? `(punto ${point + 1})` : ""}
+      <span className="path-width" title={t("tools.pathFields.widthTitle")}>
+        {point !== null
+          ? t("tools.pathFields.widthAtPoint", { width: displayWidth, point: point + 1 })
+          : t("tools.pathFields.width", { width: displayWidth })}
       </span>
       <button
         type="button"
         className="icon-button"
-        aria-label="Allarga"
-        title={point !== null ? "Allarga il punto selezionato" : "Allarga tutto il percorso"}
+        aria-label={t("tools.pathFields.widen")}
+        title={point !== null ? t("tools.pathFields.widenPoint") : t("tools.pathFields.widenPath")}
         onClick={() => scaleWidth(1.25)}
       >
         +
@@ -80,7 +88,7 @@ export function PathFields({
             setPathPoint(null);
           }}
         >
-          Elimina punto
+          {t("tools.pathFields.deletePoint")}
         </button>
       )}
       <span className="toolbar-separator" />

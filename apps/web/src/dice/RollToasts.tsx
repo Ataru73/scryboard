@@ -1,6 +1,7 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { Roll } from "@scryboard/shared";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocalRolls, useRolls } from "./rolls";
 
 const TOAST_MS = 6000;
@@ -15,6 +16,7 @@ interface Toast {
  * registro quando si entra non vengono ripetuti.
  */
 export function RollToasts({ provider }: { provider: HocuspocusProvider }) {
+  const { t } = useTranslation();
   const shared = useRolls(provider);
   const hidden = useLocalRolls((s) => s.hidden);
   const seen = useRef<Set<string> | null>(null);
@@ -61,13 +63,13 @@ export function RollToasts({ provider }: { provider: HocuspocusProvider }) {
 
   if (toasts.length === 0) return null;
   return (
-    <div className="roll-toasts" role="status" aria-label="Ultimi tiri">
+    <div className="roll-toasts" role="status" aria-label={t("social.dice.recent")}>
       {toasts.map(({ roll, secret }) => (
         <div key={roll.id} className={secret ? "roll-toast secret" : "roll-toast"}>
           <span className="roll-toast-total">{roll.total}</span>
           <span className="roll-toast-text">
             <strong>{roll.name}</strong> · {roll.formula}
-            {secret && " (nascosto)"}
+            {secret && ` ${t("social.dice.hiddenSuffix")}`}
           </span>
         </div>
       ))}

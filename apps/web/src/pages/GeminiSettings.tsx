@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useId, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import {
   DEFAULT_GEMINI_MODEL,
   GeminiError,
@@ -8,11 +9,12 @@ import {
 import { DEFAULT_VISION_MODEL, pickDefaultVisionModel } from "../gemini/walls";
 import { storage } from "../lib/storage";
 
-type Check = { state: "idle" | "testing" } | { state: "ok" } | { state: "error"; message: string };
+type Check = { state: "idle" | "testing" } | { state: "ok" } | { state: "error"; error: unknown };
 
 /** Pulsante "Impostazioni" con la chiave API di Gemini per generare le immagini dei token. */
 /** Con `icon` il pulsante mostra solo l'icona; il nome resta per screen reader e tooltip. */
 export function SettingsButton({ className, icon }: { className?: string; icon?: ReactNode }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const keyId = useId();
@@ -45,10 +47,7 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
     } catch (e) {
       setModels(null);
       setVisionModels(null);
-      setCheck({
-        state: "error",
-        message: e instanceof GeminiError ? e.message : "Prova non riuscita.",
-      });
+      setCheck({ state: "error", error: e });
       return false;
     }
   }
@@ -69,11 +68,11 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
       <button
         type="button"
         className={className}
-        aria-label={icon ? "Impostazioni" : undefined}
-        title={icon ? "Impostazioni" : undefined}
+        aria-label={icon ? t("pages.geminiSettings.title") : undefined}
+        title={icon ? t("pages.geminiSettings.title") : undefined}
         onClick={() => setOpen(true)}
       >
-        {icon ?? "Impostazioni"}
+        {icon ?? t("pages.geminiSettings.title")}
       </button>
       {open && (
         // biome-ignore lint/a11y/useKeyWithClickEvents: Esc chiude nativamente <dialog>.
@@ -88,15 +87,15 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <h2 id={titleId}>Impostazioni</h2>
+          <h2 id={titleId}>{t("pages.geminiSettings.title")}</h2>
           <p className="small">
-            Con una chiave API di Gemini puoi generare le immagini dei token dalla scheda{" "}
-            <strong>Genera</strong> della libreria e, da GM, le mappe dal pulsante{" "}
-            <strong>Genera mappa</strong>; con lo strumento Muri, Gemini può anche tracciare i muri
-            di una mappa. Senza chiave le funzioni non compaiono.
+            <Trans
+              i18nKey="pages.geminiSettings.description"
+              components={{ generate: <strong />, generateMap: <strong /> }}
+            />
           </p>
           <label className="field" htmlFor={keyId}>
-            <span>Chiave API di Gemini</span>
+            <span>{t("pages.geminiSettings.apiKey")}</span>
             <input
               id={keyId}
               type="password"
@@ -112,10 +111,12 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
             />
           </label>
           <label className="field" htmlFor={modelId}>
-            <span>Modello</span>
+            <span>{t("pages.geminiSettings.model")}</span>
             {models && models.length > 0 ? (
               <select id={modelId} value={model} onChange={(e) => setModel(e.target.value)}>
-                <option value="">Predefinito ({DEFAULT_GEMINI_MODEL})</option>
+                <option value="">
+                  {t("pages.geminiSettings.defaultModel", { model: DEFAULT_GEMINI_MODEL })}
+                </option>
                 {/* Un modello scelto in precedenza resta selezionabile anche se non è più in elenco. */}
                 {model && !models.some((m) => m.id === model) && (
                   <option value={model}>{model}</option>
@@ -137,14 +138,18 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
             )}
           </label>
           <label className="field" htmlFor={visionId}>
-            <span>Per leggere le mappe</span>
+            <span>{t("pages.geminiSettings.visionModel")}</span>
             {visionModels && visionModels.length > 0 ? (
               <select
                 id={visionId}
                 value={visionModel}
                 onChange={(e) => setVisionModel(e.target.value)}
               >
-                <option value="">Automatico ({pickDefaultVisionModel(visionModels)})</option>
+                <option value="">
+                  {t("pages.geminiSettings.automaticModel", {
+                    model: pickDefaultVisionModel(visionModels),
+                  })}
+                </option>
                 {visionModel && !visionModels.some((m) => m.id === visionModel) && (
                   <option value={visionModel}>{visionModel}</option>
                 )}
@@ -158,36 +163,41 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
               <input
                 id={visionId}
                 value={visionModel}
-                placeholder={`${DEFAULT_VISION_MODEL} (se vuoto, il più recente)`}
+                placeholder={t("pages.geminiSettings.visionPlaceholder", {
+                  model: DEFAULT_VISION_MODEL,
+                })}
                 spellCheck={false}
                 onChange={(e) => setVisionModel(e.target.value)}
               />
             )}
           </label>
           {models && models.length === 0 && (
-            <p className="muted small">
-              Con questa chiave non risultano modelli per immagini: puoi scrivere il nome a mano.
-            </p>
+            <p className="muted small">{t("pages.geminiSettings.noImageModels")}</p>
           )}
-          <p className="muted small">
-            La chiave resta salvata solo in questo browser e le richieste partono da qui verso
-            Google: Scryboard non le vede. Le richieste sono addebitate sul conto Google di chi ha
-            creato la chiave, e qualunque script della pagina può leggerla: usa una chiave dedicata,
-            con limiti di spesa.
-          </p>
+          <p className="muted small">{t("pages.geminiSettings.privacy")}</p>
           {check.state === "ok" && (
             <p role="status">
-              Chiave valida{models ? `: ${models.length} modelli per immagini` : ""}.
+              {models
+                ? t("pages.geminiSettings.validKeyWithModels", { count: models.length })
+                : t("pages.geminiSettings.validKey")}
             </p>
           )}
-          {check.state === "error" && <p className="error">{check.message}</p>}
+          {check.state === "error" && (
+            <p className="error">
+              {check.error instanceof GeminiError
+                ? t(`pages.geminiSettings.errors.${check.error.code}`)
+                : t("pages.geminiSettings.testFailed")}
+            </p>
+          )}
           <div className="modal-actions">
             <button
               type="button"
               disabled={!apiKey.trim() || check.state === "testing"}
               onClick={() => void test()}
             >
-              {check.state === "testing" ? "Prova…" : "Prova chiave"}
+              {check.state === "testing"
+                ? t("pages.geminiSettings.testing")
+                : t("pages.geminiSettings.testKey")}
             </button>
             <button
               type="button"
@@ -201,7 +211,7 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
                 setCheck({ state: "idle" });
               }}
             >
-              Dimentica chiave
+              {t("pages.geminiSettings.forgetKey")}
             </button>
             <button
               type="button"
@@ -211,7 +221,7 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
                 setOpen(false);
               }}
             >
-              Salva
+              {t("pages.geminiSettings.save")}
             </button>
           </div>
         </dialog>

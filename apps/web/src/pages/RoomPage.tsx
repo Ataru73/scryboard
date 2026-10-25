@@ -1,5 +1,6 @@
 import { GM_MAILBOX, playerCredentials, type RoomInfo } from "@scryboard/shared";
 import { useEffect, useId, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AssetAuthContext } from "../board/assetAuth";
 import { Board } from "../board/Board";
 import { InfoIcon, SettingsIcon } from "../board/icons";
@@ -44,6 +45,7 @@ async function loadRoom(roomId: string): Promise<Load> {
 }
 
 export function RoomPage({ roomId }: { roomId: string }) {
+  const { t } = useTranslation();
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [profile, setProfile] = useState(storage.getProfile);
 
@@ -57,22 +59,22 @@ export function RoomPage({ roomId }: { roomId: string }) {
     };
   }, [roomId]);
 
-  if (load.state === "loading") return <main className="centered muted">Caricamento…</main>;
+  if (load.state === "loading") {
+    return <main className="centered muted">{t("pages.room.loading")}</main>;
+  }
   if (load.state === "not-found") {
     return (
       <main className="centered">
         <div className="card">
-          <h2>Stanza non trovata</h2>
-          <p className="muted">Controlla il link ricevuto dal tuo GM.</p>
-          <a href="/">Crea una nuova stanza</a>
+          <h2>{t("pages.room.notFoundTitle")}</h2>
+          <p className="muted">{t("pages.room.notFoundDescription")}</p>
+          <a href="/">{t("pages.room.createNewRoom")}</a>
         </div>
       </main>
     );
   }
   if (load.state === "error") {
-    return (
-      <main className="centered error">Impossibile contattare il server. Riprova più tardi.</main>
-    );
+    return <main className="centered error">{t("pages.room.serverError")}</main>;
   }
   if (!profile) {
     return (
@@ -89,14 +91,6 @@ export function RoomPage({ roomId }: { roomId: string }) {
   return <Room room={load.room} gmToken={load.gmToken} profile={profile} />;
 }
 
-const STATUS_LABEL: Record<ConnectionStatus, string> = {
-  connecting: "Connessione…",
-  connected: "Connesso",
-  disconnected: "Disconnesso, riconnessione…",
-  idle: "Inattivo: tocca per riprendere",
-  denied: "Accesso negato",
-};
-
 function Room({
   room,
   gmToken,
@@ -106,6 +100,14 @@ function Room({
   gmToken: string | null;
   profile: Profile;
 }) {
+  const { t } = useTranslation();
+  const statusLabel: Record<ConnectionStatus, string> = {
+    connecting: t("pages.room.status.connecting"),
+    connected: t("pages.room.status.connected"),
+    disconnected: t("pages.room.status.disconnected"),
+    idle: t("pages.room.status.idle"),
+    denied: t("pages.room.status.denied"),
+  };
   // Il GM può aprire una scena diversa da quella dei giocatori per prepararla.
   const [viewScene, setViewScene] = useState<string | null>(null);
   const { status, users, provider, gmProvider, mailProvider, activeScene, sceneId, sceneFailed } =
@@ -134,7 +136,7 @@ function Room({
           Scryboard
         </a>
         <h1>{room.name}</h1>
-        <span className={`status status-${status}`}>{STATUS_LABEL[status]}</span>
+        <span className={`status status-${status}`}>{statusLabel[status]}</span>
         <SettingsButton className="icon-button" icon={SettingsIcon} />
         <CreditsButton className="icon-button" icon={InfoIcon} />
       </header>
@@ -151,13 +153,13 @@ function Room({
           />
         )}
         <section>
-          <h2>Al tavolo ({users.length})</h2>
-          <ul className="users" aria-label="Al tavolo">
+          <h2>{t("pages.room.atTable", { count: users.length })}</h2>
+          <ul className="users" aria-label={t("pages.room.atTableLabel")}>
             {users.map((u) => (
               <li key={u.clientId}>
                 <span className="dot" style={{ background: u.color }} />
                 {u.name}
-                {u.isSelf && <span className="muted"> (tu)</span>}
+                {u.isSelf && <span className="muted"> {t("pages.room.self")}</span>}
                 {u.role === "gm" && <span className="badge">GM</span>}
               </li>
             ))}
@@ -174,14 +176,17 @@ function Room({
             gmToken ? { gmToken } : { credentials: playerCredentials(profile.id, profile.secret) }
           }
         />
-        <p className="muted small attribution">Powered by Doc</p>
+        <p className="muted small attribution">{t("pages.poweredBy")}</p>
       </aside>
       <main className="board-area">
         {gmToken && sceneId && activeScene && sceneId !== activeScene && (
           <div className="scene-banner" role="status">
-            Stai preparando «{sceneName(sceneId)}»: i giocatori sono in «{sceneName(activeScene)}».
+            {t("pages.room.preparingScene", {
+              viewing: sceneName(sceneId),
+              active: sceneName(activeScene),
+            })}
             <button type="button" onClick={() => setViewScene(activeScene)}>
-              Torna ai giocatori
+              {t("pages.room.returnToPlayers")}
             </button>
           </div>
         )}
@@ -197,7 +202,7 @@ function Room({
             />
           </AssetAuthContext.Provider>
         ) : (
-          <div className="board-placeholder muted">Connessione alla lavagna…</div>
+          <div className="board-placeholder muted">{t("pages.room.boardConnecting")}</div>
         )}
       </main>
     </div>
@@ -213,9 +218,10 @@ function SharePanel({
   roomName: string;
   gmToken: string;
 }) {
+  const { t } = useTranslation();
   const origin = window.location.origin;
   const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<{ error: unknown } | null>(null);
 
   /** Scarica la stanza (scene, nascosti, immagini) in un file .scryboard da riaprire in seguito. */
   async function exportRoom() {
@@ -229,7 +235,7 @@ function SharePanel({
       link.click();
       setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
     } catch (e) {
-      setExportError(describeApiError(e));
+      setExportError({ error: e });
     } finally {
       setExporting(false);
     }
@@ -237,20 +243,24 @@ function SharePanel({
 
   return (
     <section className="stack">
-      <h2>Condividi</h2>
-      <CopyField label="Link per i giocatori" value={playerLink(origin, roomId)} />
-      <CopyField label="Link GM (tienilo segreto)" value={gmLink(origin, roomId, gmToken)} secret />
+      <h2>{t("pages.room.share.title")}</h2>
+      <CopyField label={t("pages.room.share.playerLink")} value={playerLink(origin, roomId)} />
+      <CopyField
+        label={t("pages.room.share.gmLink")}
+        value={gmLink(origin, roomId, gmToken)}
+        secret
+      />
       <button
         type="button"
         disabled={exporting}
-        title="Salva scene, oggetti nascosti e immagini in un file da importare in una nuova stanza"
+        title={t("pages.room.share.exportTitle")}
         onClick={() => void exportRoom()}
       >
-        {exporting ? "Esportazione…" : "Esporta la stanza"}
+        {exporting ? t("pages.room.share.exporting") : t("pages.room.share.exportRoom")}
       </button>
       {exportError && (
         <p className="error small" role="alert">
-          {exportError}
+          {describeApiError(exportError.error)}
         </p>
       )}
     </section>
@@ -258,6 +268,7 @@ function SharePanel({
 }
 
 function CopyField({ label, value, secret }: { label: string; value: string; secret?: boolean }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const id = useId();
   async function copy() {
@@ -281,7 +292,7 @@ function CopyField({ label, value, secret }: { label: string; value: string; sec
           onFocus={(e) => e.target.select()}
         />
         <button type="button" onClick={copy}>
-          {copied ? "Copiato" : "Copia"}
+          {copied ? t("pages.room.share.copied") : t("pages.room.share.copy")}
         </button>
       </div>
     </div>

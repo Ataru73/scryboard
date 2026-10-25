@@ -2,6 +2,7 @@ import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { BoardItem, Role, TokenItem } from "@scryboard/shared";
 import { canModify } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
 import { AuraFields } from "./AuraFields";
 import { parentOf } from "./attach";
 import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
@@ -20,6 +21,7 @@ interface Props {
 
 /** Azioni sugli oggetti selezionati: proprietà del token, blocco (GM) ed eliminazione. */
 export function SelectionPanel({ store, role, roomId, provider }: Props) {
+  const { t } = useTranslation();
   // Si aggiorna anche quando gli oggetti cambiano da remoto.
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   const selectedIds = useBoardUi((s) => s.selectedIds);
@@ -35,7 +37,7 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
   const removable = selected.filter((i) => canModify(i, role));
 
   return (
-    <div className="toolbar selection-panel" role="toolbar" aria-label="Selezione">
+    <div className="toolbar selection-panel" role="toolbar" aria-label={t("core.selection.label")}>
       {single?.kind === "token" && canModify(single, role) && (
         <>
           <TokenStyleFields
@@ -63,8 +65,8 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           type="button"
           className="icon-button"
           aria-pressed={allHidden}
-          aria-label={allHidden ? "Rivela" : "Nascondi"}
-          title={allHidden ? "Rivela ai giocatori (Shift+H)" : "Nascondi ai giocatori (Shift+H)"}
+          aria-label={allHidden ? t("core.selection.reveal") : t("core.selection.hide")}
+          title={allHidden ? t("core.selection.revealTitle") : t("core.selection.hideTitle")}
           onClick={() =>
             store.setHidden(
               selected.map((i) => i.id),
@@ -80,12 +82,8 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           type="button"
           className="icon-button"
           aria-pressed={allLocked}
-          aria-label={allLocked ? "Sblocca" : "Blocca"}
-          title={
-            allLocked
-              ? "Sblocca"
-              : "Blocca: nessuno potrà spostarlo o cancellarlo finché non lo sblocchi"
-          }
+          aria-label={allLocked ? t("core.selection.unlock") : t("core.selection.lock")}
+          title={allLocked ? t("core.selection.unlock") : t("core.selection.lockTitle")}
           onClick={() =>
             store.update(Object.fromEntries(selected.map((i) => [i.id, { locked: !allLocked }])))
           }
@@ -97,8 +95,8 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
         <button
           type="button"
           className="icon-button"
-          aria-label="Elimina"
-          title="Elimina (Canc)"
+          aria-label={t("core.selection.delete")}
+          title={t("core.selection.deleteTitle")}
           onClick={() => {
             store.remove(removable.map((i) => i.id));
             select([]);
@@ -113,16 +111,17 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
 
 /** «Aggancia a…»: il prossimo token cliccato diventa quello principale (cavalcatura, veicolo). */
 function AttachButton({ token, store }: { token: TokenItem; store: BoardStore }) {
+  const { t } = useTranslation();
   const attachFrom = useBoardUi((s) => s.attachFrom);
   const parent = parentOf(store.getSnapshot(), token);
   if (parent) {
     return (
       <button
         type="button"
-        title="Il token non seguirà più quello principale"
+        title={t("core.selection.detachTitle")}
         onClick={() => store.update({ [token.id]: { attachedTo: null } })}
       >
-        Sgancia da {parent.name || "token"}
+        {t("core.selection.detachFrom", { name: parent.name || t("core.selection.token") })}
       </button>
     );
   }
@@ -130,10 +129,10 @@ function AttachButton({ token, store }: { token: TokenItem; store: BoardStore })
     <button
       type="button"
       aria-pressed={attachFrom === token.id}
-      title="Poi clicca il token principale: si muoveranno insieme"
+      title={t("core.selection.attachTitle")}
       onClick={() => useBoardUi.getState().setAttachFrom(attachFrom === token.id ? null : token.id)}
     >
-      Aggancia a…
+      {t("core.selection.attachTo")}
     </button>
   );
 }

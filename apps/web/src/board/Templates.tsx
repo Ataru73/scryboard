@@ -1,5 +1,6 @@
 import type { GridSettings, TokenItem } from "@scryboard/shared";
 import type Konva from "konva";
+import { useTranslation } from "react-i18next";
 import { Circle, Group, Label, Line, Rect, Shape, Tag, Text } from "react-konva";
 import {
   DEFAULT_LINE_WIDTH,
@@ -112,6 +113,7 @@ export function AreaPreview({
   tokens: TokenItem[];
   scale: number;
 }) {
+  const { t } = useTranslation();
   const length = geometry.size * grid.size;
   const rad = (geometry.rotation * Math.PI) / 180;
   const end =
@@ -123,7 +125,9 @@ export function AreaPreview({
         };
   const count = tokensInside(geometry, tokens, grid.size).length;
   const text =
-    count > 0 ? `${templateLabel(geometry, grid)} · ${count} token` : templateLabel(geometry, grid);
+    count > 0
+      ? t("core.templates.summary", { label: templateLabel(geometry, grid), count })
+      : templateLabel(geometry, grid);
   return (
     <Group listening={false} name="area-preview">
       <Group x={geometry.x} y={geometry.y} rotation={geometry.rotation}>

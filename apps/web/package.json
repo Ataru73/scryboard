@@ -13,9 +13,11 @@
   "dependencies": {
     "@hocuspocus/provider": "^4.7.1",
     "@scryboard/shared": "workspace:*",
+    "i18next": "^26.5.10",
     "konva": "^10.9.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-i18next": "^17.1.8",
     "react-konva": "^19.3.2",
     "yjs": "^13.6.33",
     "zustand": "^5.0.16"

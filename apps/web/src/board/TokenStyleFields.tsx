@@ -1,5 +1,7 @@
 import { DRAW_COLORS, MAX_ASSET_BYTES, PORTRAITS, TOKEN_SIZES } from "@scryboard/shared";
 import { useId, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { catalogLabel, colorLabel } from "../i18n/catalog";
 import { storage } from "../lib/storage";
 import { useAssetAuth } from "./assetAuth";
 import { COLOR_NAMES } from "./colors";
@@ -20,6 +22,7 @@ interface Props {
 }
 
 export function TokenStyleFields({ value, roomId, onChange, liveName = false }: Props) {
+  const { t } = useTranslation();
   const [name, setName] = useState(value.name);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -38,10 +41,14 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
   /** Sceglie un'immagine: nome e taglia si adattano solo se non li ha già cambiati l'utente. */
   function pickPortrait(picked: (typeof PORTRAITS)[number]) {
     const previous = PORTRAITS.find((p) => p.id === value.portrait);
+    const pickedLabel = catalogLabel(t, "portraits", picked.id, picked.label);
+    const previousLabel = previous
+      ? catalogLabel(t, "portraits", previous.id, previous.label)
+      : undefined;
     const patch: Partial<TokenDraft> = { portrait: picked.id, assetId: null };
-    if (!name.trim() || name === previous?.label) {
-      patch.name = picked.label;
-      setName(picked.label);
+    if (!name.trim() || name === previousLabel) {
+      patch.name = pickedLabel;
+      setName(pickedLabel);
     }
     if (!previous || value.size === previous.size) patch.size = picked.size;
     storage.addRecentPortrait(picked.id);
@@ -54,9 +61,9 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
     if (!file) return;
     setError(null);
     if (!isSupportedImage(file)) {
-      setError(`"${file.name}": formato non supportato (usa PNG, JPEG, WebP o GIF).`);
+      setError(t("core.upload.unsupportedImage", { filename: file.name }));
     } else if (file.size > MAX_ASSET_BYTES) {
-      setError(`"${file.name}" è troppo grande (massimo 20 MB).`);
+      setError(t("core.upload.imageTooLarge", { filename: file.name }));
     } else {
       setCropping(file);
     }
@@ -70,7 +77,7 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
       const { assetId } = await uploadImage(roomId, file, gmToken);
       onChange({ assetId });
     } catch (e) {
-      setError(e instanceof UploadError ? e.message : "Caricamento non riuscito.");
+      setError(e instanceof UploadError ? e.message : t("core.upload.failed"));
     } finally {
       setUploading(false);
     }
@@ -79,13 +86,13 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
   return (
     <>
       <label htmlFor={nameId} className="visually-hidden">
-        Nome del token
+        {t("core.tokenStyle.name")}
       </label>
       <input
         id={nameId}
         className="token-name"
         value={name}
-        placeholder="Nome del token"
+        placeholder={t("core.tokenStyle.name")}
         maxLength={40}
         onChange={(e) => {
           setName(e.target.value);
@@ -97,21 +104,24 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
         }}
       />
       <span className="toolbar-separator" />
-      {DRAW_COLORS.map((c) => (
-        <button
-          key={c}
-          type="button"
-          className="color-button"
-          style={{ background: c }}
-          aria-pressed={value.color === c}
-          aria-label={`Colore ${COLOR_NAMES[c] ?? c}`}
-          title={COLOR_NAMES[c] ?? c}
-          onClick={() => onChange({ color: c })}
-        />
-      ))}
+      {DRAW_COLORS.map((c) => {
+        const label = colorLabel(t, c, COLOR_NAMES[c] ?? c);
+        return (
+          <button
+            key={c}
+            type="button"
+            className="color-button"
+            style={{ background: c }}
+            aria-pressed={value.color === c}
+            aria-label={t("core.tokenStyle.color", { color: label })}
+            title={label}
+            onClick={() => onChange({ color: c })}
+          />
+        );
+      })}
       <span className="toolbar-separator" />
       <label htmlFor={sizeId} className="visually-hidden">
-        Taglia
+        {t("core.tokenStyle.size")}
       </label>
       <select
         id={sizeId}
@@ -120,20 +130,24 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
       >
         {TOKEN_SIZES.map((s) => (
           <option key={s.size} value={s.size}>
-            {s.label}
+            {catalogLabel(t, "tokenSizes", String(s.size), s.label)}
           </option>
         ))}
       </select>
       <span className="toolbar-separator" />
       <button type="button" disabled={uploading} onClick={() => fileInput.current?.click()}>
-        {uploading ? "Caricamento…" : value.assetId ? "Cambia immagine" : "Immagine"}
+        {uploading
+          ? t("core.tokenStyle.uploading")
+          : value.assetId
+            ? t("core.tokenStyle.changeImage")
+            : t("core.tokenStyle.image")}
       </button>
       <button type="button" onClick={() => setLibraryOpen(true)}>
-        Libreria
+        {t("core.tokenStyle.library")}
       </button>
       {(value.assetId || value.portrait) && (
         <button type="button" onClick={() => onChange({ assetId: null, portrait: null })}>
-          Togli immagine
+          {t("core.tokenStyle.removeImage")}
         </button>
       )}
       {cropping && (
@@ -161,7 +175,7 @@ export function TokenStyleFields({ value, roomId, onChange, liveName = false }: 
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif"
         hidden
-        aria-label="Immagine del token"
+        aria-label={t("core.tokenStyle.imageInput")}
         onChange={(e) => {
           onFile(e.target.files?.[0]);
           e.target.value = "";

@@ -1,5 +1,6 @@
 import type { Scene } from "@scryboard/shared";
 import { type FormEvent, useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import type { useScenes } from "./useScenes";
 
@@ -16,6 +17,7 @@ interface Props {
 
 /** Cassetto delle scene: il GM ne prepara una mentre i giocatori restano sull'attiva. */
 export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, scenes }: Props) {
+  const { t } = useTranslation();
   const { scenes: list, error, run } = scenes;
   const [newName, setNewName] = useState("");
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
@@ -35,7 +37,12 @@ export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, s
 
   async function duplicate(scene: Scene) {
     const copy = await run(() =>
-      api.scenes.duplicate(roomId, gmToken, scene.id, `${scene.name} (copia)`.slice(0, 40)),
+      api.scenes.duplicate(
+        roomId,
+        gmToken,
+        scene.id,
+        t("social.scenes.copyName", { name: scene.name }).slice(0, 40),
+      ),
     );
     if (copy) onOpen(copy.id);
   }
@@ -55,8 +62,8 @@ export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, s
   }
 
   return (
-    <section className="scenes" aria-label="Scene">
-      <h2>Scene</h2>
+    <section className="scenes" aria-label={t("social.scenes.title")}>
+      <h2>{t("social.scenes.title")}</h2>
       <ul className="scene-list">
         {list.map((scene) => {
           const isActive = scene.id === activeScene;
@@ -66,7 +73,7 @@ export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, s
               {renaming?.id === scene.id ? (
                 <form className="scene-rename" onSubmit={rename}>
                   <input
-                    aria-label="Nuovo nome della scena"
+                    aria-label={t("social.scenes.renameLabel")}
                     value={renaming.name}
                     maxLength={40}
                     // biome-ignore lint/a11y/noAutofocus: il campo compare solo su richiesta.
@@ -80,11 +87,11 @@ export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, s
                   type="button"
                   className="scene-name"
                   aria-current={isViewed ? "true" : undefined}
-                  title="Apri la scena per prepararla"
+                  title={t("social.scenes.openTitle")}
                   onClick={() => onOpen(scene.id)}
                 >
                   {scene.name}
-                  {isActive && <span className="badge">Giocatori</span>}
+                  {isActive && <span className="badge">{t("social.scenes.players")}</span>}
                 </button>
               )}
               <span className="scene-actions">
@@ -92,28 +99,28 @@ export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, s
                   <button
                     type="button"
                     className="primary"
-                    title="Porta i giocatori in questa scena"
+                    title={t("social.scenes.activateTitle")}
                     onClick={() =>
                       void run(() => api.scenes.activate(roomId, gmToken, scene.id)).then(() =>
                         onOpen(scene.id),
                       )
                     }
                   >
-                    Sposta qui il gruppo
+                    {t("social.scenes.activate")}
                   </button>
                 )}
                 <button
                   type="button"
-                  aria-label={`Rinomina ${scene.name}`}
-                  title="Rinomina"
+                  aria-label={t("social.scenes.rename", { name: scene.name })}
+                  title={t("social.scenes.renameTitle")}
                   onClick={() => setRenaming({ id: scene.id, name: scene.name })}
                 >
                   ✎
                 </button>
                 <button
                   type="button"
-                  aria-label={`Duplica ${scene.name}`}
-                  title="Duplica"
+                  aria-label={t("social.scenes.duplicate", { name: scene.name })}
+                  title={t("social.scenes.duplicateTitle")}
                   onClick={() => void duplicate(scene)}
                 >
                   ⧉
@@ -123,17 +130,17 @@ export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, s
                     <button
                       type="button"
                       className="danger"
-                      aria-label={`Conferma l'eliminazione di ${scene.name}`}
+                      aria-label={t("social.scenes.confirmDelete", { name: scene.name })}
                       onClick={() => void remove(scene)}
                       onBlur={() => setConfirming(null)}
                     >
-                      Elimina?
+                      {t("social.scenes.deleteQuestion")}
                     </button>
                   ) : (
                     <button
                       type="button"
-                      aria-label={`Elimina ${scene.name}`}
-                      title="Elimina"
+                      aria-label={t("social.scenes.delete", { name: scene.name })}
+                      title={t("social.scenes.deleteTitle")}
                       onClick={() => setConfirming(scene.id)}
                     >
                       ×
@@ -146,17 +153,17 @@ export function ScenesPanel({ roomId, gmToken, activeScene, viewScene, onOpen, s
       </ul>
       <form className="scene-new" onSubmit={create}>
         <label htmlFor={newId} className="visually-hidden">
-          Nome della nuova scena
+          {t("social.scenes.createLabel")}
         </label>
         <input
           id={newId}
           value={newName}
           maxLength={40}
-          placeholder="Nuova scena…"
+          placeholder={t("social.scenes.createPlaceholder")}
           onChange={(e) => setNewName(e.target.value)}
         />
         <button type="submit" disabled={!newName.trim()}>
-          Aggiungi
+          {t("social.scenes.add")}
         </button>
       </form>
       {error && (

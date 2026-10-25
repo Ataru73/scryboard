@@ -1,14 +1,9 @@
-import {
-  assetUrl,
-  BIOMES,
-  type BiomeId,
-  type DoorState,
-  type ImageItem,
-  type WallKind,
-} from "@scryboard/shared";
+import { assetUrl, BIOMES, type BiomeId, type ImageItem, type WallKind } from "@scryboard/shared";
 import { useState, useSyncExternalStore } from "react";
+import { useTranslation } from "react-i18next";
 import { GeminiError, listGeminiModels } from "../gemini/api";
 import { pickDefaultVisionModel, prepareForAnalysis, traceWalls } from "../gemini/walls";
+import { catalogLabel } from "../i18n/catalog";
 import { storage, subscribeGeminiKey } from "../lib/storage";
 import { projectTrace } from "../walls/fromImage";
 import { terrainWallContours } from "../walls/fromTerrain";
@@ -19,28 +14,7 @@ import { TrashIcon } from "./icons";
 import type { BoardStore } from "./store";
 import { useBoardUi } from "./tools";
 
-const KINDS: { kind: WallKind; label: string }[] = [
-  { kind: "wall", label: "Muro" },
-  { kind: "door", label: "Porta" },
-  { kind: "window", label: "Finestra" },
-  { kind: "invisible", label: "Invisibile" },
-  { kind: "one-way", label: "Senso unico" },
-  { kind: "terrain", label: "Terreno" },
-];
-
-/** Cosa fa ciascun tipo, per il suggerimento sotto la barra. */
-const KIND_HINTS: Partial<Record<WallKind, string>> = {
-  "one-way":
-    "Dirupi e sporgenze: si vede attraverso solo nel verso delle frecce (sinistra di chi traccia).",
-  terrain:
-    "Colonne e rocce: si vede la faccia davanti ma non il retro (il secondo muro ferma la vista).",
-};
-
-const DOOR_LABELS: Record<DoorState, string> = {
-  open: "Aperta",
-  closed: "Chiusa",
-  locked: "A chiave",
-};
+const KINDS: WallKind[] = ["wall", "door", "window", "invisible", "one-way", "terrain"];
 
 /** La mappa di sfondo: l'immagine più grande del livello mappa. */
 function mapImage(store: BoardStore): ImageItem | undefined {
@@ -52,6 +26,7 @@ function mapImage(store: BoardStore): ImageItem | undefined {
 
 /** Tipo di barriera e generazione automatica dai bordi di un bioma. */
 export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string }) {
+  const { t } = useTranslation();
   const { wallKind, wallBiome, setWall } = useBoardUi();
   const gmToken = useAssetAuth();
   const geminiKey = useSyncExternalStore(subscribeGeminiKey, storage.getGeminiKey);
@@ -59,6 +34,9 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
   const terrain = useSyncExternalStore(store.subscribe, store.getTerrain);
   const [message, setMessage] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  /** Cosa fa ciascun tipo, per il suggerimento sotto la barra. */
+  const kindHint =
+    wallKind === "one-way" || wallKind === "terrain" ? t(`effects.walls.hints.${wallKind}`) : "";
 
   async function generate() {
     if (generating) return;
@@ -67,23 +45,23 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
     try {
       const contours = await terrainWallContours(terrain, wallBiome, store.getGrid().size);
       if (contours.length === 0) {
-        setMessage("Nessun bordo trovato per questo bioma.");
+        setMessage(t("effects.walls.noEdges"));
         return;
       }
       // Rigenerando dallo stesso terreno si ottengono gli stessi contorni: niente doppioni.
       const fresh = newContours(contours, store.getWalls());
       if (fresh.length === 0) {
-        setMessage("I muri di questi bordi ci sono già.");
+        setMessage(t("effects.walls.edgesAlreadyWalled"));
         return;
       }
       store.addWalls(fresh.map((points) => ({ kind: "wall", points })));
       const skipped = contours.length - fresh.length;
       setMessage(
-        `${fresh.length} ${fresh.length === 1 ? "contorno creato" : "contorni creati"}` +
-          (skipped > 0 ? `, ${skipped} già presenti.` : "."),
+        t("effects.walls.contoursCreated", { count: fresh.length }) +
+          (skipped > 0 ? t("effects.walls.alreadyPresent", { skipped }) : "."),
       );
     } catch {
-      setMessage("Non è stato possibile generare i muri da quest'area.");
+      setMessage(t("effects.walls.generateError"));
     } finally {
       setGenerating(false);
     }
@@ -94,7 +72,7 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
     if (tracing || !geminiKey) return;
     const image = mapImage(store);
     if (!image) {
-      setMessage("Carica prima l'immagine di una mappa.");
+      setMessage(t("effects.walls.loadMapFirst"));
       return;
     }
     setTracing(true);
@@ -118,23 +96,25 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
         grid.enabled ? (p) => snapGridCorner(p, grid) : undefined,
       );
       if (drafts.length === 0) {
-        setMessage("Gemini non ha trovato muri in questa mappa.");
+        setMessage(t("effects.walls.noWallsFound"));
         return;
       }
       store.addWalls(drafts);
-      setMessage(
-        `${drafts.length} ${drafts.length === 1 ? "muro tracciato" : "muri tracciati"}: controllali, Ctrl+Z annulla tutto.`,
-      );
+      setMessage(t("effects.walls.wallsTraced", { count: drafts.length }));
     } catch (e) {
-      setMessage(e instanceof GeminiError ? e.message : "Non è stato possibile tracciare i muri.");
+      setMessage(e instanceof GeminiError ? e.message : t("effects.walls.traceError"));
     } finally {
       setTracing(false);
     }
   }
 
   return (
-    <div className="toolbar toolbar-style wall-panel" role="toolbar" aria-label="Muri">
-      {KINDS.map(({ kind, label }) => (
+    <div
+      className="toolbar toolbar-style wall-panel"
+      role="toolbar"
+      aria-label={t("effects.walls.toolbarLabel")}
+    >
+      {KINDS.map((kind) => (
         <button
           key={kind}
           type="button"
@@ -142,17 +122,17 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
           aria-pressed={wallKind === kind}
           onClick={() => setWall({ wallKind: kind })}
         >
-          {label}
+          {t(`effects.walls.kinds.${kind}`)}
         </button>
       ))}
       <span className="muted small fog-hint">
         {wallKind === "door"
-          ? "Clicca i due estremi della porta."
-          : `${KIND_HINTS[wallKind] ? `${KIND_HINTS[wallKind]} ` : ""}Clic per i vertici, doppio clic o Invio per finire. Alt non aggancia.`}
+          ? t("effects.walls.doorInstruction")
+          : t("effects.walls.drawInstruction", { hint: kindHint ? `${kindHint} ` : "" })}
       </span>
       <span className="toolbar-separator" />
       <label className="small muted" htmlFor="wall-biome">
-        Bordi di
+        {t("effects.walls.edgesOf")}
       </label>
       <select
         id="wall-biome"
@@ -161,7 +141,7 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
       >
         {BIOMES.map((biome) => (
           <option key={biome.id} value={biome.id}>
-            {biome.label}
+            {catalogLabel(t, "biomes", biome.id, biome.label)}
           </option>
         ))}
       </select>
@@ -171,17 +151,17 @@ export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string
         disabled={generating}
         onClick={() => void generate()}
       >
-        {generating ? "Creazione…" : "Crea muri dai bordi"}
+        {generating ? t("effects.walls.creating") : t("effects.walls.createFromEdges")}
       </button>
       {geminiKey && (
         <button
           type="button"
           className="text-button"
           disabled={tracing}
-          title="Gemini traccia i muri dell'immagine di mappa più grande"
+          title={t("effects.walls.traceTitle")}
           onClick={() => void traceFromMap()}
         >
-          {tracing ? "Analisi…" : "Traccia muri con Gemini"}
+          {tracing ? t("effects.walls.tracing") : t("effects.walls.traceWithGemini")}
         </button>
       )}
       {message && (
@@ -203,14 +183,19 @@ function reversePoints(points: number[]): number[] {
 
 /** Proprietà della porta selezionata ed eliminazione di una barriera esistente. */
 export function WallSelectionPanel({ store }: { store: BoardStore }) {
+  const { t } = useTranslation();
   useSyncExternalStore(store.subscribe, store.getWalls);
   const selectedWallId = useBoardUi((state) => state.selectedWallId);
   const selectWall = useBoardUi((state) => state.selectWall);
   const wall = selectedWallId ? store.getWall(selectedWallId) : undefined;
   if (!wall) return null;
   return (
-    <div className="toolbar selection-panel" role="toolbar" aria-label="Muro selezionato">
-      <span className="small">{KINDS.find(({ kind }) => kind === wall.kind)?.label}</span>
+    <div
+      className="toolbar selection-panel"
+      role="toolbar"
+      aria-label={t("effects.walls.selection.toolbarLabel")}
+    >
+      <span className="small">{t(`effects.walls.kinds.${wall.kind}`)}</span>
       {wall.kind === "door" && (
         <>
           <span className="toolbar-separator" />
@@ -222,7 +207,7 @@ export function WallSelectionPanel({ store }: { store: BoardStore }) {
               aria-pressed={wall.door === state}
               onClick={() => store.updateWall(wall.id, { door: state })}
             >
-              {DOOR_LABELS[state]}
+              {t(`effects.walls.doorStates.${state}`)}
             </button>
           ))}
         </>
@@ -233,19 +218,19 @@ export function WallSelectionPanel({ store }: { store: BoardStore }) {
           <button
             type="button"
             className="text-button"
-            title="Scambia il lato da cui si vede attraverso il muro"
+            title={t("effects.walls.selection.reverseTitle")}
             onClick={() => store.updateWall(wall.id, { points: reversePoints(wall.points) })}
           >
-            Inverti il verso
+            {t("effects.walls.selection.reverseDirection")}
           </button>
         </>
       )}
-      <span className="muted small fog-hint">Trascina i vertici per modificare.</span>
+      <span className="muted small fog-hint">{t("effects.walls.selection.dragHint")}</span>
       <button
         type="button"
         className="icon-button"
-        aria-label="Elimina muro"
-        title="Elimina (Canc)"
+        aria-label={t("effects.walls.selection.deleteLabel")}
+        title={t("effects.walls.selection.deleteTitle")}
         onClick={() => {
           store.removeWalls([wall.id]);
           selectWall(null);

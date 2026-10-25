@@ -1,6 +1,7 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { PresenceUser } from "@scryboard/shared";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Ping } from "./Presence";
 import { edgeIndicator, type Point, type Viewport, worldToScreen } from "./viewport";
 
@@ -25,6 +26,7 @@ interface Props {
  * porta la vista sul punto. I ping visibili hanno già il loro cerchio animato.
  */
 export function PingArrows({ provider, viewport, size, onFocus }: Props) {
+  const { t } = useTranslation();
   const [pings, setPings] = useState<OffscreenPing[]>([]);
 
   useEffect(() => {
@@ -74,8 +76,8 @@ export function PingArrows({ provider, viewport, size, onFocus }: Props) {
               background: ping.color,
               transform: `translate(-50%, -50%) rotate(${edge.angle}deg)`,
             }}
-            aria-label={`Ping di ${ping.name} fuori vista: vai al punto`}
-            title={`Ping di ${ping.name}`}
+            aria-label={t("effects.ping.offscreenLabel", { name: ping.name })}
+            title={t("effects.ping.title", { name: ping.name })}
             onClick={() => onFocus(ping)}
           >
             <span aria-hidden="true">➤</span>

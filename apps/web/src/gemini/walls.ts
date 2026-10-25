@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 import { call, ENDPOINT, GeminiError } from "./api";
 
 /** Ultima scelta se l'elenco dei modelli non è disponibile: modificabile nelle impostazioni. */
@@ -70,15 +71,15 @@ export function parseWallTrace(json: unknown): TracedWall[] {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
   } | null;
   if (res?.promptFeedback?.blockReason) {
-    throw new GeminiError("blocked", "Google ha rifiutato la richiesta (filtri di sicurezza).");
+    throw new GeminiError("blocked", i18n.t("assets.gemini.walls.blocked"));
   }
   const text = res?.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
-  if (!text) throw new GeminiError("other", "Gemini non ha restituito nessun muro.");
+  if (!text) throw new GeminiError("other", i18n.t("assets.gemini.walls.empty"));
   let parsed: { walls?: unknown };
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new GeminiError("other", "La risposta di Gemini non è leggibile.");
+    throw new GeminiError("other", i18n.t("assets.gemini.walls.invalidResponse"));
   }
   const clamp = (n: number) => Math.max(0, Math.min(TRACE_SCALE, n));
   const walls: TracedWall[] = [];
@@ -103,7 +104,7 @@ async function firstFrame(blob: Blob): Promise<ImageBitmap> {
     video.src = url;
     await new Promise<void>((resolve, reject) => {
       video.onloadeddata = () => resolve();
-      video.onerror = () => reject(new Error("Impossibile leggere il video."));
+      video.onerror = () => reject(new Error(i18n.t("assets.gemini.walls.video")));
     });
     return await createImageBitmap(video);
   } finally {
@@ -126,7 +127,7 @@ export async function prepareForAnalysis(blob: Blob): Promise<{ mimeType: string
   const jpeg = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/jpeg", 0.85),
   );
-  if (!jpeg) throw new Error("Impossibile preparare l'immagine.");
+  if (!jpeg) throw new Error(i18n.t("assets.gemini.walls.prepareImage"));
   const bytes = new Uint8Array(await jpeg.arrayBuffer());
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);

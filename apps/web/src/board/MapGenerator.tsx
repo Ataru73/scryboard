@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   buildMapPrompt,
   DEFAULT_GEMINI_MODEL,
@@ -20,8 +21,16 @@ interface Props {
   onClose: () => void;
 }
 
+const FORMAT_KEYS: Record<MapFormatId, string> = {
+  "16:9": "landscape169",
+  "4:3": "landscape43",
+  "1:1": "square",
+  "3:4": "portrait34",
+};
+
 /** Finestra del GM per generare una mappa da una descrizione e sceglierne una variante. */
 export function MapGenerator({ apiKey, onPick, onClose }: Props) {
+  const { t } = useTranslation();
   const titleId = useId();
   const descId = useId();
   const [description, setDescription] = useState("");
@@ -41,7 +50,7 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
       const prompt = buildMapPrompt(description, style);
       setResults(await generateVariants({ apiKey, model, prompt, aspectRatio: format }, count));
     } catch (e) {
-      setError(e instanceof GeminiError ? e.message : "Generazione non riuscita.");
+      setError(e instanceof GeminiError ? e.message : t("assets.mapGenerator.generationFailed"));
     } finally {
       setBusy(false);
     }
@@ -54,7 +63,7 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
       onPick(await toMapImage(image));
       onClose();
     } catch {
-      setError("Impossibile usare questa mappa.");
+      setError(t("assets.mapGenerator.useFailed"));
       setBusy(false);
     }
   }
@@ -72,41 +81,43 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <h2 id={titleId}>Genera una mappa</h2>
+      <h2 id={titleId}>{t("assets.mapGenerator.title")}</h2>
       <label className="field" htmlFor={descId}>
-        <span>Descrizione</span>
+        <span>{t("assets.mapGenerator.description")}</span>
         <textarea
           id={descId}
           rows={3}
           value={description}
           maxLength={400}
-          placeholder="Es. cripta con un altare al centro, colonne crollate e pozze d'acqua"
+          placeholder={t("assets.mapGenerator.descriptionPlaceholder")}
           onChange={(e) => setDescription(e.target.value)}
         />
       </label>
       <div className="generate-options">
         <label className="field">
-          <span>Tipo</span>
+          <span>{t("assets.mapGenerator.kind")}</span>
           <select value={style} onChange={(e) => setStyle(e.target.value as MapStyleId)}>
             {MAP_STYLES.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.label}
+                {t(`assets.mapGenerator.styles.${s.id}`, { defaultValue: s.label })}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          <span>Formato</span>
+          <span>{t("assets.mapGenerator.format")}</span>
           <select value={format} onChange={(e) => setFormat(e.target.value as MapFormatId)}>
             {MAP_FORMATS.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.label}
+                {t(`assets.mapGenerator.formats.${FORMAT_KEYS[f.id]}`, {
+                  defaultValue: f.label,
+                })}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          <span>Varianti</span>
+          <span>{t("assets.mapGenerator.variants")}</span>
           <select value={count} onChange={(e) => setCount(Number(e.target.value))}>
             {[1, 2, 3].map((n) => (
               <option key={n} value={n}>
@@ -116,10 +127,7 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
           </select>
         </label>
       </div>
-      <p className="muted small">
-        Ogni variante è una richiesta a Gemini, addebitata sul conto Google della tua chiave. La
-        mappa scelta viene messa al centro della vista.
-      </p>
+      <p className="muted small">{t("assets.mapGenerator.billing")}</p>
       {error && <p className="error">{error}</p>}
       {results.length > 0 && (
         <div className="map-results">
@@ -130,7 +138,7 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
               type="button"
               className="generated-button"
               disabled={busy}
-              aria-label={`Usa la mappa ${i + 1}`}
+              aria-label={t("assets.mapGenerator.useMap", { number: i + 1 })}
               onClick={() => void choose(image)}
             >
               <img src={`data:${image.mimeType};base64,${image.data}`} alt="" />
@@ -140,7 +148,7 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
       )}
       <div className="modal-actions">
         <button type="button" onClick={onClose}>
-          Chiudi
+          {t("assets.mapGenerator.close")}
         </button>
         <button
           type="button"
@@ -148,7 +156,9 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
           disabled={busy || !description.trim()}
           onClick={() => void generate()}
         >
-          {busy && results.length === 0 ? "Generazione…" : "Genera"}
+          {busy && results.length === 0
+            ? t("assets.mapGenerator.generating")
+            : t("assets.mapGenerator.generate")}
         </button>
       </div>
     </dialog>

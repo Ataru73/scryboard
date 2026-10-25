@@ -1,5 +1,6 @@
 import { isVideoAsset, MAX_ASSET_BYTES, type RoomAsset } from "@scryboard/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api, describeApiError } from "../lib/api";
 import { useAssetAuth } from "./assetAuth";
 import { AssetThumb } from "./GeneratePanel";
@@ -16,6 +17,7 @@ interface Props {
  * di nuove senza piazzarle: il GM prepara in anticipo i token dei mostri, ritagliati a cerchio.
  */
 export function UploadedAssets({ roomId, onPickAsset }: Props) {
+  const { t } = useTranslation();
   const gmToken = useAssetAuth();
   const [assets, setAssets] = useState<RoomAsset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +44,9 @@ export function UploadedAssets({ roomId, onPickAsset }: Props) {
     if (!file) return;
     setError(null);
     if (!isSupportedImage(file)) {
-      setError(`"${file.name}": formato non supportato (usa PNG, JPEG, WebP o GIF).`);
+      setError(t("assets.uploaded.unsupportedFormat", { name: file.name }));
     } else if (file.size > MAX_ASSET_BYTES) {
-      setError(`"${file.name}" è troppo grande (massimo 20 MB).`);
+      setError(t("assets.uploaded.tooLarge", { name: file.name }));
     } else {
       setCropping(file);
     }
@@ -58,7 +60,7 @@ export function UploadedAssets({ roomId, onPickAsset }: Props) {
       await uploadImage(roomId, file, gmToken);
       await load();
     } catch (e) {
-      setError(e instanceof UploadError ? e.message : "Caricamento non riuscito.");
+      setError(e instanceof UploadError ? e.message : t("assets.uploaded.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -68,32 +70,24 @@ export function UploadedAssets({ roomId, onPickAsset }: Props) {
     <div className="stack uploaded-assets">
       <div className="uploaded-actions">
         <button type="button" disabled={uploading} onClick={() => fileInput.current?.click()}>
-          {uploading ? "Caricamento…" : "Aggiungi alla raccolta"}
+          {uploading ? t("assets.uploaded.uploading") : t("assets.uploaded.add")}
         </button>
-        <span className="muted small">
-          Carica un'immagine senza piazzarla: la ritrovi qui quando serve.
-        </span>
+        <span className="muted small">{t("assets.uploaded.help")}</span>
       </div>
       {error && (
         <p className="error small" role="alert">
           {error}
         </p>
       )}
-      {assets?.length === 0 && (
-        <p className="muted small">Nessuna immagine caricata in questa stanza.</p>
-      )}
+      {assets?.length === 0 && <p className="muted small">{t("assets.uploaded.empty")}</p>}
       <div className="portrait-grid generated-grid">
         {assets?.map((asset) => (
           <button
             key={asset.assetId}
             type="button"
             className="generated-button"
-            aria-label={asset.public ? "Usa questa immagine" : "Usa questa immagine (solo GM)"}
-            title={
-              asset.public
-                ? undefined
-                : "Solo il GM la vede finché non la usi su un oggetto visibile"
-            }
+            aria-label={asset.public ? t("assets.uploaded.use") : t("assets.uploaded.usePrivate")}
+            title={asset.public ? undefined : t("assets.uploaded.privateTitle")}
             onClick={() => onPickAsset(asset.assetId)}
           >
             <AssetThumb roomId={roomId} assetId={asset.assetId} />
@@ -113,7 +107,7 @@ export function UploadedAssets({ roomId, onPickAsset }: Props) {
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif"
         hidden
-        aria-label="Immagine da aggiungere alla raccolta"
+        aria-label={t("assets.uploaded.fileInput")}
         onChange={(e) => {
           onFile(e.target.files?.[0]);
           e.target.value = "";

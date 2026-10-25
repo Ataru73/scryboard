@@ -1,4 +1,5 @@
 import type { BoardItem, TokenItem } from "@scryboard/shared";
+import { i18n } from "../i18n";
 
 const isToken = (item: BoardItem | undefined): item is TokenItem => item?.kind === "token";
 
@@ -16,15 +17,18 @@ export function attachError(
   child: BoardItem | undefined,
   parent: BoardItem | undefined,
 ): string | null {
-  if (!isToken(child) || !isToken(parent))
-    return "Si può agganciare solo un token a un altro token.";
-  if (child.id === parent.id) return "Un token non si aggancia a se stesso.";
+  if (!isToken(child) || !isToken(parent)) return i18n.t("core.attach.onlyTokens");
+  if (child.id === parent.id) return i18n.t("core.attach.self");
   const byId = new Map(items.map((i) => [i.id, i]));
   if (isToken(byId.get(parent.attachedTo ?? ""))) {
-    return `«${parent.name || "Il token"}» è già agganciato a un altro: scegli quello principale.`;
+    return i18n.t("core.attach.parentAlreadyAttached", {
+      name: parent.name || i18n.t("core.attach.defaultParentName"),
+    });
   }
   if (items.some((i) => isToken(i) && i.attachedTo === child.id)) {
-    return `A «${child.name || "questo token"}» sono già agganciati altri token: sganciali prima.`;
+    return i18n.t("core.attach.childHasFollowers", {
+      name: child.name || i18n.t("core.attach.defaultChildName"),
+    });
   }
   return null;
 }

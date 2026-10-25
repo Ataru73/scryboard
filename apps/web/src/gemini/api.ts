@@ -3,6 +3,8 @@
  * con la chiave dell'utente, che non passa mai dal server di Scryboard.
  */
 
+import i18n from "../i18n";
+
 /** Una generazione di immagini può durare a lungo, ma non all'infinito. */
 const REQUEST_TIMEOUT_MS = 180_000;
 
@@ -75,15 +77,9 @@ export class GeminiError extends Error {
   }
 }
 
-const MESSAGES: Record<GeminiErrorCode, string> = {
-  "invalid-key": "Chiave API non valida.",
-  quota: "Quota di Gemini esaurita: riprova più tardi o controlla il tuo piano.",
-  blocked:
-    "Google ha rifiutato la richiesta (filtri di sicurezza): prova a cambiare la descrizione.",
-  "not-found": "Modello non trovato: controlla il nome nelle impostazioni.",
-  network: "Impossibile raggiungere Gemini. Controlla la connessione.",
-  other: "Gemini ha risposto con un errore.",
-};
+function errorMessage(code: GeminiErrorCode): string {
+  return i18n.t(`assets.gemini.errors.${code}`);
+}
 
 export interface GeneratedImage {
   mimeType: string;
@@ -117,17 +113,18 @@ function errorFromStatus(status: number, body: unknown): GeminiError {
   const err = (body as { error?: { message?: string; status?: string } } | null)?.error;
   const message = err?.message ?? "";
   if (status === 429 || err?.status === "RESOURCE_EXHAUSTED") {
-    return new GeminiError("quota", MESSAGES.quota);
+    return new GeminiError("quota", errorMessage("quota"));
   }
   if (
     status === 401 ||
     status === 403 ||
     /api key not valid|API_KEY_INVALID|API key expired/i.test(message)
   ) {
-    return new GeminiError("invalid-key", MESSAGES["invalid-key"]);
+    return new GeminiError("invalid-key", errorMessage("invalid-key"));
   }
-  if (status === 404) return new GeminiError("not-found", MESSAGES["not-found"]);
-  return new GeminiError("other", message ? `${MESSAGES.other} ${message}` : MESSAGES.other);
+  if (status === 404) return new GeminiError("not-found", errorMessage("not-found"));
+  const other = errorMessage("other");
+  return new GeminiError("other", message ? `${other} ${message}` : other);
 }
 
 interface GenerateContentResponse {
@@ -141,7 +138,9 @@ interface GenerateContentResponse {
 /** Estrae le immagini dalla risposta di `generateContent`; rifiuti e risposte vuote sono errori. */
 export function parseImages(json: unknown): GeneratedImage[] {
   const res = (json ?? {}) as GenerateContentResponse;
-  if (res.promptFeedback?.blockReason) throw new GeminiError("blocked", MESSAGES.blocked);
+  if (res.promptFeedback?.blockReason) {
+    throw new GeminiError("blocked", errorMessage("blocked"));
+  }
   const images: GeneratedImage[] = [];
   for (const candidate of res.candidates ?? []) {
     for (const part of candidate.content?.parts ?? []) {
@@ -153,8 +152,8 @@ export function parseImages(json: unknown): GeneratedImage[] {
   }
   if (images.length > 0) return images;
   const reason = res.candidates?.[0]?.finishReason;
-  if (reason && reason !== "STOP") throw new GeminiError("blocked", MESSAGES.blocked);
-  throw new GeminiError("other", "Gemini non ha restituito nessuna immagine.");
+  if (reason && reason !== "STOP") throw new GeminiError("blocked", errorMessage("blocked"));
+  throw new GeminiError("other", i18n.t("assets.gemini.errors.noImages"));
 }
 
 export async function call(url: string, apiKey: string, init: RequestInit = {}): Promise<unknown> {
@@ -167,7 +166,7 @@ export async function call(url: string, apiKey: string, init: RequestInit = {}):
       headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
     });
   } catch {
-    throw new GeminiError("network", MESSAGES.network);
+    throw new GeminiError("network", errorMessage("network"));
   }
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) throw errorFromStatus(res.status, body);

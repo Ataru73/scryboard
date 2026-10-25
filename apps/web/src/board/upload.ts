@@ -4,6 +4,7 @@ import {
   MAX_VIDEO_BYTES,
   VIDEO_MIME_TYPES,
 } from "@scryboard/shared";
+import { i18n } from "../i18n";
 import { api, describeApiError } from "../lib/api";
 
 export interface UploadedImage {
@@ -51,22 +52,27 @@ export async function uploadVideo(
   gmToken: string | null,
 ): Promise<UploadedImage> {
   if (!isSupportedVideo(file)) {
-    throw new UploadError(`"${file.name}": formato non supportato (usa WebM o MP4).`);
+    throw new UploadError(i18n.t("core.upload.unsupportedVideo", { filename: file.name }));
   }
   if (file.size > MAX_VIDEO_BYTES) {
-    throw new UploadError(`"${file.name}" è troppo grande (massimo 50 MB per i video).`);
+    throw new UploadError(i18n.t("core.upload.videoTooLarge", { filename: file.name }));
   }
   let size: { width: number; height: number };
   try {
     size = await videoSize(file);
   } catch {
-    throw new UploadError(`"${file.name}" non sembra un video che questo browser sa riprodurre.`);
+    throw new UploadError(i18n.t("core.upload.unreadableVideo", { filename: file.name }));
   }
   try {
     const { assetId } = await api.uploadAsset(roomId, file, gmToken);
     return { assetId, ...size };
   } catch (error) {
-    throw new UploadError(`Caricamento di "${file.name}" fallito. ${describeApiError(error)}`);
+    throw new UploadError(
+      i18n.t("core.upload.fileFailed", {
+        filename: file.name,
+        reason: describeApiError(error),
+      }),
+    );
   }
 }
 
@@ -77,10 +83,10 @@ export async function uploadImage(
   gmToken: string | null,
 ): Promise<UploadedImage> {
   if (!isSupportedImage(file)) {
-    throw new UploadError(`"${file.name}": formato non supportato (usa PNG, JPEG, WebP o GIF).`);
+    throw new UploadError(i18n.t("core.upload.unsupportedImage", { filename: file.name }));
   }
   if (file.size > MAX_ASSET_BYTES) {
-    throw new UploadError(`"${file.name}" è troppo grande (massimo 20 MB).`);
+    throw new UploadError(i18n.t("core.upload.imageTooLarge", { filename: file.name }));
   }
   let width: number;
   let height: number;
@@ -89,12 +95,17 @@ export async function uploadImage(
     ({ width, height } = bitmap);
     bitmap.close();
   } catch {
-    throw new UploadError(`"${file.name}" non sembra un'immagine valida.`);
+    throw new UploadError(i18n.t("core.upload.invalidImage", { filename: file.name }));
   }
   try {
     const { assetId } = await api.uploadAsset(roomId, file, gmToken);
     return { assetId, width, height };
   } catch (error) {
-    throw new UploadError(`Caricamento di "${file.name}" fallito. ${describeApiError(error)}`);
+    throw new UploadError(
+      i18n.t("core.upload.fileFailed", {
+        filename: file.name,
+        reason: describeApiError(error),
+      }),
+    );
   }
 }

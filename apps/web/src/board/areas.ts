@@ -1,4 +1,6 @@
 import type { GridSettings, TemplateItem, TemplateShape } from "@scryboard/shared";
+import { i18n } from "../i18n";
+import { catalogLabel } from "../i18n/catalog";
 import { snapGridCorner } from "./grid";
 import { hexCorners, hexToPixel, isHex, visibleHexes } from "./hex";
 import type { Box, Point } from "./viewport";
@@ -135,6 +137,16 @@ export function templateCells(t: TemplateGeometry, grid: GridSettings): AreaCell
 export function templateLabel(t: TemplateGeometry, grid: GridSettings): string {
   const value = Math.round(t.size * grid.scale.amount * 10) / 10;
   const unit = grid.scale.unit ? ` ${grid.scale.unit}` : "";
-  const name = { circle: "Cerchio", cone: "Cono", cube: "Cubo", line: "Raggio" }[t.shape];
-  return `${name} ${value}${unit}`;
+  const name = catalogLabel(
+    i18n.t,
+    "templates",
+    t.shape,
+    {
+      circle: "Cerchio",
+      cone: "Cono",
+      cube: "Cubo",
+      line: "Raggio",
+    }[t.shape],
+  );
+  return i18n.t("core.templates.label", { name, value, unit });
 }

@@ -1,4 +1,5 @@
 import type { DiagonalRule, GridSettings } from "@scryboard/shared";
+import { i18n } from "../i18n";
 import { snapTokenCenter } from "./grid";
 import { isHex, pixelToHex } from "./hex";
 import type { Point } from "./viewport";
@@ -52,5 +53,5 @@ export function formatDistance(cells: number, grid: GridSettings): string {
   const unit = grid.scale.unit ? ` ${grid.scale.unit}` : "";
   const count = round1(cells);
   if (grid.scale.amount === 1 && !grid.scale.unit) return `${count}`;
-  return `${value}${unit} · ${count} ${count === 1 ? "casella" : "caselle"}`;
+  return i18n.t("core.measure.distance", { value, unit, count });
 }

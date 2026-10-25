@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   type Crop,
   clampCrop,
@@ -22,6 +23,7 @@ interface Props {
 
 /** Mini editor: trascina per spostare, zoom per stringere, e si tiene l'area dentro il cerchio. */
 export function TokenCropper({ file, onConfirm, onCancel }: Props) {
+  const { t } = useTranslation();
   const titleId = useId();
   const zoomId = useId();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,13 +43,13 @@ export function TokenCropper({ file, onConfirm, onCancel }: Props) {
         setBitmap(b);
         setCrop(initialCrop(b.width, b.height));
       },
-      () => !cancelled && setError(`"${file.name}" non sembra un'immagine valida.`),
+      () => !cancelled && setError(t("assets.cropper.invalidImage", { name: file.name })),
     );
     return () => {
       cancelled = true;
       loaded?.close();
     };
-  }, [file]);
+  }, [file, t]);
 
   // L'anteprima mostra il ritaglio, con l'esterno del cerchio scurito.
   useEffect(() => {
@@ -79,7 +81,7 @@ export function TokenCropper({ file, onConfirm, onCancel }: Props) {
     try {
       onConfirm(await renderCrop(bitmap, clampCrop(bitmap.width, bitmap.height, crop)));
     } catch {
-      setError("Impossibile ritagliare l'immagine.");
+      setError(t("assets.cropper.cropFailed"));
       setBusy(false);
     }
   }
@@ -97,10 +99,8 @@ export function TokenCropper({ file, onConfirm, onCancel }: Props) {
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <h2 id={titleId}>Ritaglia l'immagine</h2>
-      <p className="muted small">
-        Trascina per spostare l'immagine e usa lo zoom: resta visibile solo l'area nel cerchio.
-      </p>
+      <h2 id={titleId}>{t("assets.cropper.title")}</h2>
+      <p className="muted small">{t("assets.cropper.help")}</p>
       <canvas
         ref={canvasRef}
         className="cropper-canvas"
@@ -108,7 +108,7 @@ export function TokenCropper({ file, onConfirm, onCancel }: Props) {
         height={PREVIEW}
         tabIndex={0}
         role="img"
-        aria-label="Area del token: trascina o usa le frecce per spostarla"
+        aria-label={t("assets.cropper.canvas")}
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
           drag.current = { x: e.clientX, y: e.clientY };
@@ -148,7 +148,7 @@ export function TokenCropper({ file, onConfirm, onCancel }: Props) {
         }}
       />
       <label className="field" htmlFor={zoomId}>
-        <span>Zoom</span>
+        <span>{t("assets.cropper.zoom")}</span>
         <input
           id={zoomId}
           type="range"
@@ -163,7 +163,7 @@ export function TokenCropper({ file, onConfirm, onCancel }: Props) {
       {error && <p className="error">{error}</p>}
       <div className="modal-actions">
         <button type="button" onClick={onCancel}>
-          Annulla
+          {t("assets.cropper.cancel")}
         </button>
         <button
           type="button"
@@ -171,7 +171,7 @@ export function TokenCropper({ file, onConfirm, onCancel }: Props) {
           disabled={!crop || busy}
           onClick={() => void confirm()}
         >
-          Usa questa immagine
+          {t("assets.cropper.use")}
         </button>
       </div>
     </dialog>

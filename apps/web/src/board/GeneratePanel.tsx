@@ -1,5 +1,6 @@
 import { assetUrl } from "@scryboard/shared";
 import { useId, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   buildPrompt,
   DEFAULT_GEMINI_MODEL,
@@ -32,6 +33,7 @@ export function AssetThumb({ roomId, assetId }: { roomId: string; assetId: strin
 
 /** Scheda "Genera" della libreria: descrizione, stile e varianti da scegliere con un clic. */
 export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props) {
+  const { t } = useTranslation();
   const descId = useId();
   const gmToken = useAssetAuth();
   const [description, setDescription] = useState(tokenName);
@@ -51,7 +53,7 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
       const prompt = buildPrompt(description, style);
       setResults(await generateVariants({ apiKey, model, prompt }, count));
     } catch (e) {
-      setError(e instanceof GeminiError ? e.message : "Generazione non riuscita.");
+      setError(e instanceof GeminiError ? e.message : t("assets.generate.generationFailed"));
     } finally {
       setBusy(false);
     }
@@ -67,7 +69,7 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
       setHistory(storage.getGenerated(roomId));
       onPickAsset(assetId);
     } catch (e) {
-      setError(e instanceof UploadError ? e.message : "Caricamento non riuscito.");
+      setError(e instanceof UploadError ? e.message : t("assets.generate.uploadFailed"));
       setBusy(false);
     }
   }
@@ -75,28 +77,28 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
   return (
     <div className="stack generate-panel">
       <label className="field" htmlFor={descId}>
-        <span>Descrizione</span>
+        <span>{t("assets.generate.description")}</span>
         <input
           id={descId}
           value={description}
           maxLength={200}
-          placeholder="Es. goblin con l'arco e il cappuccio verde"
+          placeholder={t("assets.generate.descriptionPlaceholder")}
           onChange={(e) => setDescription(e.target.value)}
         />
       </label>
       <div className="generate-options">
         <label className="field">
-          <span>Stile</span>
+          <span>{t("assets.generate.style")}</span>
           <select value={style} onChange={(e) => setStyle(e.target.value as GeminiStyleId)}>
             {GEMINI_STYLES.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.label}
+                {t(`assets.generate.styles.${s.id}`, { defaultValue: s.label })}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          <span>Varianti</span>
+          <span>{t("assets.generate.variants")}</span>
           <select value={count} onChange={(e) => setCount(Number(e.target.value))}>
             {[2, 3, 4].map((n) => (
               <option key={n} value={n}>
@@ -111,12 +113,12 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
           disabled={busy || !description.trim()}
           onClick={() => void generate()}
         >
-          {busy && results.length === 0 ? "Generazione…" : "Genera"}
+          {busy && results.length === 0
+            ? t("assets.generate.generating")
+            : t("assets.generate.generate")}
         </button>
       </div>
-      <p className="muted small">
-        Ogni variante è una richiesta a Gemini, addebitata sul conto Google della tua chiave.
-      </p>
+      <p className="muted small">{t("assets.generate.billing")}</p>
       {error && <p className="error">{error}</p>}
       {results.length > 0 && (
         <div className="portrait-grid generated-grid">
@@ -127,7 +129,7 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
               type="button"
               className="generated-button"
               disabled={busy}
-              aria-label={`Usa la variante ${i + 1}`}
+              aria-label={t("assets.generate.useVariant", { number: i + 1 })}
               onClick={() => void choose(image)}
             >
               <img src={`data:${image.mimeType};base64,${image.data}`} alt="" />
@@ -136,15 +138,15 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
         </div>
       )}
       {history.length > 0 && (
-        <section aria-label="Generate in precedenza">
-          <h3 className="muted small">Generate in precedenza</h3>
+        <section aria-label={t("assets.generate.history")}>
+          <h3 className="muted small">{t("assets.generate.history")}</h3>
           <div className="portrait-grid generated-grid">
             {history.map((assetId) => (
               <button
                 key={assetId}
                 type="button"
                 className="generated-button"
-                aria-label="Riusa un'immagine generata"
+                aria-label={t("assets.generate.reuse")}
                 onClick={() => onPickAsset(assetId)}
               >
                 <AssetThumb roomId={roomId} assetId={assetId} />

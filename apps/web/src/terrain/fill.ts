@@ -1,5 +1,6 @@
 import { BIOMES, type BiomeId, type TerrainOp, type Wall } from "@scryboard/shared";
 import type { Box, Point } from "../board/viewport";
+import { i18n } from "../i18n";
 import { maskContours } from "../walls/contours";
 import { drawTerrainOpFlat } from "./render";
 
@@ -7,7 +8,7 @@ import { drawTerrainOpFlat } from "./render";
 const WALL_LABEL = 255;
 const MAX_SIDE = 2048;
 const MAX_COORDINATES = 20_000;
-const NOT_CLOSED = "L'area non è chiusa: delimitala con muri o altri biomi.";
+const notClosed = () => i18n.t("core.terrain.notClosed");
 
 /**
  * Riempimento a macchia d'olio (4 vicini) dei pixel con la stessa etichetta del punto di
@@ -119,15 +120,15 @@ export function terrainFillArea(
   const sy = Math.floor((at.y - area.y) / spacing);
   if (sx < 0 || sy < 0 || sx >= width || sy >= height)
     // Fuori dalla zona esaminata c'è solo spazio vuoto e aperto.
-    return { ok: false, reason: NOT_CLOSED };
+    return { ok: false, reason: notClosed() };
   const start = labels[sy * width + sx] as number;
-  if (start === WALL_LABEL) return { ok: false, reason: "Hai cliccato su un muro." };
+  if (start === WALL_LABEL) return { ok: false, reason: i18n.t("core.terrain.clickedWall") };
   if (start === BIOMES.findIndex((b) => b.id === biome) + 1) {
-    return { ok: false, reason: "L'area è già di questo bioma." };
+    return { ok: false, reason: i18n.t("core.terrain.sameBiome") };
   }
 
   const { mask, touchesBorder } = floodFill(labels, width, height, sx, sy);
-  if (touchesBorder) return { ok: false, reason: NOT_CLOSED };
+  if (touchesBorder) return { ok: false, reason: notClosed() };
 
   const grown = dilate(mask, width, height);
   for (let tolerance = 0.75; tolerance <= 12; tolerance *= 2) {
@@ -149,5 +150,5 @@ export function terrainFillArea(
       return { ok: true, points: valid.flat(), rings: valid.map((r) => r.length) };
     }
   }
-  return { ok: false, reason: "L'area è troppo frastagliata per essere riempita." };
+  return { ok: false, reason: i18n.t("core.terrain.tooComplex") };
 }

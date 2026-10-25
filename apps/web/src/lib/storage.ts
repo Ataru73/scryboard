@@ -41,6 +41,7 @@ function write(key: string, value: string | null): void {
   }
 }
 
+const LANGUAGE_KEY = "scryboard:language";
 const RECENT_PORTRAITS_KEY = "scryboard:recent-portraits";
 const GEMINI_KEY = "scryboard:gemini-key";
 const GEMINI_MODEL_KEY = "scryboard:gemini-model";
@@ -63,6 +64,8 @@ export function subscribeGeminiKey(listener: () => void): () => void {
 }
 
 export const storage = {
+  getLanguage: () => read(LANGUAGE_KEY),
+  setLanguage: (language: string) => write(LANGUAGE_KEY, language),
   /** Chiave API di Gemini: resta in questo browser, non si invia mai al server di Scryboard. */
   getGeminiKey: () => read(GEMINI_KEY),
   setGeminiKey: (key: string | null) => {
