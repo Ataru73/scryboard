@@ -3,7 +3,10 @@
  * con la chiave dell'utente, che non passa mai dal server di Scryboard.
  */
 
-const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta";
+/** Una generazione di immagini può durare a lungo, ma non all'infinito. */
+const REQUEST_TIMEOUT_MS = 180_000;
+
+export const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta";
 
 /** Modello predefinito: modificabile nelle impostazioni, perché i nomi cambiano spesso. */
 export const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-image";
@@ -154,10 +157,12 @@ export function parseImages(json: unknown): GeneratedImage[] {
   throw new GeminiError("other", "Gemini non ha restituito nessuna immagine.");
 }
 
-async function call(url: string, apiKey: string, init: RequestInit = {}): Promise<unknown> {
+export async function call(url: string, apiKey: string, init: RequestInit = {}): Promise<unknown> {
   let res: Response;
   try {
     res = await fetch(url, {
+      // Senza limite una richiesta che non risponde terrebbe l'interfaccia in attesa per sempre.
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       ...init,
       headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
     });
@@ -236,19 +241,45 @@ export function pickImageModels(json: unknown): GeminiModel[] {
 }
 
 /**
- * Elenco dei modelli per immagini disponibili con la chiave. Serve anche a controllare la chiave:
- * non genera nulla, quindi non costa.
+ * Modelli che leggono le immagini e rispondono con testo (servono a tracciare i muri): quelli
+ * `gemini-*` con `generateContent`, esclusi i modelli che producono immagini o audio e gli altri
+ * usi specializzati.
  */
-export async function listImageModels(apiKey: string): Promise<GeminiModel[]> {
-  const models: GeminiModel[] = [];
+export function pickVisionModels(json: unknown): GeminiModel[] {
+  const res = (json ?? {}) as ModelsResponse;
+  return (res.models ?? []).flatMap((m) => {
+    const id = m.name?.replace(/^models\//, "");
+    if (!id?.startsWith("gemini") || !m.supportedGenerationMethods?.includes("generateContent")) {
+      return [];
+    }
+    if (/image|nano-banana|tts|live|audio|embedding|robotics|computer-use/i.test(id)) return [];
+    return [{ id, displayName: m.displayName || id }];
+  });
+}
+
+/**
+ * Modelli disponibili con la chiave, divisi per uso. Serve anche a controllare la chiave: non
+ * genera nulla, quindi non costa.
+ */
+export async function listGeminiModels(
+  apiKey: string,
+): Promise<{ image: GeminiModel[]; vision: GeminiModel[] }> {
+  const image: GeminiModel[] = [];
+  const vision: GeminiModel[] = [];
   let pageToken = "";
   // Poche pagine bastano: il limite evita cicli infiniti con risposte anomale.
   for (let page = 0; page < 10; page++) {
     const query = `pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`;
     const body = (await call(`${ENDPOINT}/models?${query}`, apiKey)) as ModelsResponse | null;
-    models.push(...pickImageModels(body));
+    image.push(...pickImageModels(body));
+    vision.push(...pickVisionModels(body));
     pageToken = body?.nextPageToken ?? "";
     if (!pageToken) break;
   }
-  return models;
+  return { image, vision };
+}
+
+/** Elenco dei modelli per immagini disponibili con la chiave. */
+export async function listImageModels(apiKey: string): Promise<GeminiModel[]> {
+  return (await listGeminiModels(apiKey)).image;
 }

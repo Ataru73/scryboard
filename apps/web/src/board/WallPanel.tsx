@@ -1,7 +1,20 @@
-import { BIOMES, type BiomeId, type DoorState, type WallKind } from "@scryboard/shared";
+import {
+  assetUrl,
+  BIOMES,
+  type BiomeId,
+  type DoorState,
+  type ImageItem,
+  type WallKind,
+} from "@scryboard/shared";
 import { useState, useSyncExternalStore } from "react";
+import { GeminiError, listGeminiModels } from "../gemini/api";
+import { pickDefaultVisionModel, prepareForAnalysis, traceWalls } from "../gemini/walls";
+import { storage, subscribeGeminiKey } from "../lib/storage";
+import { projectTrace } from "../walls/fromImage";
 import { terrainWallContours } from "../walls/fromTerrain";
 import { newContours } from "../walls/geometry";
+import { useAssetAuth } from "./assetAuth";
+import { snapGridCorner } from "./grid";
 import { TrashIcon } from "./icons";
 import type { BoardStore } from "./store";
 import { useBoardUi } from "./tools";
@@ -19,9 +32,20 @@ const DOOR_LABELS: Record<DoorState, string> = {
   locked: "A chiave",
 };
 
+/** La mappa di sfondo: l'immagine più grande del livello mappa. */
+function mapImage(store: BoardStore): ImageItem | undefined {
+  return store
+    .getSnapshot()
+    .filter((i): i is ImageItem => i.kind === "image" && i.layer === "map")
+    .sort((a, b) => b.width * b.height - a.width * a.height)[0];
+}
+
 /** Tipo di barriera e generazione automatica dai bordi di un bioma. */
-export function WallPanel({ store }: { store: BoardStore }) {
+export function WallPanel({ store, roomId }: { store: BoardStore; roomId: string }) {
   const { wallKind, wallBiome, setWall } = useBoardUi();
+  const gmToken = useAssetAuth();
+  const geminiKey = useSyncExternalStore(subscribeGeminiKey, storage.getGeminiKey);
+  const [tracing, setTracing] = useState(false);
   const terrain = useSyncExternalStore(store.subscribe, store.getTerrain);
   const [message, setMessage] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -52,6 +76,49 @@ export function WallPanel({ store }: { store: BoardStore }) {
       setMessage("Non è stato possibile generare i muri da quest'area.");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  /** Chiede a Gemini di tracciare i muri della mappa; l'insieme si annulla con un solo Ctrl+Z. */
+  async function traceFromMap() {
+    if (tracing || !geminiKey) return;
+    const image = mapImage(store);
+    if (!image) {
+      setMessage("Carica prima l'immagine di una mappa.");
+      return;
+    }
+    setTracing(true);
+    setMessage(null);
+    try {
+      const res = await fetch(assetUrl(roomId, image.assetId), {
+        headers: gmToken ? { authorization: `Bearer ${gmToken}` } : {},
+      });
+      if (!res.ok) throw new Error("Immagine non disponibile.");
+      const traced = await traceWalls({
+        apiKey: geminiKey,
+        model:
+          storage.getGeminiVisionModel() ||
+          pickDefaultVisionModel((await listGeminiModels(geminiKey)).vision),
+        image: await prepareForAnalysis(await res.blob()),
+      });
+      const grid = store.getGrid();
+      const drafts = projectTrace(
+        traced,
+        image,
+        grid.enabled ? (p) => snapGridCorner(p, grid) : undefined,
+      );
+      if (drafts.length === 0) {
+        setMessage("Gemini non ha trovato muri in questa mappa.");
+        return;
+      }
+      store.addWalls(drafts);
+      setMessage(
+        `${drafts.length} ${drafts.length === 1 ? "muro tracciato" : "muri tracciati"}: controllali, Ctrl+Z annulla tutto.`,
+      );
+    } catch (e) {
+      setMessage(e instanceof GeminiError ? e.message : "Non è stato possibile tracciare i muri.");
+    } finally {
+      setTracing(false);
     }
   }
 
@@ -96,6 +163,17 @@ export function WallPanel({ store }: { store: BoardStore }) {
       >
         {generating ? "Creazione…" : "Crea muri dai bordi"}
       </button>
+      {geminiKey && (
+        <button
+          type="button"
+          className="text-button"
+          disabled={tracing}
+          title="Gemini traccia i muri dell'immagine di mappa più grande"
+          onClick={() => void traceFromMap()}
+        >
+          {tracing ? "Analisi…" : "Traccia muri con Gemini"}
+        </button>
+      )}
       {message && (
         <span className="muted small" role="status">
           {message}

@@ -3,8 +3,9 @@ import {
   DEFAULT_GEMINI_MODEL,
   GeminiError,
   type GeminiModel,
-  listImageModels,
+  listGeminiModels,
 } from "../gemini/api";
+import { DEFAULT_VISION_MODEL, pickDefaultVisionModel } from "../gemini/walls";
 import { storage } from "../lib/storage";
 
 type Check = { state: "idle" | "testing" } | { state: "ok" } | { state: "error"; message: string };
@@ -18,24 +19,32 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
   const modelId = useId();
   const [apiKey, setApiKey] = useState(() => storage.getGeminiKey() ?? "");
   const [model, setModel] = useState(() => storage.getGeminiModel() ?? "");
+  const [visionModel, setVisionModel] = useState(() => storage.getGeminiVisionModel() ?? "");
+  const visionId = useId();
   const [check, setCheck] = useState<Check>({ state: "idle" });
   /** Modelli per immagini disponibili con la chiave; null finché non sono stati scaricati. */
   const [models, setModels] = useState<GeminiModel[] | null>(null);
+  /** Modelli che leggono le immagini, per tracciare i muri; null come sopra. */
+  const [visionModels, setVisionModels] = useState<GeminiModel[] | null>(null);
 
   const save = () => {
     storage.setGeminiKey(apiKey);
     storage.setGeminiModel(model);
+    storage.setGeminiVisionModel(visionModel);
   };
 
   /** Scarica i modelli con la chiave: se risponde, la chiave è valida. */
   async function loadModels(key: string): Promise<boolean> {
     setCheck({ state: "testing" });
     try {
-      setModels(await listImageModels(key));
+      const found = await listGeminiModels(key);
+      setModels(found.image);
+      setVisionModels(found.vision);
       setCheck({ state: "ok" });
       return true;
     } catch (e) {
       setModels(null);
+      setVisionModels(null);
       setCheck({
         state: "error",
         message: e instanceof GeminiError ? e.message : "Prova non riuscita.",
@@ -83,7 +92,8 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
           <p className="small">
             Con una chiave API di Gemini puoi generare le immagini dei token dalla scheda{" "}
             <strong>Genera</strong> della libreria e, da GM, le mappe dal pulsante{" "}
-            <strong>Genera mappa</strong>. Senza chiave le funzioni non compaiono.
+            <strong>Genera mappa</strong>; con lo strumento Muri, Gemini può anche tracciare i muri
+            di una mappa. Senza chiave le funzioni non compaiono.
           </p>
           <label className="field" htmlFor={keyId}>
             <span>Chiave API di Gemini</span>
@@ -96,6 +106,7 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
               onChange={(e) => {
                 setApiKey(e.target.value);
                 setModels(null);
+                setVisionModels(null);
                 setCheck({ state: "idle" });
               }}
             />
@@ -122,6 +133,34 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
                 placeholder={DEFAULT_GEMINI_MODEL}
                 spellCheck={false}
                 onChange={(e) => setModel(e.target.value)}
+              />
+            )}
+          </label>
+          <label className="field" htmlFor={visionId}>
+            <span>Per leggere le mappe</span>
+            {visionModels && visionModels.length > 0 ? (
+              <select
+                id={visionId}
+                value={visionModel}
+                onChange={(e) => setVisionModel(e.target.value)}
+              >
+                <option value="">Automatico ({pickDefaultVisionModel(visionModels)})</option>
+                {visionModel && !visionModels.some((m) => m.id === visionModel) && (
+                  <option value={visionModel}>{visionModel}</option>
+                )}
+                {visionModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.displayName === m.id ? m.id : `${m.displayName} (${m.id})`}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={visionId}
+                value={visionModel}
+                placeholder={`${DEFAULT_VISION_MODEL} (se vuoto, il più recente)`}
+                spellCheck={false}
+                onChange={(e) => setVisionModel(e.target.value)}
               />
             )}
           </label>
@@ -158,6 +197,7 @@ export function SettingsButton({ className, icon }: { className?: string; icon?:
                 storage.setGeminiKey(null);
                 setApiKey("");
                 setModels(null);
+                setVisionModels(null);
                 setCheck({ state: "idle" });
               }}
             >

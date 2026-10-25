@@ -260,7 +260,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       {tool === "path" && role === "gm" && <PathPanel />}
       {tool === "stamp" && role === "gm" && <StampPanel />}
       {tool === "light" && role === "gm" && <LightPanel store={store} provider={provider} />}
-      {tool === "wall" && role === "gm" && <WallPanel store={store} />}
+      {tool === "wall" && role === "gm" && <WallPanel store={store} roomId={roomId} />}
 
       {tool === "calibrate" && (
         <div className="toolbar toolbar-style toolbar-hint" role="status">

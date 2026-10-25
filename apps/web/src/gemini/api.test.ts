@@ -8,6 +8,7 @@ import {
   listImageModels,
   parseImages,
   pickImageModels,
+  pickVisionModels,
 } from "./api";
 
 const image = (data: string) => ({ inlineData: { mimeType: "image/png", data } });
@@ -161,6 +162,22 @@ describe("image models", () => {
       { id: "gemini-nano-banana-2.1", displayName: "gemini-nano-banana-2.1" },
     ]);
     expect(pickImageModels(null)).toEqual([]);
+  });
+
+  it("keeps only text models that read images for the wall tracing", () => {
+    const picked = pickVisionModels({
+      models: [
+        model("gemini-3.1-flash", ["generateContent"], "Gemini Flash"),
+        model("gemini-3.1-flash-image"),
+        model("gemini-nano-banana-2.1"),
+        model("gemini-3.1-flash-tts"),
+        model("gemini-live-3"),
+        model("gemini-embedding-001", ["embedContent"]),
+        model("imagen-4.0-generate", ["predict"]),
+        model("gemma-3-27b"),
+      ],
+    });
+    expect(picked).toEqual([{ id: "gemini-3.1-flash", displayName: "Gemini Flash" }]);
   });
 
   it("follows the pages and sends the key as a header", async () => {

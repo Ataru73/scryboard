@@ -44,6 +44,7 @@ function write(key: string, value: string | null): void {
 const RECENT_PORTRAITS_KEY = "scryboard:recent-portraits";
 const GEMINI_KEY = "scryboard:gemini-key";
 const GEMINI_MODEL_KEY = "scryboard:gemini-model";
+const GEMINI_VISION_MODEL_KEY = "scryboard:gemini-vision-model";
 const MAX_GENERATED = 24;
 
 const geminiKeyListeners = new Set<() => void>();
@@ -68,6 +69,10 @@ export const storage = {
     write(GEMINI_KEY, key?.trim() || null);
     for (const listener of geminiKeyListeners) listener();
   },
+  /** Modello che legge le immagini (per tracciare i muri); diverso da quello che le genera. */
+  getGeminiVisionModel: () => read(GEMINI_VISION_MODEL_KEY),
+  setGeminiVisionModel: (model: string | null) =>
+    write(GEMINI_VISION_MODEL_KEY, model?.trim() || null),
   getGeminiModel: () => read(GEMINI_MODEL_KEY),
   setGeminiModel: (model: string | null) => write(GEMINI_MODEL_KEY, model?.trim() || null),
   /** Immagini generate in questa stanza (id degli asset caricati), le più recenti per prime. */

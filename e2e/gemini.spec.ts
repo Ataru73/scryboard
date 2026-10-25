@@ -104,6 +104,13 @@ test("the key can be tested, saved and forgotten", async ({ browser }) => {
     "Nano Banana 2.1 (gemini-nano-banana-2.1)",
   ]);
   await select.selectOption("gemini-nano-banana-2.1");
+  // Anche il modello che legge le mappe è una tendina, con i soli modelli di testo.
+  const vision = gm.getByLabel("Per leggere le mappe");
+  await expect(vision.getByRole("option")).toHaveText([
+    /Automatico \(gemini-3.1-flash\)/,
+    "Gemini Flash (gemini-3.1-flash)",
+  ]);
+  await vision.selectOption("gemini-3.1-flash");
   await gm.getByRole("button", { name: "Salva" }).click();
 
   // Alla riapertura l'elenco si scarica da solo e il modello scelto resta selezionato.
@@ -244,4 +251,103 @@ test("the GM generates a map from a description and it lands on the board as a m
   await expect(dialog).toHaveCount(0);
   await expect(board(gm)).toHaveAttribute("data-item-count", "1");
   await expect(board(player)).toHaveAttribute("data-item-count", "1");
+});
+
+test("the GM has Gemini trace the walls of the map, in one undo step", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  const trace = {
+    candidates: [
+      {
+        content: {
+          parts: [
+            {
+              text: JSON.stringify({
+                walls: [
+                  {
+                    kind: "wall",
+                    points: [
+                      { x: 100, y: 100 },
+                      { x: 900, y: 100 },
+                      { x: 900, y: 900 },
+                    ],
+                  },
+                  {
+                    kind: "door",
+                    points: [
+                      { x: 400, y: 900 },
+                      { x: 500, y: 900 },
+                    ],
+                  },
+                ],
+              }),
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const calls = await mockGemini(gm, { status: 200, body: trace });
+  await saveKey(gm);
+
+  const png = await gm.evaluate(async () => {
+    const canvas = new OffscreenCanvas(400, 200);
+    (canvas.getContext("2d") as OffscreenCanvasRenderingContext2D).fillRect(0, 0, 400, 200);
+    const bytes = new Uint8Array(await (await canvas.convertToBlob()).arrayBuffer());
+    let binary = "";
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary);
+  });
+  await gm.locator('input[type="file"]').setInputFiles({
+    name: "mappa.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(png, "base64"),
+  });
+  await expect(board(gm)).toHaveAttribute("data-item-count", "1");
+
+  // Senza chiave il pulsante non c'è; i giocatori non hanno lo strumento.
+  await expect(player.getByRole("button", { name: "Traccia muri con Gemini" })).toHaveCount(0);
+  await gm.keyboard.press("w");
+  await gm.getByRole("button", { name: "Traccia muri con Gemini" }).click();
+  await expect(board(gm)).toHaveAttribute("data-wall-count", "2");
+  await expect(board(player)).toHaveAttribute("data-wall-count", "2");
+
+  // Questa risposta simulata non contiene l'elenco dei modelli: si usa il modello di riserva.
+  const request = calls.find((c) => c.method === "POST");
+  const sent = JSON.parse(request?.body ?? "{}");
+  expect(request?.url).toContain("/models/gemini-2.5-flash:generateContent");
+  expect(sent.contents[0].parts[0].inlineData.mimeType).toBe("image/jpeg");
+  expect(sent.generationConfig.responseMimeType).toBe("application/json");
+
+  await gm.keyboard.press("Control+z");
+  await expect(board(gm)).toHaveAttribute("data-wall-count", "0");
+});
+
+test("if Gemini cannot find the model the tracing stops with a message and can be retried", async ({
+  browser,
+}) => {
+  const { gm } = await setupTable(browser);
+  await mockGemini(gm, {
+    status: 404,
+    body: { error: { message: "models/x is not found", status: "NOT_FOUND" } },
+  });
+  await saveKey(gm);
+  const png = await gm.evaluate(async () => {
+    const canvas = new OffscreenCanvas(400, 200);
+    (canvas.getContext("2d") as OffscreenCanvasRenderingContext2D).fillRect(0, 0, 400, 200);
+    const bytes = new Uint8Array(await (await canvas.convertToBlob()).arrayBuffer());
+    let binary = "";
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary);
+  });
+  await gm.locator('input[type="file"]').setInputFiles({
+    name: "mappa.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(png, "base64"),
+  });
+  await expect(board(gm)).toHaveAttribute("data-item-count", "1");
+  await gm.keyboard.press("w");
+  const button = gm.getByRole("button", { name: "Traccia muri con Gemini" });
+  await button.click();
+  await expect(gm.getByText("Modello non trovato")).toBeVisible();
+  await expect(button).toBeEnabled();
 });

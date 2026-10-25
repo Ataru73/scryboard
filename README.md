@@ -77,16 +77,20 @@ muri e porte.
 
 ## Generazione con Gemini
 
-Con una chiave API di Gemini, salvata dalle Impostazioni, compaiono due funzioni:
-
+Con una chiave API di Gemini, salvata dalle Impostazioni, compaiono tre funzioni:
 - la scheda **Genera** della libreria di immagini, per creare l'immagine di un token da una
   descrizione (ritratto, vista dall'alto o sagoma);
 - il pulsante **Genera mappa** della barra, solo per il GM: da una descrizione, un tipo (dungeon
   o interno, esterno, mappa di una regione) e un formato produce fino a 3 varianti; quella scelta
-  viene ridotta a 2048 px e messa al centro della vista come immagine del livello mappa.
+  viene ridotta a 2048 px e messa al centro della vista come immagine del livello mappa;
+- il pulsante **Traccia muri con Gemini** dello strumento Muri, solo per il GM: Gemini legge
+  l'immagine di mappa più grande e ne traccia muri, porte e finestre, agganciati alla griglia se è
+  attiva. È un punto di partenza da ritoccare, e un solo Ctrl+Z annulla tutto. Il modello che
+  legge le immagini si sceglie nelle Impostazioni; di default è il modello "flash" più recente
+  tra quelli disponibili con la chiave.
 
 Le richieste partono dal browser con la chiave dell'utente, che resta nel suo `localStorage` e non
-passa mai dal server di Scryboard. Ogni variante è una richiesta addebitata sul conto Google della
+passa mai dal server di Scryboard. Ogni variante e ogni analisi sono richieste addebitate sul conto Google della
 chiave. Senza chiave le funzioni non compaiono.
 
 Il GM attiva la griglia dal pulsante dedicato, sceglie se quadrata o esagonale (a punta o piatta)
