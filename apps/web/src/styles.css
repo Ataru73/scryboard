@@ -460,6 +460,18 @@ button.danger {
   background-size: 24px 24px;
   touch-action: none;
   user-select: none;
+  transition: background-color 0.4s;
+}
+
+/* Con le luci attive lo sfondo segue la luce ambientale. */
+.board[data-ambient="twilight"] {
+  --board-bg: #c9bfc4;
+  --board-dot: #b0a4ad;
+}
+
+.board[data-ambient="night"] {
+  --board-bg: #1c2233;
+  --board-dot: #2e364d;
 }
 
 .toolbar {

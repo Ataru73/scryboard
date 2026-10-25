@@ -1216,7 +1216,10 @@ export function Board({ store, provider, roomId, role }: Props) {
   // I giocatori non vedono le linee dei muri, ma solo le icone delle porte; la nebbia copre tutto
   // tranne i disegni.
   const pathItems = items.filter((i) => i.layer === "paths");
-  const mapItems = items.filter((i) => i.layer === "map" && (role === "gm" || i.kind !== "light"));
+  // Le luci sono segnaposto: stanno sempre sopra le mappe, anche se queste sono state caricate dopo.
+  const mapItems = items
+    .filter((i) => i.layer === "map" && (role === "gm" || i.kind !== "light"))
+    .sort((a, b) => Number(a.kind === "light") - Number(b.kind === "light"));
   const tokenItems = items.filter((i) => i.layer === "token");
   const drawItems = items.filter((i) => i.layer === "draw");
   const drawnWalls = walls.map((wall) =>
@@ -1242,6 +1245,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         editing={item.id === editingTextId}
         concealed={store.isHidden(item.id)}
         selected={selectedIds.includes(item.id)}
+        ambient={lighting.enabled ? lighting.ambient : undefined}
         onDragStart={onItemDragStart}
         onDragMove={onItemDragMove}
         onDragEnd={onItemDragEnd}
@@ -1290,6 +1294,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       data-terrain-count={terrain.length}
       data-wall-count={walls.length}
       data-synced={synced}
+      data-ambient={lighting.enabled ? lighting.ambient : undefined}
       style={{
         cursor,
         // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.

@@ -3,12 +3,13 @@ import {
   type BoardItem,
   type ImageItem,
   type LightItem,
+  type LightingSettings,
   type PathItem,
   type StampItem,
   type TokenItem,
 } from "@scryboard/shared";
 import type Konva from "konva";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Circle, Ellipse, Group, Image, Line, Path, Rect, Text } from "react-konva";
 import { PathShape } from "../paths/PathShape";
 import { stampImage } from "../stamps/generate";
@@ -35,6 +36,8 @@ interface Props {
   concealed: boolean;
   /** Evidenzia la selezione dei token, che non usano il Transformer. */
   selected: boolean;
+  /** Luce ambientale che tinge le immagini; assente con le luci spente. */
+  ambient?: LightingSettings["ambient"];
   onDragStart?: (event: Konva.KonvaEventObject<DragEvent>) => void;
   onDragMove?: (event: Konva.KonvaEventObject<DragEvent>) => void;
   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
@@ -48,6 +51,7 @@ export const ItemNode = memo(function ItemNode({
   editing,
   concealed,
   selected,
+  ambient,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -74,7 +78,7 @@ export const ItemNode = memo(function ItemNode({
       ) : item.kind === "light" ? (
         <LightIcon color={item.color} cellSize={cellSize} selected={selected} />
       ) : (
-        <ItemContent item={item} roomId={roomId} />
+        <ItemContent item={item} roomId={roomId} ambient={ambient} />
       )}
     </Group>
   );
@@ -83,13 +87,15 @@ export const ItemNode = memo(function ItemNode({
 function ItemContent({
   item,
   roomId,
+  ambient,
 }: {
   item: Exclude<BoardItem, TokenItem | PathItem | LightItem | StampItem>;
   roomId: string;
+  ambient?: LightingSettings["ambient"];
 }) {
   switch (item.kind) {
     case "image":
-      return <ImageContent item={item} roomId={roomId} />;
+      return <ImageContent item={item} roomId={roomId} ambient={ambient} />;
     case "stroke":
       return (
         <Line
@@ -138,14 +144,46 @@ function ItemContent({
   }
 }
 
-function ImageContent({ item, roomId }: { item: ImageItem; roomId: string }) {
+/** Colore per cui si moltiplica un'immagine a seconda della luce: il giorno non la cambia. */
+const AMBIENT_TINT: Partial<Record<LightingSettings["ambient"], string>> = {
+  twilight: "#d3a9a3",
+  night: "#4a5788",
+};
+
+/** Copia dell'immagine tinta, con la trasparenza originale. */
+function tinted(image: HTMLImageElement, color: string): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  ctx.drawImage(image, 0, 0);
+  ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(image, 0, 0);
+  return canvas;
+}
+
+function ImageContent({
+  item,
+  roomId,
+  ambient,
+}: {
+  item: ImageItem;
+  roomId: string;
+  ambient?: LightingSettings["ambient"];
+}) {
   const image = useImage(assetUrl(roomId, item.assetId));
-  if (!image) {
+  const tint = ambient ? AMBIENT_TINT[ambient] : undefined;
+  const shown = useMemo(() => (image && tint ? tinted(image, tint) : image), [image, tint]);
+  if (!shown) {
     return (
       <Rect width={item.width} height={item.height} fill="#8884" stroke="#8888" dash={[8, 8]} />
     );
   }
-  return <Image image={image} width={item.width} height={item.height} />;
+  return <Image image={shown} width={item.width} height={item.height} />;
 }
 
 function TokenContent({
