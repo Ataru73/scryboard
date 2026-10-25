@@ -14,7 +14,7 @@ informazioni e decide cosa vedono i giocatori. Perimetro, architettura e piano d
   d'area e aure.
 - **Token**: libreria di circa 80 sagome, immagini proprie, immagini generate con l'IA, aggancio
   (cavalcature), ordine di iniziativa e anello del turno.
-- **Mappe dipinte**: 13 biomi, strade e fiumi, timbri, riempimento, copia e incolla, oppure
+- **Mappe dipinte**: 14 biomi, strade e fiumi, timbri, riempimento, copia e incolla, oppure
   immagini importate e mappe animate in video.
 - **Muri, porte e luci** con visione dinamica, muri a senso unico e di terreno, luce ambientale.
 - **Segreti garantiti dal server**: oggetti nascosti, nebbia e messaggi privati non arrivano mai ai
@@ -179,7 +179,7 @@ luce portata.
 
 ## Mappe, terreno e scenario
 
-Il GM può dipingere il terreno con 13 biomi (erba, foresta, roccia, sabbia, acqua, lava…), a
+Il GM può dipingere il terreno con 14 biomi (erba, foresta, roccia, sabbia, acqua, legno, lava…), a
 pennello o come regioni dai bordi morbidi; le texture sono generate nel browser e ogni pennellata
 arriva subito ai giocatori.
 

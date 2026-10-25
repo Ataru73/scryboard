@@ -1,5 +1,7 @@
+import { BIOMES } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
 import { hashString, noise1d, seededRandom, tileableFbm, tileableNoise } from "./noise";
+import { biomeColor } from "./textures";
 
 describe("noise", () => {
   it("is deterministic for a given seed", () => {
@@ -33,5 +35,12 @@ describe("noise", () => {
       expect(v).toBeLessThanOrEqual(1);
       expect(Math.abs(g(i * 0.31))).toBeLessThanOrEqual(1);
     }
+  });
+
+  it("defines a valid biome color for every biome including wood", () => {
+    for (const { id } of BIOMES) {
+      expect(biomeColor(id)).toMatch(/^rgb\(\d+,\s*\d+,\s*\d+\)$/);
+    }
+    expect(biomeColor("wood")).toMatch(/^rgb\(120,\s*74,\s*42\)$/);
   });
 });

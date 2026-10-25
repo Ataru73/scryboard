@@ -15,6 +15,7 @@ export const BIOMES = [
   { id: "shallow-water", label: "Acqua bassa" },
   { id: "deep-water", label: "Acqua profonda" },
   { id: "lava", label: "Lava" },
+  { id: "wood", label: "Legno" },
 ] as const;
 
 export type BiomeId = (typeof BIOMES)[number]["id"];

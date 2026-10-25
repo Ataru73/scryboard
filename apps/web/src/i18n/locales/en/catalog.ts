@@ -13,6 +13,7 @@ export const catalog = {
     "shallow-water": "Shallow Water",
     "deep-water": "Deep Water",
     lava: "Lava",
+    wood: "Wood",
   },
   gridTypes: {
     square: "Square",

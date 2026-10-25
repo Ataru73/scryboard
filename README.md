@@ -13,7 +13,7 @@ information and decides what the players see. Scope, architecture and work plan 
 - **Square or hex grid** with calibration, a ruler with configurable scale, area templates and auras.
 - **Tokens**: a library of ~80 silhouettes, your own images, AI-generated images, attachments
   (mounts), initiative order and turn ring.
-- **Painted maps**: 13 biomes, roads and rivers, stamps, fill, copy/paste, or imported images and
+- **Painted maps**: 14 biomes, roads and rivers, stamps, fill, copy/paste, or imported images and
   animated video maps.
 - **Walls, doors and lights** with dynamic vision, one-way and terrain walls, ambient light.
 - **Secrets enforced by the server**: hidden objects, fog of war and private messages never reach
@@ -174,7 +174,7 @@ the GM can assign a token to a player and set its vision, darkvision and carried
 
 ## Maps, terrain and scenery
 
-The GM can paint the terrain with 13 biomes (grass, forest, rock, sand, water, lava…), with a
+The GM can paint the terrain with 14 biomes (grass, forest, rock, sand, water, wood, lava…), with a
 brush or as regions with soft edges; the textures are generated in the browser and every stroke
 reaches the players immediately.
 

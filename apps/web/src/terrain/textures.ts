@@ -131,6 +131,121 @@ const combine =
     for (const detail of details) detail(ctx, random);
   };
 
+/** Assi di legno con venature, sfumature tra una tavola e l'altra e chiodi alle giunture. */
+function woodPlanks(ctx: Ctx, random: Random) {
+  const rows = 8;
+  const h = TEXTURE_SIZE / rows;
+  const seamsPerRow: number[][] = [
+    [128],
+    [64, 192],
+    [160],
+    [96, 224],
+    [128],
+    [48, 176],
+    [144],
+    [80, 208],
+  ];
+
+  // 1. Tonalità sfalsata tra le assi
+  for (let row = 0; row < rows; row++) {
+    const y = row * h;
+    const seams = [0, ...(seamsPerRow[row] ?? [128]), TEXTURE_SIZE];
+    for (let s = 0; s + 1 < seams.length; s++) {
+      const x0 = seams[s] as number;
+      const x1 = seams[s + 1] as number;
+      const shade = (random() - 0.5) * 0.22;
+      ctx.fillStyle =
+        shade >= 0
+          ? `rgba(255, 235, 200, ${shade.toFixed(3)})`
+          : `rgba(15, 8, 4, ${(-shade).toFixed(3)})`;
+      ctx.fillRect(x0, y + 1, x1 - x0, h - 2);
+    }
+  }
+
+  // 2. Fibre e venature del legno
+  for (let row = 0; row < rows; row++) {
+    const yBase = row * h;
+    const grainCount = 3 + Math.floor(random() * 2);
+    for (let g = 0; g < grainCount; g++) {
+      const yRel = 4 + random() * (h - 8);
+      const k1 = 1 + Math.floor(random() * 3);
+      const k2 = k1 + 1 + Math.floor(random() * 2);
+      const a1 = 0.8 + random() * 1.5;
+      const a2 = 0.4 + random() * 1.0;
+      const phi1 = random() * Math.PI * 2;
+      const phi2 = random() * Math.PI * 2;
+      const isDark = random() > 0.35;
+      ctx.strokeStyle = isDark ? "rgba(35, 18, 8, 0.22)" : "rgba(255, 240, 210, 0.15)";
+      ctx.lineWidth = 0.8 + random() * 0.6;
+      ctx.beginPath();
+      for (let x = 0; x <= TEXTURE_SIZE; x += 4) {
+        const t = (x / TEXTURE_SIZE) * Math.PI * 2;
+        const wave = Math.sin(t * k1 + phi1) * a1 + Math.sin(t * k2 + phi2) * a2;
+        const py = yBase + yRel + wave;
+        if (x === 0) ctx.moveTo(x, py);
+        else ctx.lineTo(x, py);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // 3. Fessure orizzontali tra le file (sia interne che ai bordi per continuità)
+  ctx.lineWidth = 1.5;
+  for (let row = 0; row <= rows; row++) {
+    const y = row * h;
+    ctx.strokeStyle = "rgba(18, 9, 4, 0.75)";
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(TEXTURE_SIZE, y);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255, 240, 210, 0.12)";
+    ctx.beginPath();
+    ctx.moveTo(0, y + 1.2);
+    ctx.lineTo(TEXTURE_SIZE, y + 1.2);
+    ctx.stroke();
+  }
+
+  // 4. Fessure verticali e chiodi
+  for (let row = 0; row < rows; row++) {
+    const y = row * h;
+    const seams = seamsPerRow[row] ?? [];
+    for (const sx of seams) {
+      ctx.strokeStyle = "rgba(18, 9, 4, 0.75)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, y);
+      ctx.lineTo(sx, y + h);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255, 240, 210, 0.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sx + 1, y);
+      ctx.lineTo(sx + 1, y + h);
+      ctx.stroke();
+
+      const nails: [number, number][] = [
+        [sx - 4, y + 6],
+        [sx - 4, y + h - 6],
+        [sx + 5, y + 6],
+        [sx + 5, y + h - 6],
+      ];
+      for (const [nx, ny] of nails) {
+        wrapped((dx, dy) => {
+          ctx.fillStyle = "rgba(20, 12, 6, 0.85)";
+          ctx.beginPath();
+          ctx.arc(nx + dx, ny + dy, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+          ctx.fillRect(nx + dx - 0.4, ny + dy - 0.4, 0.8, 0.8);
+        });
+      }
+    }
+  }
+}
+
 const STYLES: Record<BiomeId, BiomeStyle> = {
   grass: {
     colors: ["#3f6b2a", "#5a8a37", "#78a545"],
@@ -216,6 +331,12 @@ const STYLES: Record<BiomeId, BiomeStyle> = {
     octaves: 4,
     ridged: true,
     detail: speckles(["#fdba74"], 150, 1.5, 0.6),
+  },
+  wood: {
+    colors: ["#523019", "#6b4124", "#84532f", "#9d673b"],
+    period: 8,
+    octaves: 4,
+    detail: woodPlanks,
   },
 };
 
