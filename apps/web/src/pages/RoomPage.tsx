@@ -5,7 +5,7 @@ import { Board } from "../board/Board";
 import { InfoIcon, SettingsIcon } from "../board/icons";
 import { BoardStore } from "../board/store";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
-import { ApiRequestError, api } from "../lib/api";
+import { ApiRequestError, api, describeApiError } from "../lib/api";
 import { gmLink, gmTokenFromHash, playerLink } from "../lib/links";
 import { type Profile, storage } from "../lib/storage";
 import { MessagesPanel } from "../messages/MessagesPanel";
@@ -139,7 +139,7 @@ function Room({
         <CreditsButton className="icon-button" icon={InfoIcon} />
       </header>
       <aside className="sidebar">
-        {gmToken && <SharePanel roomId={room.id} gmToken={gmToken} />}
+        {gmToken && <SharePanel roomId={room.id} roomName={room.name} gmToken={gmToken} />}
         {gmToken && (
           <ScenesPanel
             roomId={room.id}
@@ -204,13 +204,55 @@ function Room({
   );
 }
 
-function SharePanel({ roomId, gmToken }: { roomId: string; gmToken: string }) {
+function SharePanel({
+  roomId,
+  roomName,
+  gmToken,
+}: {
+  roomId: string;
+  roomName: string;
+  gmToken: string;
+}) {
   const origin = window.location.origin;
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  /** Scarica la stanza (scene, nascosti, immagini) in un file .scryboard da riaprire in seguito. */
+  async function exportRoom() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const blob = await api.exportRoom(roomId, gmToken);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${roomName.replace(/[\\/:*?"<>|]+/g, "_")}.scryboard`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+    } catch (e) {
+      setExportError(describeApiError(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <section className="stack">
       <h2>Condividi</h2>
       <CopyField label="Link per i giocatori" value={playerLink(origin, roomId)} />
       <CopyField label="Link GM (tienilo segreto)" value={gmLink(origin, roomId, gmToken)} secret />
+      <button
+        type="button"
+        disabled={exporting}
+        title="Salva scene, oggetti nascosti e immagini in un file da importare in una nuova stanza"
+        onClick={() => void exportRoom()}
+      >
+        {exporting ? "Esportazione…" : "Esporta la stanza"}
+      </button>
+      {exportError && (
+        <p className="error small" role="alert">
+          {exportError}
+        </p>
+      )}
     </section>
   );
 }

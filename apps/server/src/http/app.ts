@@ -1,6 +1,7 @@
 import {
   createRoomRequestSchema,
   DiceError,
+  MAX_ARCHIVE_BYTES,
   MAX_ASSET_BYTES,
   parsePlayerCredentials,
   ROOM_ID_PATTERN,
@@ -16,6 +17,7 @@ import { type AssetStore, UnsupportedAssetError } from "../assets/store";
 import { MessageError, type MessageService, type Sender } from "../collab/messages";
 import type { RollService } from "../collab/rolls";
 import type { SceneCollab } from "../collab/scenes";
+import { ArchiveError, type ArchiveService } from "../rooms/archive";
 import type { PlayerService } from "../rooms/players";
 import { SceneError, type SceneService } from "../rooms/scenes";
 import type { RoomService } from "../rooms/service";
@@ -38,6 +40,7 @@ export function createApi(
     players: PlayerService;
     rolls: RollService;
     scenes: { service: SceneService; collab: SceneCollab };
+    archive: ArchiveService;
   },
 ): Hono {
   const api = new Hono();
@@ -96,6 +99,46 @@ export function createApi(
     if (!parsed.success) return c.json({ error: "Nome della stanza non valido" }, 400);
     return c.json(rooms.create(parsed.data.name), 201);
   });
+
+  // Esporta la stanza in un archivio .scryboard (solo GM) e ne crea una nuova da un archivio.
+  api.get("/rooms/:id/export", limitUploads, async (c) => {
+    const room = findRoom(c.req.param("id"));
+    if (!room) return c.json({ error: "Stanza non trovata" }, 404);
+    if (!isGmRequest(room.id, c.req.header("authorization"))) {
+      return c.json({ error: "Solo il GM può esportare la stanza" }, 403);
+    }
+    try {
+      const { name, data } = await messaging.archive.export(room.id);
+      const ascii = name.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 60) || "stanza";
+      return new Response(data, {
+        headers: {
+          "content-type": "application/octet-stream",
+          "content-disposition": `attachment; filename="${ascii}.scryboard"; filename*=UTF-8''${encodeURIComponent(name)}.scryboard`,
+        },
+      });
+    } catch (error) {
+      if (error instanceof ArchiveError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
+  });
+
+  api.post(
+    "/rooms/import",
+    limitRooms,
+    bodyLimit({
+      maxSize: MAX_ARCHIVE_BYTES,
+      onError: (c) => c.json({ error: "Archivio troppo grande (max 200 MB)" }, 413),
+    }),
+    async (c) => {
+      const data = new Uint8Array(await c.req.arrayBuffer());
+      try {
+        return c.json(await messaging.archive.import(data), 201);
+      } catch (error) {
+        if (error instanceof ArchiveError) return c.json({ error: error.message }, 400);
+        throw error;
+      }
+    },
+  );
 
   api.get("/rooms/:id", (c) => {
     const room = findRoom(c.req.param("id"));

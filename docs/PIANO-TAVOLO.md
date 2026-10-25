@@ -248,6 +248,20 @@ perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
 
 ### T7 — Esporta e importa la stanza (≈ 1 settimana)
 
+**Stato**: completata. Note rispetto al piano:
+- L'archivio (`.scryboard`, uno zip di `fflate`) contiene `manifest.json`, per ogni scena lo stato
+  Yjs del documento pubblico e del GM, e le immagini citate dagli oggetti. Niente token, giocatori
+  né messaggi privati; i tiri non si importano. Limite 200 MB, sia in uscita che in ingresso.
+- `GET /api/rooms/:id/export` (solo GM, pulsante «Esporta la stanza» nel pannello Condividi) e
+  `POST /api/rooms/import` (limite delle stanze create), che restituisce i link della stanza
+  nuova; la home ha «Importa una stanza».
+- L'importazione non si fida del file: rifiuta zip con voci non previste o dimensioni eccessive,
+  e ricopia in documenti nuovi solo ciò che supera gli schemi (oggetti, muri, nebbia, terreno,
+  griglia, luce, turno). L'id di un'immagine è l'hash del contenuto: un file con altro contenuto
+  non viene accettato. Le immagini importate restano private finché non le usa un oggetto
+  visibile. Tutto viene validato prima di creare la stanza, quindi un archivio rovinato non lascia
+  scarti. La scena dei giocatori resta quella dell'esportazione.
+
 **Cosa vede l'utente**
 - Nelle impostazioni del GM: **Esporta** scarica `nome-stanza.scryboard`; nella home,
   **Importa** crea una nuova stanza (nuovi link GM e giocatori) dall'archivio.

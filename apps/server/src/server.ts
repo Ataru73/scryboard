@@ -17,6 +17,7 @@ import { SceneCollab } from "./collab/scenes";
 import type { Config } from "./config";
 import { openDatabase } from "./db/client";
 import { createApi } from "./http/app";
+import { ArchiveService } from "./rooms/archive";
 import { PlayerService } from "./rooms/players";
 import { SceneService } from "./rooms/scenes";
 import { RoomService } from "./rooms/service";
@@ -39,6 +40,7 @@ export async function startServer(config: Config): Promise<RunningServer> {
   const app = new Hono();
   if (process.env.NODE_ENV !== "test") app.use(logger());
   const access = new AssetAccess(db, publicReferenceCheck(collab, db, sceneService));
+  const archive = new ArchiveService(collab, rooms, sceneService, assetStore, access);
   app.route(
     "/api",
     createApi(
@@ -54,6 +56,7 @@ export async function startServer(config: Config): Promise<RunningServer> {
         players,
         rolls: new RollService(collab, sceneService),
         scenes: { service: sceneService, collab: new SceneCollab(collab, sceneService) },
+        archive,
       },
     ),
   );

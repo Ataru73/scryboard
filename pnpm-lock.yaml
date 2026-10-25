@@ -208,6 +208,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       hono:
         specifier: ^4.13.13
         version: 4.13.13
@@ -1661,6 +1664,9 @@ packages:
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
     engines: {node: ^12.20 || >= 14.13}
+
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   fix-dts-default-cjs-exports@1.0.1:
     resolution: {integrity: sha512-pVIECanWFC61Hzl2+oOCtoJ3F17kglZC/6N94eRWycFgBH35hHx0Li604ZIzhseh97mf2p0cv7vVrOZGoqhlEg==}
@@ -3236,6 +3242,8 @@ snapshots:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.3
+
+  fflate@0.8.3: {}
 
   fix-dts-default-cjs-exports@1.0.1:
     dependencies:

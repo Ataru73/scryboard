@@ -1,3 +1,4 @@
+export * from "./archive";
 export * from "./assets";
 export * from "./board";
 export * from "./dice";

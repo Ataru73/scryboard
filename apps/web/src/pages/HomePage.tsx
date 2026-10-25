@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { api, describeApiError } from "../lib/api";
 import { gmLink } from "../lib/links";
 import { navigate } from "../lib/router";
@@ -8,6 +8,7 @@ export function HomePage() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -23,6 +24,20 @@ export function HomePage() {
       return;
     }
     navigate(gmLink("", room.id, room.gmToken));
+  }
+
+  /** Crea una stanza nuova da un archivio .scryboard esportato in precedenza. */
+  async function onImport(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const room = await api.importRoom(file);
+      navigate(gmLink("", room.id, room.gmToken));
+    } catch (err) {
+      setError(`Non è stato possibile importare la stanza. ${describeApiError(err)}`);
+      setBusy(false);
+    }
   }
 
   return (
@@ -49,6 +64,28 @@ export function HomePage() {
           </button>
           {error && <p className="error">{error}</p>}
         </form>
+        <p className="muted small">
+          Hai un file esportato?{" "}
+          <button
+            type="button"
+            className="link-button"
+            disabled={busy}
+            onClick={() => fileInput.current?.click()}
+          >
+            Importa una stanza
+          </button>
+        </p>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".scryboard,application/octet-stream"
+          hidden
+          aria-label="File della stanza da importare"
+          onChange={(e) => {
+            void onImport(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
         <p className="muted small attribution">
           Powered by Doc · <CreditsButton className="link-button" />
         </p>

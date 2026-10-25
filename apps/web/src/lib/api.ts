@@ -46,7 +46,7 @@ export function describeApiError(error: unknown): string {
   }
   if (error.status === 400 && error.detail) return error.detail;
   if (error.status === 400) return "Dati non validi: controlla quello che hai inserito.";
-  if (error.status === 413) return "Il file è troppo grande (massimo 20 MB).";
+  if (error.status === 413) return error.detail ?? "Il file è troppo grande (massimo 20 MB).";
   if (error.status === 415) return "Formato non supportato: usa PNG, JPEG, WebP o GIF.";
   return `Il server ha risposto con un errore (${error.status}). Riprova.`;
 }
@@ -92,6 +92,32 @@ export const api = {
   },
   createRoom: (name: string) =>
     request<CreateRoomResponse>("/rooms", { method: "POST", body: JSON.stringify({ name }) }),
+  /** Crea una stanza nuova da un archivio .scryboard: restituisce i suoi link. */
+  importRoom: (file: Blob) =>
+    request<CreateRoomResponse>("/rooms/import", {
+      method: "POST",
+      body: file,
+      headers: { "content-type": "application/octet-stream" },
+    }),
+  /** Archivio della stanza (solo GM): scene, oggetti nascosti e immagini. */
+  exportRoom: async (roomId: string, gmToken: string): Promise<Blob> => {
+    let res: Response;
+    try {
+      res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/export`, {
+        headers: gmHeaders(gmToken),
+      });
+    } catch {
+      throw new ApiRequestError(0);
+    }
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+      throw new ApiRequestError(
+        res.status,
+        typeof body?.error === "string" ? body.error : undefined,
+      );
+    }
+    return res.blob();
+  },
   getRoom: (id: string) => request<RoomInfo>(`/rooms/${encodeURIComponent(id)}`),
   checkGmToken: (id: string, token: string) =>
     request<{ valid: boolean }>(`/rooms/${encodeURIComponent(id)}/gm-check`, {
