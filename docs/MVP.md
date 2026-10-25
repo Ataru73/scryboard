@@ -65,6 +65,12 @@ Scene multiple e "porta tutti qui", handout con chiusura temporizzata, pin con n
 righello e aree d'effetto, lancio dadi, griglia esagonale, libreria asset, tracker iniziativa,
 export PNG/PDF, fog dinamico con muri, plugin, account utente.
 
+**Da implementare: lingue.** L'interfaccia oggi è solo in italiano, con i testi scritti direttamente
+nel codice. Bisogna supportare **italiano e inglese**: estrarre i testi in cataloghi di traduzione,
+scegliere la lingua (dal browser, con possibilità di cambiarla) e tradurre anche i messaggi di errore
+del server mostrati agli utenti, le etichette dei dati condivisi (biomi, taglie, timbri, luci…) e i
+formati di data e ora.
+
 ### Criteri di accettazione dell'MVP
 
 1. Un GM e 6 giocatori su browser diversi vedono le modifiche altrui in meno di 200 ms.
