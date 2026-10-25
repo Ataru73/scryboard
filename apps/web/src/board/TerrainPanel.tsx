@@ -24,12 +24,14 @@ export function TerrainPanel({ store }: { store: BoardStore }) {
     terrainBiome,
     terrainMode,
     terrainSize,
+    terrainExact,
     terrainUnderFog,
     terrainClipboard,
     recentBiomes,
     setTerrain,
   } = useBoardUi();
   const fogId = useId();
+  const exactId = useId();
   const pick = (biome: BiomeId) =>
     setTerrain({
       terrainBiome: biome,
@@ -135,6 +137,17 @@ export function TerrainPanel({ store }: { store: BoardStore }) {
         />
         {t("tools.terrain.underFog.label")}
       </label>
+      {terrainMode === "region" && (
+        <label className="checkbox small" htmlFor={exactId} title={t("tools.terrain.exact.title")}>
+          <input
+            id={exactId}
+            type="checkbox"
+            checked={terrainExact}
+            onChange={(e) => setTerrain({ terrainExact: e.target.checked })}
+          />
+          {t("tools.terrain.exact.label")}
+        </label>
+      )}
       {hint && <span className="muted small fog-hint">{hint}</span>}
     </div>
   );

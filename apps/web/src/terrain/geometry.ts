@@ -98,7 +98,8 @@ export function brushCircles(
 }
 
 /** Contorno di una regione: smussato e leggermente irregolare, in modo deterministico. */
-export function regionOutline(op: Pick<TerrainOp, "id" | "points">): number[] {
+export function regionOutline(op: Pick<TerrainOp, "id" | "points" | "exact">): number[] {
+  if (op.exact) return op.points.slice();
   const smooth = toPairs(chaikinClosed(op.points, 3));
   const wobble = noise1d(hashString(op.id));
   const n = smooth.length;
@@ -131,7 +132,7 @@ export function terrainOpBounds(op: TerrainOp): Box {
     maxY = Math.max(maxY, y);
   }
   // Raggio massimo con l'irregolarità del bordo, più la sfumatura (al massimo 24 px).
-  const margin = op.shape === "brush" ? ((op.width ?? 40) / 2) * 1.25 + 26 : 8 + 24;
+  const margin = op.shape === "brush" ? ((op.width ?? 40) / 2) * 1.25 + 26 : op.exact ? 2 : 8 + 24;
   if (op.clip) {
     // Con il ritaglio non si va oltre il riquadro.
     const [cx = 0, cy = 0, cw = 0, ch = 0] = op.clip;

@@ -254,6 +254,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const terrainBiome = useBoardUi((s) => s.terrainBiome);
   const terrainMode = useBoardUi((s) => s.terrainMode);
   const terrainSize = useBoardUi((s) => s.terrainSize);
+  const terrainExact = useBoardUi((s) => s.terrainExact);
   const terrainClipboard = useBoardUi((s) => s.terrainClipboard);
   /** Posizione del puntatore per l'anteprima dell'incolla. */
   const [pasteCursor, setPasteCursor] = useState<Point | null>(null);
@@ -843,6 +844,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           mode: "paint",
           shape: "region",
           points: polygon.points,
+          ...(terrainExact ? { exact: true } : {}),
         });
       }
     }

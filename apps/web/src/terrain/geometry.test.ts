@@ -48,9 +48,20 @@ describe("terrain geometry", () => {
     }
   });
 
+  it("keeps exact region outlines unchanged", () => {
+    const points = [0, 0, 100, 0, 100, 100, 0, 100];
+    const outline = regionOutline({ id: "r", points, exact: true });
+    expect(outline).toEqual(points);
+  });
+
   it("includes the irregular edge and the soft fade in the bounds", () => {
     const b = terrainOpBounds(op({}));
     expect(b.x).toBeLessThan(-15 * 1.2);
     expect(b.x + b.width).toBeGreaterThan(100 + 15 * 1.2);
+  });
+
+  it("uses minimal margin for exact regions", () => {
+    const b = terrainOpBounds(op({ shape: "region", exact: true, points: [0, 0, 100, 100] }));
+    expect(b).toEqual({ x: -2, y: -2, width: 104, height: 104 });
   });
 });

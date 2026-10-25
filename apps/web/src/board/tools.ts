@@ -121,6 +121,8 @@ interface BoardUiState {
   terrainMode: TerrainMode;
   /** In caselle: la larghezza segue la griglia. */
   terrainSize: number;
+  /** Solo region: non interpola i vertici, riempie la regione esatta. */
+  terrainExact: boolean;
   /** Pittura nascosta: ogni pennellata nasce coperta dalla nebbia. */
   terrainUnderFog: boolean;
   terrainClipboard: TerrainClipboard | null;
@@ -170,7 +172,12 @@ interface BoardUiState {
     patch: Partial<
       Pick<
         BoardUiState,
-        "terrainBiome" | "terrainMode" | "terrainSize" | "terrainUnderFog" | "terrainClipboard"
+        | "terrainBiome"
+        | "terrainMode"
+        | "terrainSize"
+        | "terrainExact"
+        | "terrainUnderFog"
+        | "terrainClipboard"
       >
     >,
   ) => void;
@@ -224,6 +231,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   terrainBiome: "grass",
   terrainMode: "brush",
   terrainSize: 1,
+  terrainExact: false,
   terrainUnderFog: false,
   terrainClipboard: null,
   recentBiomes: loadRecentBiomes(),

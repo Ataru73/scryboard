@@ -131,6 +131,10 @@ export const tools = {
       label: "Sotto la nebbia",
       title: "Ogni pennellata nasce coperta dalla nebbia: la riveli quando vuoi",
     },
+    exact: {
+      label: "Regione esatta",
+      title: "Non interpola i vertici: riempie il poligono esatto, senza smussatura né rumore",
+    },
     hints: {
       region: "Clic per i vertici, doppio clic o Invio per chiudere.",
       fill: "Clic dentro un'area chiusa da muri o da altri biomi.",

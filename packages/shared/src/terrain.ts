@@ -46,6 +46,8 @@ export const terrainOpSchema = z
     rings: z.array(z.number().int().min(6)).max(500).optional(),
     /** Ritaglio [x, y, w, h]: l'operazione si vede solo lì (terreno incollato da un'altra zona). */
     clip: z.array(z.number()).length(4).optional(),
+    /** Solo region: non interpola i punti (niente smussatura né rumore), riempie la regione esatta. */
+    exact: z.boolean().optional(),
   })
   .refine(
     (op) =>

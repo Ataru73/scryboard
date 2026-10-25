@@ -56,6 +56,17 @@ test("quick palette, closed-area fill, copy/paste and painting under the fog", a
   await expect(board(player)).toHaveAttribute("data-terrain-count", "3");
   await expect(board(player)).toHaveAttribute("data-fog-count", "0");
   expect(await terrainCount(gm)).toBe(3);
+
+  // Regione esatta: con l'opzione attiva riempie il poligono esatto senza interpolazione.
+  await panel.getByRole("button", { name: "Regione" }).click();
+  await expect(panel.getByLabel("Regione esatta")).toBeVisible();
+  await panel.getByLabel("Regione esatta").check();
+  await click(gm, 450, 380);
+  await click(gm, 750, 360);
+  await click(gm, 800, 600);
+  await click(gm, 480, 620);
+  await gm.keyboard.press("Enter");
+  await expect(board(player)).toHaveAttribute("data-terrain-count", "4");
 });
 
 test("stamps: click to place, drag to scatter in one undo step, GM only", async ({ browser }) => {

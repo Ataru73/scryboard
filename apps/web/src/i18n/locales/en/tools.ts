@@ -131,6 +131,10 @@ export const tools = {
       label: "Under fog",
       title: "Each brushstroke starts covered by fog: reveal it whenever you want",
     },
+    exact: {
+      label: "Exact region",
+      title: "Do not interpolate vertices: fills the exact polygon, without smoothing or noise",
+    },
     hints: {
       region: "Click to add vertices, double-click or press Enter to close.",
       fill: "Click inside an area enclosed by walls or other biomes.",

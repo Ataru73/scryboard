@@ -4,6 +4,7 @@ import { biomePattern } from "./textures";
 
 /** Larghezza della sfumatura sul bordo, in pixel del mondo. */
 export function edgeWidth(op: TerrainOp): number {
+  if (op.exact) return 0;
   if (op.shape === "fill") return 4;
   return op.shape === "brush" ? Math.min(24, Math.max(2, ((op.width ?? 40) / 2) * 0.3)) : 10;
 }
@@ -57,6 +58,12 @@ function shapePath(ctx: CanvasRenderingContext2D, op: TerrainOp, shrink: number,
       ctx.closePath();
       start += length;
     }
+  } else if (op.exact) {
+    for (let i = 0; i + 1 < op.points.length; i += 2) {
+      if (i === 0) ctx.moveTo(op.points[i] as number, op.points[i + 1] as number);
+      else ctx.lineTo(op.points[i] as number, op.points[i + 1] as number);
+    }
+    ctx.closePath();
   } else {
     const outline = regionOutline(op);
     for (let i = 0; i + 1 < outline.length; i += 2) {
