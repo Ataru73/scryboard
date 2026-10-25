@@ -10,6 +10,11 @@ RUN pnpm install --frozen-lockfile && pnpm build
 FROM litestream/litestream:0.3.13 AS litestream
 
 FROM base AS runtime
+# Litestream (Go) verifica i certificati TLS con il CA store di sistema, che in node:24-slim
+# manca: senza ca-certificates le chiamate al bucket GCS falliscono
+# (x509: certificate signed by unknown authority) e il container non parte.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production PORT=3000 DATABASE_PATH=/data/scryboard.db ASSETS_DIR=/data/assets WEB_DIST_DIR=/app/apps/web/dist
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json packages/shared/
