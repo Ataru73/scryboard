@@ -1,5 +1,6 @@
 export * from "./assets";
 export * from "./board";
+export * from "./dice";
 export * from "./documents";
 export * from "./fog";
 export * from "./initiative";

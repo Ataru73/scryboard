@@ -151,6 +151,7 @@ function Room({
           me={gmToken ? GM_MAILBOX : profile.id}
           myName={profile.name}
           mailProvider={mailProvider}
+          provider={provider}
           users={users}
           auth={
             gmToken ? { gmToken } : { credentials: playerCredentials(profile.id, profile.secret) }

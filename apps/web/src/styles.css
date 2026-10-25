@@ -1085,3 +1085,116 @@ button.danger {
   align-items: center;
   gap: 0.3rem;
 }
+
+.tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.tabs button {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.tabs button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.roll-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.roll-form {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.roll-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.roll-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.roll-quick button {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.roll-log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.roll-entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.roll-entry.secret {
+  outline: 1px dashed var(--border);
+}
+
+.roll-detail {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+}
+
+.roll-total {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.roll-toasts {
+  position: absolute;
+  left: 64px;
+  bottom: 12px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+.roll-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius);
+  background: #1d1a24;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+}
+
+.roll-toast.secret {
+  outline: 1px dashed #ffffff88;
+}
+
+.roll-toast-total {
+  font-size: 1.6rem;
+  font-weight: 700;
+  min-width: 2ch;
+  text-align: center;
+}

@@ -12,6 +12,7 @@ import { createAssetStore } from "./assets/store";
 import { createCollab } from "./collab/hocuspocus";
 import { MessageService } from "./collab/messages";
 import { publicReferenceCheck } from "./collab/references";
+import { RollService } from "./collab/rolls";
 import type { Config } from "./config";
 import { openDatabase } from "./db/client";
 import { createApi } from "./http/app";
@@ -45,7 +46,7 @@ export async function startServer(config: Config): Promise<RunningServer> {
         limits: config.limits,
         trustProxy: config.trustProxy,
       },
-      { messages: new MessageService(collab, players), players },
+      { messages: new MessageService(collab, players), players, rolls: new RollService(collab) },
     ),
   );
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));

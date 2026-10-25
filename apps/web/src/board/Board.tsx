@@ -34,6 +34,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { Circle, Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
+import { RollToasts } from "../dice/RollToasts";
 import {
   insertPoint,
   nearestSegment,
@@ -1833,6 +1834,7 @@ export function Board({ store, provider, roomId, role }: Props) {
       <div className="visually-hidden" role="status" aria-label="Distanza misurata">
         {measureText}
       </div>
+      <RollToasts provider={provider} />
       {initiativeOpen && (
         <InitiativePanel
           store={store}

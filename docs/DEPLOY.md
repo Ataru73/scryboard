@@ -18,6 +18,7 @@ sulla porta 3000.
 | `ROOMS_PER_10_MIN`       | `20`                 | Stanze create per IP ogni 10 minuti                                            |
 | `UPLOADS_PER_10_MIN`     | `200`                | Immagini caricate per IP ogni 10 minuti                                        |
 | `MESSAGES_PER_10_MIN`    | `300`                | Messaggi privati inviati per IP ogni 10 minuti                                 |
+| `ROLLS_PER_10_MIN`       | `600`                | Tiri di dadi per IP ogni 10 minuti                                             |
 
 ## Fly.io
 

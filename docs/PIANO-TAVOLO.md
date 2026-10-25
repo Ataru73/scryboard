@@ -141,6 +141,18 @@ T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta 
 
 ### T4 — Dadi e registro pubblico (≈ 1 settimana)
 
+**Stato**: completata. Note rispetto al piano:
+- I tiri pubblici stanno in una Y.Map `rolls` del documento pubblico (id → tiro) e non in un array,
+  così il guard li protegge come le altre mappe (un giocatore che ne scrive uno viene ripristinato).
+  Il server tiene gli ultimi 200.
+- Il tiro nascosto del GM non viene scritto da nessuna parte: `POST /rooms/:id/rolls` con
+  `hidden: true` (solo GM) risponde con il risultato e il client lo tiene nel suo registro locale,
+  che si perde ricaricando la pagina. Non serve passare per la casella di posta.
+- Parser e tiro in `packages/shared/src/dice.ts` (`NdM`, `kh/kl/dh/dl`, `d%`, costanti, fino a 100
+  dadi e 20 termini); il server tira con `crypto.randomInt`. Limite `ROLLS_PER_10_MIN` (600).
+- Scheda «Tavolo» nel pannello Messaggi (dadi rapidi, registro, casella «di nascosto» per il GM),
+  notifica sulla lavagna per qualche secondo, e `/r formula` in qualunque conversazione.
+
 **Cosa vede l'utente**
 - Nel pannello Messaggi una scheda **Tavolo**: campo per la formula (`2d20kh1+5`, `8d6`,
   `4d6dl1`) con pulsanti rapidi (d4…d100). I risultati compaiono nel registro e per qualche

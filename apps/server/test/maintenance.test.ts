@@ -15,7 +15,7 @@ describe("rate limits", () => {
   it("refuses to create too many rooms from the same address", async () => {
     const db = tempDatabasePath();
     const server = await startTestServer(db.path, {
-      limits: { rooms: 2, uploads: 2, messages: 2 },
+      limits: { rooms: 2, uploads: 2, messages: 2, rolls: 2 },
     });
     try {
       const create = () =>

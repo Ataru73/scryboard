@@ -9,6 +9,7 @@ import {
   fogOpSchema,
   ITEMS_MAP,
   isDoorFogged,
+  ROLLS_MAP,
   type Role,
   SETTINGS_MAP,
   sortFogOps,
@@ -157,6 +158,8 @@ export function guardPublicDocument(doc: Y.Doc): void {
     isAllowedPlayerWallChange(action, key, oldValue, walls.get(key), currentFog()),
   );
   // Impostazioni della board, nebbia e terreno sono riservati al GM.
+  // Il registro dei tiri lo scrive solo il server.
+  watch(doc.getMap(ROLLS_MAP), () => false);
   watch(doc.getMap(SETTINGS_MAP), () => false);
   watch(fogMap, () => false);
   watch(doc.getMap(TERRAIN_MAP), () => false);

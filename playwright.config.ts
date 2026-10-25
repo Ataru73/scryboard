@@ -41,6 +41,7 @@ export default defineConfig({
       ROOMS_PER_10_MIN: "1000",
       UPLOADS_PER_10_MIN: "1000",
       MESSAGES_PER_10_MIN: "1000",
+      ROLLS_PER_10_MIN: "1000",
     },
   },
 });

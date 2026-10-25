@@ -1,6 +1,8 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { GM_MAILBOX, MAX_MESSAGE_LENGTH, type PresenceUser } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { RollPanel } from "../dice/RollPanel";
+import { rollFormula } from "../dice/rolls";
 import { api, describeApiError } from "../lib/api";
 import { groupConversations } from "./conversations";
 import { useLastRead, useMailbox } from "./useMailbox";
@@ -11,6 +13,8 @@ interface Props {
   me: string;
   myName: string;
   mailProvider: HocuspocusProvider | null;
+  /** Documento pubblico: contiene il registro dei tiri. */
+  provider: HocuspocusProvider | null;
   /** Utenti connessi (presenza), per scegliere a chi scrivere. */
   users: (PresenceUser & { clientId: number })[];
   auth: { gmToken: string } | { credentials: string };
@@ -20,7 +24,8 @@ interface Props {
  * Messaggi privati nella barra laterale. I giocatori scrivono al GM o tra loro; il GM scrive a
  * chiunque e legge anche le conversazioni tra giocatori (in sola lettura).
  */
-export function MessagesPanel({ roomId, me, myName, mailProvider, users, auth }: Props) {
+export function MessagesPanel({ roomId, me, myName, mailProvider, provider, users, auth }: Props) {
+  const [tab, setTab] = useState<"private" | "table">("private");
   const messages = useMailbox(mailProvider);
   const { lastRead, markRead } = useLastRead(`scryboard:read:${roomId}:${me}`);
   // I nomi dei giocatori connessi valgono più di quelli salvati (chi non ha mai scritto non ne ha).
@@ -61,18 +66,32 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, users, auth }:
   return (
     <section className="messages" aria-label="Messaggi">
       <h2>Messaggi {unread > 0 && <span className="badge unread-badge">{unread}</span>}</h2>
-      {openKey ? (
+      <div className="tabs">
+        <button type="button" aria-pressed={tab === "private"} onClick={() => setTab("private")}>
+          Privati
+        </button>
+        <button type="button" aria-pressed={tab === "table"} onClick={() => setTab("table")}>
+          Tavolo
+        </button>
+      </div>
+      {tab === "table" ? (
+        <RollPanel roomId={roomId} provider={provider} myName={myName} auth={auth} />
+      ) : openKey ? (
         <Thread
           title={openTitle}
           me={me}
           messages={open?.messages ?? []}
           readOnly={openPartner === null}
           onBack={() => setOpenKey(null)}
-          onSend={(text) =>
-            api
+          onSend={(text) => {
+            // «/r 2d6+1» in qualunque conversazione tira i dadi per tutto il tavolo.
+            const dice = /^\/r\s+(.+)$/i.exec(text);
+            if (dice)
+              return rollFormula(roomId, dice[1] as string, myName, auth).then(() => undefined);
+            return api
               .sendMessage(roomId, { to: openPartner as string, text, fromName: myName }, auth)
-              .then(() => undefined)
-          }
+              .then(() => undefined);
+          }}
         />
       ) : (
         <>

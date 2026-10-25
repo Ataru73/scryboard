@@ -1,8 +1,10 @@
 import {
   createRoomRequestSchema,
+  DiceError,
   MAX_ASSET_BYTES,
   parsePlayerCredentials,
   ROOM_ID_PATTERN,
+  rollRequestSchema,
   sendMessageRequestSchema,
   type UploadAssetResponse,
 } from "@scryboard/shared";
@@ -11,12 +13,13 @@ import { bodyLimit } from "hono/body-limit";
 import type { AssetAccess } from "../assets/access";
 import { type AssetStore, UnsupportedAssetError } from "../assets/store";
 import { MessageError, type MessageService, type Sender } from "../collab/messages";
+import type { RollService } from "../collab/rolls";
 import type { PlayerService } from "../rooms/players";
 import type { RoomService } from "../rooms/service";
 import { rateLimit } from "./rateLimit";
 
 export interface ApiOptions {
-  limits: { rooms: number; uploads: number; messages: number };
+  limits: { rooms: number; uploads: number; messages: number; rolls: number };
   trustProxy: boolean;
 }
 
@@ -27,7 +30,7 @@ export function createApi(
   assets: AssetStore,
   access: AssetAccess,
   options: ApiOptions,
-  messaging: { messages: MessageService; players: PlayerService },
+  messaging: { messages: MessageService; players: PlayerService; rolls: RollService },
 ): Hono {
   const api = new Hono();
   const limitRooms = rateLimit({
@@ -42,6 +45,12 @@ export function createApi(
     trustProxy: options.trustProxy,
     message: "Troppi messaggi in poco tempo: riprova tra qualche minuto.",
   });
+  const limitRolls = rateLimit({
+    max: options.limits.rolls,
+    windowMs: TEN_MINUTES,
+    trustProxy: options.trustProxy,
+    message: "Troppi tiri in poco tempo: riprova tra qualche minuto.",
+  });
   const limitUploads = rateLimit({
     max: options.limits.uploads,
     windowMs: TEN_MINUTES,
@@ -54,6 +63,21 @@ export function createApi(
   const isGmRequest = (roomId: string, header: string | undefined) => {
     const token = header?.match(/^Bearer (.+)$/)?.[1];
     return token !== undefined && rooms.isGmToken(roomId, token);
+  };
+
+  // Chi scrive o tira: il GM con il suo token, un giocatore con id del profilo e segreto
+  // ("Player <id>:<segreto>").
+  const resolveSender = (roomId: string, authorization: string | undefined, name: string) => {
+    const header = authorization ?? "";
+    if (isGmRequest(roomId, header)) return { kind: "gm", name } satisfies Sender;
+    const credentials = parsePlayerCredentials(header.match(/^Player (.+)$/)?.[1] ?? "");
+    if (
+      credentials &&
+      messaging.players.authenticate(roomId, credentials.profileId, credentials.secret, name)
+    ) {
+      return { kind: "player", profileId: credentials.profileId, name } satisfies Sender;
+    }
+    return null;
   };
 
   api.get("/health", (c) => c.json({ ok: true }));
@@ -111,24 +135,7 @@ export function createApi(
     if (!room) return c.json({ error: "Stanza non trovata" }, 404);
     const parsed = sendMessageRequestSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: "Messaggio non valido" }, 400);
-    const header = c.req.header("authorization") ?? "";
-    let sender: Sender | null = null;
-    if (isGmRequest(room.id, header)) {
-      sender = { kind: "gm", name: parsed.data.fromName };
-    } else {
-      const credentials = parsePlayerCredentials(header.match(/^Player (.+)$/)?.[1] ?? "");
-      if (
-        credentials &&
-        messaging.players.authenticate(
-          room.id,
-          credentials.profileId,
-          credentials.secret,
-          parsed.data.fromName,
-        )
-      ) {
-        sender = { kind: "player", profileId: credentials.profileId, name: parsed.data.fromName };
-      }
-    }
+    const sender = resolveSender(room.id, c.req.header("authorization"), parsed.data.fromName);
     if (!sender) return c.json({ error: "Non autorizzato" }, 401);
     try {
       const message = await messaging.messages.send(
@@ -140,6 +147,31 @@ export function createApi(
       return c.json({ id: message.id }, 201);
     } catch (error) {
       if (error instanceof MessageError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
+  });
+
+  // Tiri di dadi: li fa il server. Un tiro nascosto lo può chiedere solo il GM.
+  api.post("/rooms/:id/rolls", limitRolls, async (c) => {
+    const room = findRoom(c.req.param("id"));
+    if (!room) return c.json({ error: "Stanza non trovata" }, 404);
+    const parsed = rollRequestSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: "Richiesta non valida" }, 400);
+    const sender = resolveSender(room.id, c.req.header("authorization"), parsed.data.name);
+    if (!sender) return c.json({ error: "Non autorizzato" }, 401);
+    if (parsed.data.hidden && sender.kind !== "gm") {
+      return c.json({ error: "Solo il GM può tirare di nascosto" }, 403);
+    }
+    try {
+      const roll = await messaging.rolls.roll(
+        room.id,
+        sender,
+        parsed.data.formula,
+        !!parsed.data.hidden,
+      );
+      return c.json(roll, 201);
+    } catch (error) {
+      if (error instanceof DiceError) return c.json({ error: error.message }, 400);
       throw error;
     }
   });

@@ -1,5 +1,7 @@
 import type {
   CreateRoomResponse,
+  Roll,
+  RollRequest,
   RoomInfo,
   SendMessageRequest,
   UploadAssetResponse,
@@ -15,13 +17,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new ApiRequestError(0);
   }
-  if (!res.ok) throw new ApiRequestError(res.status);
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+    throw new ApiRequestError(res.status, typeof body?.error === "string" ? body.error : undefined);
+  }
   return (await res.json()) as T;
 }
 
 /** `status` è 0 quando la richiesta non è proprio arrivata (rete assente, server spento). */
 export class ApiRequestError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    /** Spiegazione del server, utile quando riguarda ciò che l'utente ha scritto. */
+    readonly detail?: string,
+  ) {
     super(`Richiesta fallita (${status})`);
   }
 }
@@ -33,6 +42,7 @@ export function describeApiError(error: unknown): string {
   if (error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504) {
     return "Il server di Scryboard non risponde. Controlla che sia avviato e riprova.";
   }
+  if (error.status === 400 && error.detail) return error.detail;
   if (error.status === 400) return "Dati non validi: controlla quello che hai inserito.";
   if (error.status === 413) return "Il file è troppo grande (massimo 20 MB).";
   if (error.status === 415) return "Formato non supportato: usa PNG, JPEG, WebP o GIF.";
@@ -55,6 +65,15 @@ export const api = {
     auth: { gmToken: string } | { credentials: string },
   ) =>
     request<{ id: string }>(`/rooms/${encodeURIComponent(roomId)}/messages`, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: {
+        authorization: "gmToken" in auth ? `Bearer ${auth.gmToken}` : `Player ${auth.credentials}`,
+      },
+    }),
+  /** Tiro di dadi: lo fa il server; `hidden` (solo GM) non lo condivide con gli altri. */
+  roll: (roomId: string, body: RollRequest, auth: { gmToken: string } | { credentials: string }) =>
+    request<Roll>(`/rooms/${encodeURIComponent(roomId)}/rolls`, {
       method: "POST",
       body: JSON.stringify(body),
       headers: {
