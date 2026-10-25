@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AssetAuthContext } from "../board/assetAuth";
 import { Board } from "../board/Board";
-import { InfoIcon, SettingsIcon } from "../board/icons";
+import { InfoIcon, SettingsIcon, SidebarIcon } from "../board/icons";
 import { BoardStore } from "../board/store";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
 import { ApiRequestError, api, describeApiError } from "../lib/api";
@@ -128,10 +128,26 @@ function Room({
     [ready, provider, gmProvider, profile.id],
   );
   useEffect(() => () => store?.destroy(), [store]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarId = useId();
+  const sidebarToggleLabel = t(
+    sidebarCollapsed ? "pages.room.expandSidebar" : "pages.room.collapseSidebar",
+  );
 
   return (
-    <div className="room">
+    <div className={sidebarCollapsed ? "room sidebar-collapsed" : "room"}>
       <header className="room-header">
+        <button
+          type="button"
+          className="icon-button"
+          aria-expanded={!sidebarCollapsed}
+          aria-controls={sidebarId}
+          aria-label={sidebarToggleLabel}
+          title={sidebarToggleLabel}
+          onClick={() => setSidebarCollapsed((c) => !c)}
+        >
+          {SidebarIcon}
+        </button>
         <a href="/" className="brand small">
           Scryboard
         </a>
@@ -140,7 +156,7 @@ function Room({
         <SettingsButton className="icon-button" icon={SettingsIcon} />
         <CreditsButton className="icon-button" icon={InfoIcon} />
       </header>
-      <aside className="sidebar">
+      <aside id={sidebarId} className="sidebar" hidden={sidebarCollapsed}>
         {gmToken && <SharePanel roomId={room.id} roomName={room.name} gmToken={gmToken} />}
         {gmToken && (
           <ScenesPanel

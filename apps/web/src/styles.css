@@ -212,6 +212,10 @@ button.danger {
     "sidebar board";
 }
 
+.room.sidebar-collapsed {
+  grid-template-columns: 0 1fr;
+}
+
 .room-header {
   grid-area: header;
   display: flex;
@@ -292,6 +296,10 @@ button.danger {
   border-right: 1px solid var(--border);
   background: var(--surface);
   overflow-y: auto;
+}
+
+.sidebar[hidden] {
+  display: none;
 }
 
 .users {

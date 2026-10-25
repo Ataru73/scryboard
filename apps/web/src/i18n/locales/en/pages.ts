@@ -33,6 +33,8 @@ export const pages = {
     preparingScene: "You are preparing “{{viewing}}”; players are in “{{active}}”.",
     returnToPlayers: "Return to players",
     boardConnecting: "Connecting to the board…",
+    collapseSidebar: "Hide sidebar",
+    expandSidebar: "Show sidebar",
     share: {
       title: "Share",
       playerLink: "Player link",
