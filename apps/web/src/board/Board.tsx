@@ -87,6 +87,8 @@ interface Props {
   store: BoardStore;
   provider: HocuspocusProvider;
   roomId: string;
+  /** Scena aperta: la memoria delle zone esplorate è separata per scena. */
+  sceneId?: string;
   role: Role;
 }
 
@@ -191,7 +193,7 @@ function findWallId(node: Konva.Node | null): string | null {
   return null;
 }
 
-export function Board({ store, provider, roomId, role }: Props) {
+export function Board({ store, provider, roomId, sceneId = "main", role }: Props) {
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const fog = useSyncExternalStore(store.subscribe, store.getFog);
@@ -401,11 +403,12 @@ export function Board({ store, provider, roomId, role }: Props) {
     () =>
       role === "player" && lighting.enabled
         ? new ExploredMap(
-            `scryboard:explored:${roomId}:${store.userId}:${lighting.explorationEpoch}`,
+            // La scena originale tiene la chiave di prima, così non si perde la memoria già raccolta.
+            `scryboard:explored:${roomId}${sceneId === "main" ? "" : `:${sceneId}`}:${store.userId}:${lighting.explorationEpoch}`,
             () => setExploredVersion((v) => v + 1),
           )
         : null,
-    [role, lighting.enabled, lighting.explorationEpoch, roomId, store.userId],
+    [role, lighting.enabled, lighting.explorationEpoch, roomId, sceneId, store.userId],
   );
   useEffect(() => {
     explored?.load();
@@ -506,6 +509,8 @@ export function Board({ store, provider, roomId, role }: Props) {
   useEffect(() => {
     const onSynced = () => setSynced(true);
     provider.on("synced", onSynced);
+    // La sincronizzazione può essere finita tra il primo render e questo effetto.
+    if (provider.synced) setSynced(true);
     return () => {
       provider.off("synced", onSynced);
     };

@@ -1,7 +1,7 @@
 import type { CreateRoomResponse, RoomInfo } from "@scryboard/shared";
 import { eq, sql } from "drizzle-orm";
 import type { Db } from "../db/client";
-import { rooms } from "../db/schema";
+import { rooms, scenes } from "../db/schema";
 import { generateGmToken, generateRoomId, hashToken, tokenMatchesHash } from "./tokens";
 
 /** Ogni quanto aggiornare al massimo l'ultima attività di una stanza. */
@@ -42,7 +42,19 @@ export class RoomService {
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
     };
-    this.db.insert(rooms).values(row).run();
+    this.db.transaction((tx) => {
+      tx.insert(rooms).values(row).run();
+      // La stanza nasce con la sua prima scena.
+      tx.insert(scenes)
+        .values({
+          roomId: row.id,
+          id: "main",
+          name: "Scena 1",
+          position: 0,
+          createdAt: row.createdAt,
+        })
+        .run();
+    });
     return { id: row.id, name: row.name, createdAt: row.createdAt, gmToken };
   }
 

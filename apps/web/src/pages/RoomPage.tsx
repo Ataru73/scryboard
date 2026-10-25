@@ -9,6 +9,8 @@ import { ApiRequestError, api } from "../lib/api";
 import { gmLink, gmTokenFromHash, playerLink } from "../lib/links";
 import { type Profile, storage } from "../lib/storage";
 import { MessagesPanel } from "../messages/MessagesPanel";
+import { ScenesPanel } from "../scenes/ScenesPanel";
+import { useScenes } from "../scenes/useScenes";
 import { CreditsButton } from "./Credits";
 import { SettingsButton } from "./GeminiSettings";
 import { ProfileForm } from "./ProfileForm";
@@ -104,11 +106,16 @@ function Room({
   gmToken: string | null;
   profile: Profile;
 }) {
-  const { status, users, provider, gmProvider, mailProvider } = useRoomConnection({
-    roomId: room.id,
-    gmToken,
-    profile,
-  });
+  // Il GM può aprire una scena diversa da quella dei giocatori per prepararla.
+  const [viewScene, setViewScene] = useState<string | null>(null);
+  const { status, users, provider, gmProvider, mailProvider, activeScene, sceneId, sceneFailed } =
+    useRoomConnection({ roomId: room.id, gmToken, profile, viewScene });
+  const scenes = useScenes(room.id, gmToken, activeScene);
+  // Se la scena aperta non c'è più (cancellata) si torna a quella dei giocatori.
+  useEffect(() => {
+    if (sceneFailed && viewScene) setViewScene(null);
+  }, [sceneFailed, viewScene]);
+  const sceneName = (id: string | null) => scenes.scenes.find((s) => s.id === id)?.name ?? "…";
   // Il GM aspetta anche il documento degli oggetti nascosti, così lo store nasce completo.
   const ready = provider !== null && (gmToken === null || gmProvider !== null);
   const store = useMemo(
@@ -133,6 +140,16 @@ function Room({
       </header>
       <aside className="sidebar">
         {gmToken && <SharePanel roomId={room.id} gmToken={gmToken} />}
+        {gmToken && (
+          <ScenesPanel
+            roomId={room.id}
+            gmToken={gmToken}
+            activeScene={activeScene}
+            viewScene={sceneId}
+            onOpen={setViewScene}
+            scenes={scenes}
+          />
+        )}
         <section>
           <h2>Al tavolo ({users.length})</h2>
           <ul className="users" aria-label="Al tavolo">
@@ -160,12 +177,22 @@ function Room({
         <p className="muted small attribution">Powered by Doc</p>
       </aside>
       <main className="board-area">
+        {gmToken && sceneId && activeScene && sceneId !== activeScene && (
+          <div className="scene-banner" role="status">
+            Stai preparando «{sceneName(sceneId)}»: i giocatori sono in «{sceneName(activeScene)}».
+            <button type="button" onClick={() => setViewScene(activeScene)}>
+              Torna ai giocatori
+            </button>
+          </div>
+        )}
         {store && provider ? (
           <AssetAuthContext.Provider value={gmToken}>
             <Board
+              key={sceneId}
               store={store}
               provider={provider}
               roomId={room.id}
+              sceneId={sceneId ?? "main"}
               role={gmToken ? "gm" : "player"}
             />
           </AssetAuthContext.Provider>

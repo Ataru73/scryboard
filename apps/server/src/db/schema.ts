@@ -8,6 +8,8 @@ export const rooms = sqliteTable("rooms", {
   createdAt: text("created_at").notNull(),
   /** Ultima connessione o modifica; null per le stanze create prima di questa colonna. */
   lastActiveAt: text("last_active_at"),
+  /** Scena in cui si trovano i giocatori; la scena originale della stanza ha id "main". */
+  activeScene: text("active_scene").notNull().default("main"),
 });
 
 /** Snapshot Yjs dei documenti, uno per nome (`room:<id>:<scope>`). */
@@ -48,4 +50,20 @@ export const players = sqliteTable(
     createdAt: text("created_at").notNull(),
   },
   (t) => [primaryKey({ columns: [t.roomId, t.profileId] })],
+);
+
+/**
+ * Scene di una stanza (la prima, "main", esiste sempre). L'elenco sta qui e non in un documento
+ * Yjs: lo gestisce solo il GM, tramite le API, e il server decide chi può aprire quale scena.
+ */
+export const scenes = sqliteTable(
+  "scenes",
+  {
+    roomId: text("room_id").notNull(),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    position: integer("position").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.roomId, t.id] })],
 );

@@ -8,6 +8,7 @@ import {
   rollDice,
   roomDocumentName,
 } from "@scryboard/shared";
+import type { SceneService } from "../rooms/scenes";
 import type { ConnectionContext } from "./hocuspocus";
 import type { Sender } from "./messages";
 
@@ -16,7 +17,10 @@ import type { Sender } from "./messages";
  * nel documento pubblico, dove lo vedono tutti; uno nascosto del GM torna solo a chi l'ha chiesto.
  */
 export class RollService {
-  constructor(private readonly collab: Hocuspocus<ConnectionContext>) {}
+  constructor(
+    private readonly collab: Hocuspocus<ConnectionContext>,
+    private readonly scenes: SceneService,
+  ) {}
 
   async roll(roomId: string, sender: Sender, formula: string, hidden: boolean): Promise<Roll> {
     // Lancia DiceError se la formula non è valida: il chiamante risponde 400.
@@ -29,10 +33,13 @@ export class RollService {
       at: new Date().toISOString(),
     };
     if (hidden) return roll;
-    const connection = await this.collab.openDirectConnection(roomDocumentName(roomId, "public"), {
-      roomId,
-      role: "gm",
-    });
+    const connection = await this.collab.openDirectConnection(
+      roomDocumentName(roomId, "public", this.scenes.activeId(roomId)),
+      {
+        roomId,
+        role: "gm",
+      },
+    );
     try {
       await connection.transact((doc) => {
         const rolls = doc.getMap<Roll>(ROLLS_MAP);

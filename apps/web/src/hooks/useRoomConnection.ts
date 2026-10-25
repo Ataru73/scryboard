@@ -1,12 +1,15 @@
 import { HocuspocusProvider, HocuspocusProviderWebsocket } from "@hocuspocus/provider";
 import {
+  ACTIVE_SCENE_KEY,
   GM_MAILBOX,
+  META_MAP,
   mailDocumentName,
+  metaDocumentName,
   type PresenceUser,
   playerCredentials,
   roomDocumentName,
 } from "@scryboard/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "idle" | "denied";
@@ -29,6 +32,8 @@ interface Options {
   roomId: string;
   gmToken: string | null;
   profile: { id: string; name: string; color: string; secret: string };
+  /** Solo GM: scena da aprire per prepararla; di default quella dei giocatori. */
+  viewScene?: string | null;
 }
 
 function collabUrl(): string {
@@ -37,18 +42,31 @@ function collabUrl(): string {
 }
 
 /**
- * Si connette ai documenti della stanza su un unico WebSocket: il documento pubblico sempre,
- * quello del GM solo se si possiede il token.
+ * Si connette ai documenti della stanza su un unico WebSocket. Quelli di tutta la stanza (scena
+ * attiva, presenze, messaggi privati) restano aperti sempre; quelli della scena (pubblico e,
+ * per il GM, nascosto) si riaprono quando cambia la scena che si sta guardando. I giocatori
+ * guardano sempre la scena attiva; il GM può aprirne un'altra per prepararla.
  */
-export function useRoomConnection({ roomId, gmToken, profile }: Options) {
+export function useRoomConnection({ roomId, gmToken, profile, viewScene = null }: Options) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [users, setUsers] = useState<ConnectedUser[]>([]);
+  const [socket, setSocket] = useState<HocuspocusProviderWebsocket | null>(null);
+  const [activeScene, setActiveScene] = useState<string | null>(null);
   const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
   const [gmProvider, setGmProvider] = useState<HocuspocusProvider | null>(null);
   const [mailProvider, setMailProvider] = useState<HocuspocusProvider | null>(null);
+  /** La scena richiesta non si può aprire (cancellata o non più attiva). */
+  const [sceneFailed, setSceneFailed] = useState(false);
+  /** Attività altrui nei documenti della scena: tiene sveglia la connessione. */
+  const remoteActivity = useRef<() => void>(() => {});
+
+  // Il GM non aspetta di sapere dov'è il gruppo: apre subito la scena originale (e disegna anche
+  // con la rete lenta), poi passa a quella attiva se è un'altra. I giocatori la aspettano.
+  const sceneId = gmToken ? (viewScene ?? activeScene ?? "main") : activeScene;
 
   useEffect(() => {
     const socket = new HocuspocusProviderWebsocket({ url: collabUrl() });
+    setSocket(socket);
     const role = gmToken ? "gm" : "player";
 
     let idle = false;
@@ -86,9 +104,12 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
     document.addEventListener("visibilitychange", onVisibility);
     armIdleTimer();
 
-    const publicProvider = new HocuspocusProvider({
+    remoteActivity.current = onRemoteActivity;
+
+    // Documento della stanza: scena attiva e presenze (chi c'è, in qualunque scena).
+    const metaProvider = new HocuspocusProvider({
       websocketProvider: socket,
-      name: roomDocumentName(roomId, "public"),
+      name: metaDocumentName(roomId),
       document: new Y.Doc(),
       // Il server assegna il ruolo in base al token; i giocatori ne inviano uno qualsiasi.
       token: gmToken ?? "player",
@@ -97,7 +118,7 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
       onAuthenticationFailed: () => setStatus("denied"),
       onAwarenessChange: ({ states }) => {
         onRemoteActivity();
-        const selfId = publicProvider.awareness?.clientID;
+        const selfId = metaProvider.awareness?.clientID;
         const next = states
           .filter((s) => s.user)
           .map((s) => ({
@@ -119,21 +140,16 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
     });
     let usersKey = "";
     const user: PresenceUser = { id: profile.id, name: profile.name, color: profile.color, role };
-    publicProvider.setAwarenessField("user", user);
-    publicProvider.document.on("update", onRemoteActivity);
-    publicProvider.attach();
-    setProvider(publicProvider);
-
-    const gmProvider = gmToken
-      ? new HocuspocusProvider({
-          websocketProvider: socket,
-          name: roomDocumentName(roomId, "gm"),
-          document: new Y.Doc(),
-          token: gmToken,
-        })
-      : null;
-    gmProvider?.attach();
-    setGmProvider(gmProvider);
+    metaProvider.setAwarenessField("user", user);
+    metaProvider.document.on("update", onRemoteActivity);
+    metaProvider.attach();
+    const meta = metaProvider.document.getMap<unknown>(META_MAP);
+    const readActive = () => {
+      const value = meta.get(ACTIVE_SCENE_KEY);
+      if (typeof value === "string") setActiveScene(value);
+    };
+    meta.observe(readActive);
+    readActive();
 
     // Casella dei messaggi privati: il GM riceve tutto, ogni giocatore solo i suoi.
     const mailProvider = new HocuspocusProvider({
@@ -149,15 +165,55 @@ export function useRoomConnection({ roomId, gmToken, profile }: Options) {
       clearTimeout(idleTimer);
       for (const type of ACTIVITY_EVENTS) window.removeEventListener(type, onUserActivity);
       document.removeEventListener("visibilitychange", onVisibility);
-      setProvider(null);
-      setGmProvider(null);
+      setSocket(null);
+      setActiveScene(null);
       setMailProvider(null);
-      publicProvider.destroy();
-      gmProvider?.destroy();
+      metaProvider.destroy();
       mailProvider.destroy();
       socket.destroy();
     };
   }, [roomId, gmToken, profile]);
 
-  return { status, users, provider, gmProvider, mailProvider };
+  // Documenti della scena che si sta guardando: si riaprono a ogni cambio di scena.
+  useEffect(() => {
+    if (!socket || !sceneId) return;
+    setSceneFailed(false);
+    const user: PresenceUser = {
+      id: profile.id,
+      name: profile.name,
+      color: profile.color,
+      role: gmToken ? "gm" : "player",
+    };
+    const scenePublic = new HocuspocusProvider({
+      websocketProvider: socket,
+      name: roomDocumentName(roomId, "public", sceneId),
+      document: new Y.Doc(),
+      token: gmToken ?? "player",
+      onAuthenticationFailed: () => setSceneFailed(true),
+    });
+    scenePublic.setAwarenessField("user", user);
+    scenePublic.document.on("update", () => remoteActivity.current());
+    scenePublic.attach();
+    setProvider(scenePublic);
+
+    const sceneGm = gmToken
+      ? new HocuspocusProvider({
+          websocketProvider: socket,
+          name: roomDocumentName(roomId, "gm", sceneId),
+          document: new Y.Doc(),
+          token: gmToken,
+        })
+      : null;
+    sceneGm?.attach();
+    setGmProvider(sceneGm);
+
+    return () => {
+      setProvider(null);
+      setGmProvider(null);
+      scenePublic.destroy();
+      sceneGm?.destroy();
+    };
+  }, [socket, sceneId, roomId, gmToken, profile]);
+
+  return { status, users, provider, gmProvider, mailProvider, activeScene, sceneId, sceneFailed };
 }

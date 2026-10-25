@@ -22,6 +22,7 @@ export function RollToasts({ provider }: { provider: HocuspocusProvider }) {
   useEffect(() => {
     const onSynced = () => setSynced(true);
     provider.on("synced", onSynced);
+    if (provider.synced) setSynced(true);
     return () => {
       provider.off("synced", onSynced);
     };

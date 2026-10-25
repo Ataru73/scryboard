@@ -199,6 +199,26 @@ T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta 
 
 ### T6 — Scene multiple (≈ 3 settimane)
 
+**Stato**: completata. Note rispetto al piano:
+- Scelte concordate: nessuna copia automatica dei token al cambio di scena (si usa «Duplica»),
+  registro dei tiri e turni per scena (stanno nel documento della scena), elenco con soli nomi
+  (niente miniature per ora).
+- L'elenco scene sta nel database (tabelle `scenes` e `rooms.active_scene`, migrazione 0004 che
+  crea la scena `main` per ogni stanza esistente), non in un documento Yjs: lo gestisce solo il
+  GM tramite `/api/rooms/:id/scenes…` (elenco, crea, rinomina, elimina, duplica, attiva).
+- Documenti: la scena `main` tiene i nomi di prima; le altre sono `room:<id>:s:<scena>:public|gm`.
+  Il documento `room:<id>:meta` (sola lettura per tutti, scritto dal server) contiene la scena
+  attiva e i client dei giocatori la seguono. I giocatori possono aprire solo la scena attiva;
+  spostando il gruppo il server chiude le loro connessioni alla scena vecchia.
+- Le presenze («Al tavolo») vengono dal documento `meta`, quindi valgono per tutta la stanza; i
+  cursori e i ping restano della scena. La memoria delle zone esplorate è separata per scena.
+- Gli asset: un'immagine diventa pubblica solo se usata nel documento pubblico della scena
+  attiva, così le scene in preparazione restano private.
+- «Duplica» copia oggetti, impostazioni e documento del GM, senza registro dei tiri.
+- Il GM apre subito la scena `main` senza aspettare `meta` (come prima si disegnava a rete lenta)
+  e passa alla scena attiva se è un'altra. Corretto anche un caso in cui il Board perdeva
+  l'evento `synced` se arrivava tra il primo render e l'effetto che lo ascolta.
+
 Già prevista in `MVP.md` ("le scene multiple arrivano nella v0.2"). È la fase più delicata
 perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
 

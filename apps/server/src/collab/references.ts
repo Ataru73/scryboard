@@ -5,11 +5,17 @@ import * as Y from "yjs";
 import type { PublicReferenceCheck } from "../assets/access";
 import type { Db } from "../db/client";
 import { documents } from "../db/schema";
+import type { SceneService } from "../rooms/scenes";
 
 /** Cerca l'asset tra gli oggetti del documento pubblico: in memoria se aperto, altrimenti su disco. */
-export function publicReferenceCheck(collab: Hocuspocus, db: Db): PublicReferenceCheck {
+export function publicReferenceCheck(
+  collab: Hocuspocus,
+  db: Db,
+  scenes: SceneService,
+): PublicReferenceCheck {
   return async (roomId, assetId) => {
-    const name = roomDocumentName(roomId, "public");
+    // Conta solo la scena dove si trovano i giocatori: quelle in preparazione restano private.
+    const name = roomDocumentName(roomId, "public", scenes.activeId(roomId));
     let doc: Y.Doc | undefined = collab.documents.get(name);
     if (!doc) {
       const row = db

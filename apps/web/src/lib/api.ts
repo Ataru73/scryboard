@@ -3,6 +3,8 @@ import type {
   Roll,
   RollRequest,
   RoomInfo,
+  Scene,
+  ScenesResponse,
   SendMessageRequest,
   UploadAssetResponse,
 } from "@scryboard/shared";
@@ -49,7 +51,45 @@ export function describeApiError(error: unknown): string {
   return `Il server ha risposto con un errore (${error.status}). Riprova.`;
 }
 
+const gmHeaders = (gmToken: string) => ({ authorization: `Bearer ${gmToken}` });
+
 export const api = {
+  /** Scene della stanza (solo GM). */
+  scenes: {
+    list: (roomId: string, gmToken: string) =>
+      request<ScenesResponse>(`/rooms/${encodeURIComponent(roomId)}/scenes`, {
+        headers: gmHeaders(gmToken),
+      }),
+    create: (roomId: string, gmToken: string, name: string) =>
+      request<Scene>(`/rooms/${encodeURIComponent(roomId)}/scenes`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+        headers: gmHeaders(gmToken),
+      }),
+    rename: (roomId: string, gmToken: string, sceneId: string, name: string) =>
+      request<{ ok: true }>(`/rooms/${encodeURIComponent(roomId)}/scenes/${sceneId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+        headers: gmHeaders(gmToken),
+      }),
+    remove: (roomId: string, gmToken: string, sceneId: string) =>
+      request<{ ok: true }>(`/rooms/${encodeURIComponent(roomId)}/scenes/${sceneId}`, {
+        method: "DELETE",
+        headers: gmHeaders(gmToken),
+      }),
+    duplicate: (roomId: string, gmToken: string, sceneId: string, name: string) =>
+      request<Scene>(`/rooms/${encodeURIComponent(roomId)}/scenes/${sceneId}/duplicate`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+        headers: gmHeaders(gmToken),
+      }),
+    /** Sposta i giocatori nella scena. */
+    activate: (roomId: string, gmToken: string, sceneId: string) =>
+      request<{ ok: true }>(`/rooms/${encodeURIComponent(roomId)}/scenes/${sceneId}/activate`, {
+        method: "POST",
+        headers: gmHeaders(gmToken),
+      }),
+  },
   createRoom: (name: string) =>
     request<CreateRoomResponse>("/rooms", { method: "POST", body: JSON.stringify({ name }) }),
   getRoom: (id: string) => request<RoomInfo>(`/rooms/${encodeURIComponent(id)}`),

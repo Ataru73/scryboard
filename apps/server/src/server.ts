@@ -13,10 +13,12 @@ import { createCollab } from "./collab/hocuspocus";
 import { MessageService } from "./collab/messages";
 import { publicReferenceCheck } from "./collab/references";
 import { RollService } from "./collab/rolls";
+import { SceneCollab } from "./collab/scenes";
 import type { Config } from "./config";
 import { openDatabase } from "./db/client";
 import { createApi } from "./http/app";
 import { PlayerService } from "./rooms/players";
+import { SceneService } from "./rooms/scenes";
 import { RoomService } from "./rooms/service";
 
 export const COLLAB_PATH = "/collab";
@@ -31,11 +33,12 @@ export async function startServer(config: Config): Promise<RunningServer> {
   const assetStore = await createAssetStore(config);
   const rooms = new RoomService(db);
   const players = new PlayerService(db);
-  const collab = createCollab(db, rooms, players);
+  const sceneService = new SceneService(db);
+  const collab = createCollab(db, rooms, players, sceneService);
 
   const app = new Hono();
   if (process.env.NODE_ENV !== "test") app.use(logger());
-  const access = new AssetAccess(db, publicReferenceCheck(collab, db));
+  const access = new AssetAccess(db, publicReferenceCheck(collab, db, sceneService));
   app.route(
     "/api",
     createApi(
@@ -46,7 +49,12 @@ export async function startServer(config: Config): Promise<RunningServer> {
         limits: config.limits,
         trustProxy: config.trustProxy,
       },
-      { messages: new MessageService(collab, players), players, rolls: new RollService(collab) },
+      {
+        messages: new MessageService(collab, players),
+        players,
+        rolls: new RollService(collab, sceneService),
+        scenes: { service: sceneService, collab: new SceneCollab(collab, sceneService) },
+      },
     ),
   );
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));

@@ -8,12 +8,14 @@ describe("mailboxes and messages", () => {
     expect(parseRoomDocumentName("room:abcdefghijkl:mail:0123abcd")).toEqual({
       roomId: "abcdefghijkl",
       scope: "mail",
+      sceneId: "main",
       mailbox: "0123abcd",
     });
     expect(parseRoomDocumentName("room:abcdefghijkl:mail:NOTHEX!")).toBeNull();
     expect(parseRoomDocumentName("room:abcdefghijkl:public")).toEqual({
       roomId: "abcdefghijkl",
       scope: "public",
+      sceneId: "main",
     });
   });
 

@@ -9,5 +9,6 @@ export * from "./permissions";
 export * from "./portraits";
 export * from "./presence";
 export * from "./rooms";
+export * from "./scenes";
 export * from "./terrain";
 export * from "./walls";

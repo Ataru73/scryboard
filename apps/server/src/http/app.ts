@@ -5,16 +5,19 @@ import {
   parsePlayerCredentials,
   ROOM_ID_PATTERN,
   rollRequestSchema,
+  sceneNameRequestSchema,
   sendMessageRequestSchema,
   type UploadAssetResponse,
 } from "@scryboard/shared";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { AssetAccess } from "../assets/access";
 import { type AssetStore, UnsupportedAssetError } from "../assets/store";
 import { MessageError, type MessageService, type Sender } from "../collab/messages";
 import type { RollService } from "../collab/rolls";
+import type { SceneCollab } from "../collab/scenes";
 import type { PlayerService } from "../rooms/players";
+import { SceneError, type SceneService } from "../rooms/scenes";
 import type { RoomService } from "../rooms/service";
 import { rateLimit } from "./rateLimit";
 
@@ -30,7 +33,12 @@ export function createApi(
   assets: AssetStore,
   access: AssetAccess,
   options: ApiOptions,
-  messaging: { messages: MessageService; players: PlayerService; rolls: RollService },
+  messaging: {
+    messages: MessageService;
+    players: PlayerService;
+    rolls: RollService;
+    scenes: { service: SceneService; collab: SceneCollab };
+  },
 ): Hono {
   const api = new Hono();
   const limitRooms = rateLimit({
@@ -175,6 +183,65 @@ export function createApi(
       throw error;
     }
   });
+
+  // Scene: le gestisce solo il GM. «Attiva» sposta i giocatori nella scena.
+  const { service: sceneService, collab: sceneCollab } = messaging.scenes;
+  const sceneRoute = async (
+    c: Context,
+    run: (roomId: string) => Promise<Response> | Response,
+  ): Promise<Response> => {
+    const room = findRoom(c.req.param("id") ?? "");
+    if (!room) return c.json({ error: "Stanza non trovata" }, 404);
+    if (!isGmRequest(room.id, c.req.header("authorization"))) {
+      return c.json({ error: "Solo il GM può gestire le scene" }, 403);
+    }
+    try {
+      return await run(room.id);
+    } catch (error) {
+      if (error instanceof SceneError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
+  };
+  const nameOf = async (c: Context) =>
+    sceneNameRequestSchema.safeParse(await c.req.json().catch(() => null));
+
+  api.get("/rooms/:id/scenes", (c) => sceneRoute(c, (roomId) => c.json(sceneService.list(roomId))));
+  api.post("/rooms/:id/scenes", (c) =>
+    sceneRoute(c, async (roomId) => {
+      const parsed = await nameOf(c);
+      if (!parsed.success) return c.json({ error: "Nome non valido" }, 400);
+      return c.json(sceneService.create(roomId, parsed.data.name), 201);
+    }),
+  );
+  api.patch("/rooms/:id/scenes/:sceneId", (c) =>
+    sceneRoute(c, async (roomId) => {
+      const parsed = await nameOf(c);
+      if (!parsed.success) return c.json({ error: "Nome non valido" }, 400);
+      sceneService.rename(roomId, c.req.param("sceneId") ?? "", parsed.data.name);
+      return c.json({ ok: true });
+    }),
+  );
+  api.delete("/rooms/:id/scenes/:sceneId", (c) =>
+    sceneRoute(c, (roomId) => {
+      sceneService.remove(roomId, c.req.param("sceneId") ?? "");
+      return c.json({ ok: true });
+    }),
+  );
+  api.post("/rooms/:id/scenes/:sceneId/duplicate", (c) =>
+    sceneRoute(c, async (roomId) => {
+      const parsed = await nameOf(c);
+      if (!parsed.success) return c.json({ error: "Nome non valido" }, 400);
+      const sceneId = c.req.param("sceneId") ?? "";
+      if (!sceneService.has(roomId, sceneId)) throw new SceneError("Scena non trovata.");
+      return c.json(await sceneCollab.duplicate(roomId, sceneId, parsed.data.name), 201);
+    }),
+  );
+  api.post("/rooms/:id/scenes/:sceneId/activate", (c) =>
+    sceneRoute(c, async (roomId) => {
+      await sceneCollab.activate(roomId, c.req.param("sceneId") ?? "");
+      return c.json({ ok: true });
+    }),
+  );
 
   api.get("/rooms/:id/assets/:assetId", async (c) => {
     const roomId = c.req.param("id");

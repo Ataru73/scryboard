@@ -1,7 +1,9 @@
 import { Database } from "@hocuspocus/extension-database";
 import { Hocuspocus } from "@hocuspocus/server";
 import {
+  ACTIVE_SCENE_KEY,
   GM_MAILBOX,
+  META_MAP,
   parsePlayerCredentials,
   parseRoomDocumentName,
   type Role,
@@ -10,6 +12,7 @@ import { eq } from "drizzle-orm";
 import type { Db } from "../db/client";
 import { documents } from "../db/schema";
 import type { PlayerService } from "../rooms/players";
+import type { SceneService } from "../rooms/scenes";
 import type { RoomService } from "../rooms/service";
 import { guardPublicDocument } from "./guard";
 
@@ -22,6 +25,7 @@ export function createCollab(
   db: Db,
   rooms: RoomService,
   players: PlayerService,
+  scenes: SceneService,
 ): Hocuspocus<ConnectionContext> {
   return new Hocuspocus<ConnectionContext>({
     name: "scryboard",
@@ -53,6 +57,17 @@ export function createCollab(
         return { roomId: parsed.roomId, role: "player" };
       }
       const isGm = rooms.isGmToken(parsed.roomId, token);
+      if (parsed.scope === "meta") {
+        // La scena attiva la scrive solo il server; la leggono tutti.
+        connectionConfig.readOnly = true;
+        rooms.touch(parsed.roomId);
+        return { roomId: parsed.roomId, role: isGm ? "gm" : "player" };
+      }
+      // Una scena esiste solo se il GM l'ha creata e i giocatori entrano solo in quella attiva.
+      if (!scenes.has(parsed.roomId, parsed.sceneId)) throw new Error("Scena non trovata");
+      if (!isGm && parsed.sceneId !== scenes.activeId(parsed.roomId)) {
+        throw new Error("Scena non attiva");
+      }
       // Il documento del GM contiene gli oggetti nascosti: i giocatori non devono mai riceverlo.
       if (parsed.scope === "gm" && !isGm) throw new Error("Accesso negato");
       rooms.touch(parsed.roomId);
@@ -60,7 +75,14 @@ export function createCollab(
     },
 
     async afterLoadDocument({ document, documentName }) {
-      if (parseRoomDocumentName(documentName)?.scope === "public") guardPublicDocument(document);
+      const parsed = parseRoomDocumentName(documentName);
+      if (parsed?.scope === "public") guardPublicDocument(document);
+      if (parsed?.scope === "meta") {
+        // Le stanze create prima delle scene non hanno ancora il documento: lo si riempie qui.
+        const meta = document.getMap<string>(META_MAP);
+        const active = scenes.activeId(parsed.roomId);
+        if (meta.get(ACTIVE_SCENE_KEY) !== active) meta.set(ACTIVE_SCENE_KEY, active);
+      }
     },
 
     extensions: [
