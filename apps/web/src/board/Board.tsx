@@ -324,6 +324,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const pressRef = useRef<{ timer: ReturnType<typeof setTimeout>; screen: Point } | null>(null);
   /** Ultime posizioni sicure degli oggetti durante il trascinamento (inizialmente quelle di partenza). */
   const dragLastRef = useRef<Map<string, Point> | null>(null);
+  const dragStartRef = useRef<Map<string, Point> | null>(null);
+  const [draggedWallOffsets, setDraggedWallOffsets] = useState<Map<string, Point>>(() => new Map());
   const myColor =
     (provider.awareness?.getLocalState()?.user as { color?: string } | undefined)?.color ??
     "#e5484d";
@@ -1294,7 +1296,9 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
 
   function onItemDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     cancelPress();
-    dragLastRef.current = new Map(selectedNodes(e.target).map((n) => [n.id(), n.position()]));
+    const nodes = selectedNodes(e.target);
+    dragLastRef.current = new Map(nodes.map((n) => [n.id(), n.position()]));
+    dragStartRef.current = new Map(nodes.map((n) => [n.id(), n.position()]));
     const id = e.target.id();
     if (store.get(id)?.kind === "token") {
       const start = e.target.position();
@@ -1345,6 +1349,17 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     }
     const drag = dragMeasureRef.current;
     if (drag?.id === dragged.id()) setDragMeasure({ ...drag, cursor: dragged.position() });
+
+    // Aggiorna la posizione in tempo reale dei muri ancorati alle immagini trascinate.
+    const imageNodes = nodes.filter((n) => store.get(n.id())?.kind === "image");
+    if (imageNodes.some((n) => walls.some((w) => w.attachedTo === n.id()))) {
+      const offsets = new Map<string, Point>();
+      for (const n of imageNodes) {
+        const start = dragStartRef.current?.get(n.id());
+        if (start) offsets.set(n.id(), { x: n.x() - start.x, y: n.y() - start.y });
+      }
+      setDraggedWallOffsets(offsets);
+    }
   }
 
   function onItemDragMove(e: Konva.KonvaEventObject<DragEvent>) {
@@ -1369,6 +1384,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       }
     }
     dragLastRef.current = null;
+    dragStartRef.current = null;
+    setDraggedWallOffsets(new Map());
     if (dragMeasureRef.current) setDragMeasure(null);
     store.update(patches);
   }
@@ -1509,9 +1526,17 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     .sort((a, b) => Number(a.kind === "light") - Number(b.kind === "light"));
   const tokenItems = items.filter((i) => i.layer === "token");
   const drawItems = items.filter((i) => i.layer === "draw");
-  const drawnWalls = walls.map((wall) =>
-    wallEdit?.id === wall.id ? { ...wall, points: wallEdit.points } : wall,
-  );
+  const drawnWalls = walls.map((wall) => {
+    if (wallEdit?.id === wall.id) return { ...wall, points: wallEdit.points };
+    const offset = wall.attachedTo ? draggedWallOffsets.get(wall.attachedTo) : undefined;
+    if (offset && (offset.x !== 0 || offset.y !== 0)) {
+      return {
+        ...wall,
+        points: wall.points.map((v, i) => v + (i % 2 === 0 ? offset.x : offset.y)),
+      };
+    }
+    return wall;
+  });
   const visibleWorld = {
     ...screenToWorld(viewport, { x: 0, y: 0 }),
     width: size.width / viewport.scale,

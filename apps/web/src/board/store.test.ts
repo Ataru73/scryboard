@@ -279,6 +279,56 @@ describe("BoardStore", () => {
     expect(player.getWalls()).toHaveLength(2);
   });
 
+  it("moves attached walls when the parent image moves, and deletes them when removed", () => {
+    const doc = new Y.Doc();
+    const store = new BoardStore(doc, null, "gm");
+    store.add([
+      {
+        id: "img-1",
+        kind: "image",
+        layer: "map",
+        assetId: "a.png",
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 200,
+        rotation: 0,
+        z: 1,
+        locked: false,
+        createdBy: "gm",
+      },
+    ]);
+    const [wall] = store.addWalls([
+      { kind: "wall", points: [100, 100, 200, 200], attachedTo: "img-1" },
+    ]);
+    expect(wall?.attachedTo).toBe("img-1");
+
+    // Moving the image shifts the wall points
+    store.update({ "img-1": { x: 150, y: 180 } });
+    expect(store.getWall(wall?.id ?? "")?.points).toEqual([150, 180, 250, 280]);
+
+    // Undo brings both the image and the wall back to original position
+    store.undo();
+    expect(store.get("img-1")?.x).toBe(100);
+    expect(store.getWall(wall?.id ?? "")?.points).toEqual([100, 100, 200, 200]);
+
+    // Redo shifts them again
+    store.redo();
+    expect(store.get("img-1")?.x).toBe(150);
+    expect(store.getWall(wall?.id ?? "")?.points).toEqual([150, 180, 250, 280]);
+
+    // Removing the image removes the attached wall too
+    store.remove(["img-1"]);
+    expect(store.get("img-1")).toBeUndefined();
+    expect(store.getWalls()).toEqual([]);
+
+    // Undo restores both image and attached wall
+    store.undo();
+    expect(store.get("img-1")).toBeDefined();
+    expect(store.getWalls()).toHaveLength(1);
+    expect(store.getWalls()[0]?.points).toEqual([150, 180, 250, 280]);
+  });
+
   it("ignores invalid walls written by other clients", () => {
     const doc = new Y.Doc();
     const store = new BoardStore(doc, null, "gm");

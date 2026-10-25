@@ -10,6 +10,7 @@ import {
   fogOpSchema,
   type GridSettings,
   gridSettingsSchema,
+  type ImageItem,
   ITEMS_MAP,
   initiativeOrder,
   type Layer,
@@ -31,11 +32,16 @@ import {
   wallSchema,
 } from "@scryboard/shared";
 import * as Y from "yjs";
+import { transformPointsWithImage } from "../walls/fromImage";
 
 /** Modifica parziale di un oggetto: non si può cambiare tipo né id. */
 export type ItemPatch = Partial<Omit<BoardItem, "id" | "kind">> & Record<string, unknown>;
 /** Modifica di un muro: il tipo non cambia; lo stato porta esiste solo sulle porte. */
-export type WallPatch = { points?: number[]; door?: "open" | "closed" | "locked" };
+export type WallPatch = {
+  points?: number[];
+  door?: "open" | "closed" | "locked";
+  attachedTo?: string | null;
+};
 
 interface DocPart {
   doc: Y.Doc;
@@ -292,9 +298,36 @@ export class BoardStore {
         this.transact(part, () => {
           for (const [id, patch] of entries) {
             const current = part.loaded.get(id);
-            if (current) part.items.set(id, { ...current, ...patch, id, kind: current.kind });
+            if (current) {
+              const next = { ...current, ...patch, id, kind: current.kind };
+              part.items.set(id, next);
+              if (current.kind === "image") {
+                this.updateAttachedWalls(current, next as ImageItem);
+              }
+            }
           }
         });
+      }
+    });
+  }
+
+  private updateAttachedWalls(oldImage: ImageItem, nextImage: ImageItem) {
+    if (
+      oldImage.x === nextImage.x &&
+      oldImage.y === nextImage.y &&
+      oldImage.width === nextImage.width &&
+      oldImage.height === nextImage.height &&
+      oldImage.rotation === nextImage.rotation
+    ) {
+      return;
+    }
+    const attached = this.walls.filter((w) => w.attachedTo === oldImage.id);
+    if (attached.length === 0) return;
+    this.transact(this.pub, () => {
+      for (const wall of attached) {
+        const points = transformPointsWithImage(wall.points, oldImage, nextImage);
+        const nextWall = { ...wall, points };
+        this.wallsMap.set(wall.id, nextWall);
       }
     });
   }
@@ -307,7 +340,13 @@ export class BoardStore {
       (i): i is TokenItem =>
         i.kind === "token" && !!i.attachedTo && removed.has(i.attachedTo) && !removed.has(i.id),
     );
+    const deadWalls = this.walls.filter((w) => !!w.attachedTo && removed.has(w.attachedTo));
     this.action(() => {
+      if (deadWalls.length > 0) {
+        this.transact(this.pub, () => {
+          for (const w of deadWalls) this.wallsMap.delete(w.id);
+        });
+      }
       for (const part of [this.pub, this.gm]) {
         if (!part) continue;
         const mine = orphans.filter((o) => part.loaded.has(o.id));

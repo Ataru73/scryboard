@@ -20,6 +20,7 @@ const barrierSchema = z
     kind: z.enum(["wall", "window", "invisible", "one-way", "terrain"]),
     /** Polilinea in coordinate assolute del mondo: [x0, y0, x1, y1, ...]. */
     points: barrierPoints,
+    attachedTo: z.string().max(64).nullable().optional(),
   })
   .strict();
 
@@ -30,6 +31,7 @@ const doorSchema = z
     /** Una porta è un singolo segmento, così stato e icona hanno un significato univoco. */
     points: barrierPoints.length(4),
     door: z.enum(DOOR_STATES),
+    attachedTo: z.string().max(64).nullable().optional(),
   })
   .strict();
 

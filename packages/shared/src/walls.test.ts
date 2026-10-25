@@ -24,6 +24,8 @@ describe("wallSchema", () => {
     expect(wallSchema.safeParse(wall).success).toBe(true);
     expect(wallSchema.safeParse({ ...wall, kind: "window" }).success).toBe(true);
     expect(wallSchema.safeParse({ ...wall, kind: "invisible" }).success).toBe(true);
+    expect(wallSchema.safeParse({ ...wall, attachedTo: "img-123" }).success).toBe(true);
+    expect(wallSchema.safeParse({ ...door, attachedTo: "img-123" }).success).toBe(true);
     for (const state of ["open", "closed", "locked"]) {
       expect(wallSchema.safeParse({ ...door, door: state }).success).toBe(true);
     }
