@@ -1,8 +1,9 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import type { BoardItem, Role } from "@scryboard/shared";
+import type { BoardItem, Role, TokenItem } from "@scryboard/shared";
 import { canModify } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
 import { AuraFields } from "./AuraFields";
+import { parentOf } from "./attach";
 import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
 import { LightFields, VisionFields } from "./LightFields";
 import { PathFields } from "./PathFields";
@@ -45,6 +46,7 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           />
           <span className="toolbar-separator" />
           <AuraFields token={single} store={store} />
+          <AttachButton token={single} store={store} />
         </>
       )}
       {single?.kind === "token" && role === "gm" && canModify(single, role) && (
@@ -106,5 +108,32 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
         </button>
       )}
     </div>
+  );
+}
+
+/** «Aggancia a…»: il prossimo token cliccato diventa quello principale (cavalcatura, veicolo). */
+function AttachButton({ token, store }: { token: TokenItem; store: BoardStore }) {
+  const attachFrom = useBoardUi((s) => s.attachFrom);
+  const parent = parentOf(store.getSnapshot(), token);
+  if (parent) {
+    return (
+      <button
+        type="button"
+        title="Il token non seguirà più quello principale"
+        onClick={() => store.update({ [token.id]: { attachedTo: null } })}
+      >
+        Sgancia da {parent.name || "token"}
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      aria-pressed={attachFrom === token.id}
+      title="Poi clicca il token principale: si muoveranno insieme"
+      onClick={() => useBoardUi.getState().setAttachFrom(attachFrom === token.id ? null : token.id)}
+    >
+      Aggancia a…
+    </button>
   );
 }

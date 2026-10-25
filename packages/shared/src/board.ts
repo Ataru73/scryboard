@@ -106,6 +106,11 @@ export const tokenItemSchema = z.object({
    * sul token, così i token nascosti restano nel documento del GM insieme al loro valore.
    */
   initiative: z.number().min(-1000).max(1000).nullable().optional(),
+  /**
+   * Token a cui questo è agganciato (cavalcatura, veicolo): muovendo quello si muove anche questo.
+   * Solo un livello: chi ha agganciati non può essere agganciato a sua volta.
+   */
+  attachedTo: z.string().max(64).nullable().optional(),
   /** Aura attorno al token (raggio in caselle dal bordo), visibile a tutti. */
   aura: z
     .object({ radius: z.number().positive().max(100), color })

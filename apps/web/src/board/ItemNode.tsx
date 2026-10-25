@@ -40,6 +40,8 @@ interface Props {
   selected: boolean;
   /** È il turno di questo token. */
   turn?: boolean;
+  /** Agganciato a un altro token: mostra il simbolo della catena. */
+  attached?: boolean;
   /** Luce ambientale che tinge le immagini; assente con le luci spente. */
   ambient?: LightingSettings["ambient"];
   onDragStart?: (event: Konva.KonvaEventObject<DragEvent>) => void;
@@ -56,6 +58,7 @@ export const ItemNode = memo(function ItemNode({
   concealed,
   selected,
   turn,
+  attached,
   ambient,
   onDragStart,
   onDragMove,
@@ -81,6 +84,7 @@ export const ItemNode = memo(function ItemNode({
           cellSize={cellSize}
           selected={selected}
           turn={turn}
+          attached={attached}
         />
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
@@ -223,12 +227,14 @@ function TokenContent({
   cellSize,
   selected,
   turn,
+  attached,
 }: {
   item: TokenItem;
   roomId: string;
   cellSize: number;
   selected: boolean;
   turn?: boolean;
+  attached?: boolean;
 }) {
   const r = (item.size * cellSize) / 2;
   const ring = Math.max(2, r * 0.1);
@@ -275,6 +281,7 @@ function TokenContent({
         <TokenFace item={item} radius={r} />
       )}
       <Circle radius={r - ring / 2} stroke={item.color} strokeWidth={ring} />
+      {attached && <ChainBadge x={r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />}
       {item.name && (
         <Text
           text={item.name}
@@ -293,6 +300,27 @@ function TokenContent({
         />
       )}
     </>
+  );
+}
+
+/** Piccolo simbolo di catena in un angolo del token: è agganciato a un altro. */
+function ChainBadge({ x, y, size }: { x: number; y: number; size: number }) {
+  const scale = (size * 0.6) / 24;
+  return (
+    <Group x={x} y={y} listening={false} name="chain-badge">
+      <Circle radius={size / 2} fill="#1d1a24" stroke="#ffffff" strokeWidth={1.5} />
+      <Path
+        data="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+        x={-12 * scale}
+        y={-12 * scale}
+        scaleX={scale}
+        scaleY={scale}
+        stroke="#ffffff"
+        strokeWidth={2.4}
+        lineCap="round"
+        lineJoin="round"
+      />
+    </Group>
   );
 }
 

@@ -301,11 +301,20 @@ export class BoardStore {
 
   remove(ids: Iterable<string>) {
     const list = [...ids];
+    const removed = new Set(list);
+    // I token agganciati a uno che sparisce si sganciano, nella stessa azione (annullando tornano).
+    const orphans = [...this.byId.values()].filter(
+      (i): i is TokenItem =>
+        i.kind === "token" && !!i.attachedTo && removed.has(i.attachedTo) && !removed.has(i.id),
+    );
     this.action(() => {
       for (const part of [this.pub, this.gm]) {
-        if (!part || !list.some((id) => part.items.has(id))) continue;
+        if (!part) continue;
+        const mine = orphans.filter((o) => part.loaded.has(o.id));
+        if (mine.length === 0 && !list.some((id) => part.items.has(id))) continue;
         this.transact(part, () => {
           for (const id of list) part.items.delete(id);
+          for (const o of mine) part.items.set(o.id, { ...o, attachedTo: null });
         });
       }
     });

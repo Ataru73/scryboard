@@ -90,6 +90,10 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
         case "Escape":
           // Durante una misura Esc la annulla (lo gestisce la lavagna) e basta.
           if (ui.measuring) return;
+          if (ui.attachFrom) {
+            ui.setAttachFrom(null);
+            return;
+          }
           if (ui.tool === "calibrate" || ui.tool === "ruler") ui.setTool("select");
           else ui.selectWall(null);
           return;

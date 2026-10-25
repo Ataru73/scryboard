@@ -1,4 +1,5 @@
 import { type BoardItem, type GridSettings, PORTRAITS, type TokenItem } from "@scryboard/shared";
+import { parentOf } from "./attach";
 import { cellAt } from "./grid";
 import { PortraitGlyph } from "./PortraitPicker";
 
@@ -27,6 +28,7 @@ export function TokenList({
             {t.name || "Token senza nome"}
             {grid.enabled && `, colonna ${cell.col + 1}, riga ${cell.row + 1}`}
             {portrait && `, immagine ${portrait.label}`}
+            {parentOf(items, t) && `, agganciato a ${parentOf(items, t)?.name || "un token"}`}
             {t.locked && ", bloccato"}
             {isHidden(t.id) && ", nascosto"}
           </li>

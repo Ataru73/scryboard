@@ -301,6 +301,18 @@ perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
 
 ### T9 — Cavalcature e oggetti agganciati (≈ 1 settimana)
 
+**Stato**: completata. Note rispetto al piano:
+- `attachedTo` è un campo del token (assente o null = libero). Solo un livello: non si aggancia
+  un token che ha già agganciati né a uno che è a sua volta agganciato (messaggio d'errore), così
+  non esistono catene e le posizioni si calcolano in un passo.
+- Dal pannello di selezione, «Aggancia a…» poi il clic sul token principale (Esc annulla);
+  «Sgancia da X» la toglie. Il token agganciato ha un simbolo di catena. Muovendo il principale
+  (o una selezione che lo contiene) gli agganciati seguono lo stesso spostamento, con le stesse
+  collisioni dei muri e solo se si possono muovere; muovere da solo un agganciato lo sgancia.
+  Anche l'elenco per gli screen reader dice «agganciato a X».
+- Cancellando il principale, gli agganciati si sganciano nella stessa azione di annulla.
+- Nessuna regola nuova nel guard: un giocatore può agganciare solo ciò che può già muovere.
+
 **Cosa vede l'utente**
 - Menu del token: **Aggancia a…** (poi clic su un altro token). Spostando il "genitore" si
   spostano anche gli agganciati; un'icona a catena indica il legame. Spostare il figlio da solo

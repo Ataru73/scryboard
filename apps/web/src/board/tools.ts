@@ -107,6 +107,8 @@ interface BoardUiState {
   rulerShape: "ruler" | TemplateShape;
   /** Pannello dei turni aperto. */
   initiativeOpen: boolean;
+  /** Token che si sta agganciando: il prossimo clic su un altro token è quello principale. */
+  attachFrom: string | null;
   tokenDraft: TokenDraft;
   gridPanelOpen: boolean;
   fogMode: FogMode;
@@ -151,6 +153,7 @@ interface BoardUiState {
   setMeasuring: (on: boolean) => void;
   setRulerShape: (shape: BoardUiState["rulerShape"]) => void;
   setInitiativeOpen: (open: boolean) => void;
+  setAttachFrom: (id: string | null) => void;
   setTokenDraft: (patch: Partial<TokenDraft>) => void;
   setGridPanelOpen: (open: boolean) => void;
   setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
@@ -211,6 +214,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   measuring: false,
   rulerShape: "ruler",
   initiativeOpen: false,
+  attachFrom: null,
   tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null, portrait: null },
   gridPanelOpen: false,
   fogMode: "cover",
@@ -233,7 +237,14 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   stampId: "tree",
   stampRandom: true,
   setTool: (tool) =>
-    set({ tool, selectedIds: [], pathPoint: null, selectedWallId: null, editingTextId: null }),
+    set({
+      tool,
+      selectedIds: [],
+      pathPoint: null,
+      selectedWallId: null,
+      editingTextId: null,
+      attachFrom: null,
+    }),
   setColor: (color) => set({ color }),
   setStrokeWidth: (strokeWidth) => set({ strokeWidth }),
   setFilled: (filled) => set({ filled }),
@@ -245,6 +256,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setMeasuring: (measuring) => set({ measuring }),
   setRulerShape: (rulerShape) => set({ rulerShape }),
   setInitiativeOpen: (initiativeOpen) => set({ initiativeOpen }),
+  setAttachFrom: (attachFrom) => set({ attachFrom }),
   setTokenDraft: (patch) => set((s) => ({ tokenDraft: { ...s.tokenDraft, ...patch } })),
   setGridPanelOpen: (gridPanelOpen) => set({ gridPanelOpen }),
   setFog: (patch) => set(patch),

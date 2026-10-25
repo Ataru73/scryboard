@@ -59,6 +59,7 @@ import { WallHandles } from "../walls/WallHandles";
 import { WallLayer } from "../walls/WallLayer";
 import { type TemplateGeometry, templateFromDrag, templateLabel } from "./areas";
 import { useAssetAuth } from "./assetAuth";
+import { attachError, followers, parentOf } from "./attach";
 import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
 import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
@@ -71,7 +72,7 @@ import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
-import { type BoardStore, newItemId } from "./store";
+import { type BoardStore, type ItemPatch, newItemId } from "./store";
 import { AreaHighlights, AreaPreview, tokensInside } from "./Templates";
 import { TerrainLayer } from "./TerrainLayer";
 import { TextEditor } from "./TextEditor";
@@ -233,6 +234,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const viewport = useBoardUi((s) => s.viewport);
   const spacePan = useBoardUi((s) => s.spacePan);
   const initiativeOpen = useBoardUi((s) => s.initiativeOpen);
+  const attachFrom = useBoardUi((s) => s.attachFrom);
   const turn = useSyncExternalStore(store.subscribe, store.getTurn);
   const fogMode = useBoardUi((s) => s.fogMode);
   const fogShape = useBoardUi((s) => s.fogShape);
@@ -649,6 +651,16 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     const target = targetId ? store.get(targetId) : undefined;
     const targetWallId = role === "gm" ? findWallId(e.target) : null;
     const targetWall = targetWallId ? store.getWall(targetWallId) : undefined;
+
+    // Modalità «Aggancia a…»: il clic successivo sceglie il token principale (altrove, annulla).
+    if (tool === "select" && attachFrom) {
+      const child = store.get(attachFrom);
+      const problem = attachError(store.getSnapshot(), child, target);
+      if (target && problem) setNotice(problem);
+      else if (target) store.update({ [attachFrom]: { attachedTo: target.id } });
+      useBoardUi.getState().setAttachFrom(null);
+      return;
+    }
 
     switch (tool) {
       case "select": {
@@ -1252,11 +1264,22 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   /** Nodi degli oggetti selezionati che si muovono insieme a quello trascinato. */
   function selectedNodes(dragged: Konva.Node): Konva.Node[] {
     const stage = stageRef.current;
-    if (!stage || !selectedIds.includes(dragged.id())) return [dragged];
-    return selectedIds
-      .filter((id) => canEdit(store.get(id)))
-      .map((id) => stage.findOne((n: Konva.Node) => n.hasName("item") && n.id() === id))
+    if (!stage) return [dragged];
+    const nodeOf = (id: string) =>
+      stage.findOne((n: Konva.Node) => n.hasName("item") && n.id() === id);
+    const own = selectedIds.includes(dragged.id())
+      ? selectedIds
+          .filter((id) => canEdit(store.get(id)))
+          .map(nodeOf)
+          .filter((n): n is Konva.Node => n !== undefined)
+      : [dragged];
+    // I token agganciati a quelli che si muovono li seguono (se si possono spostare).
+    const moving = new Set(own.map((n) => n.id()));
+    const riders = followers(store.getSnapshot(), moving)
+      .filter((t) => canEdit(t))
+      .map((t) => nodeOf(t.id))
       .filter((n): n is Konva.Node => n !== undefined);
+    return [...own, ...riders];
   }
 
   function onItemDragStart(e: Konva.KonvaEventObject<DragEvent>) {
@@ -1319,8 +1342,22 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   }
 
   function onItemDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
-    const patches: Record<string, { x: number; y: number }> = {};
-    for (const node of selectedNodes(e.target)) patches[node.id()] = { x: node.x(), y: node.y() };
+    const patches: Record<string, ItemPatch> = {};
+    const nodes = selectedNodes(e.target);
+    const moved = new Set(nodes.map((n) => n.id()));
+    for (const node of nodes) {
+      patches[node.id()] = { x: node.x(), y: node.y() };
+      // Spostare da solo un token agganciato lo sgancia (se si è mosso davvero).
+      const item = store.get(node.id());
+      if (
+        item?.kind === "token" &&
+        item.attachedTo &&
+        !moved.has(item.attachedTo) &&
+        (item.x !== node.x() || item.y !== node.y())
+      ) {
+        patches[node.id()] = { x: node.x(), y: node.y(), attachedTo: null };
+      }
+    }
     dragLastRef.current = null;
     if (dragMeasureRef.current) setDragMeasure(null);
     store.update(patches);
@@ -1483,6 +1520,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         concealed={store.isHidden(item.id)}
         selected={selectedIds.includes(item.id)}
         turn={item.id === turn.activeId}
+        attached={
+          item.kind === "token" &&
+          !!item.attachedTo &&
+          parentOf(store.getSnapshot(), item) !== undefined
+        }
         ambient={lighting.enabled ? lighting.ambient : undefined}
         onDragStart={onItemDragStart}
         onDragMove={onItemDragMove}

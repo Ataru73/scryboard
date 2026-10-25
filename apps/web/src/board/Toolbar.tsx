@@ -101,6 +101,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     setEditingText,
   } = useBoardUi.getState();
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
+  const attachFrom = useBoardUi((s) => s.attachFrom);
   const canUndo = useSyncExternalStore(store.subscribe, () => store.canUndo());
   const canRedo = useSyncExternalStore(store.subscribe, () => store.canRedo());
   const isEmpty = useSyncExternalStore(store.subscribe, () => store.isEmpty());
@@ -305,6 +306,16 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
               ? "Spazio aggiunge una tappa."
               : "Maiusc al rilascio fissa la sagoma. Alt: senza griglia."}
           </span>
+        </div>
+      )}
+
+      {attachFrom && (
+        <div className="toolbar toolbar-style toolbar-hint attach-hint" role="status">
+          Clicca il token principale a cui agganciare «
+          {store.get(attachFrom)?.kind === "token"
+            ? (store.get(attachFrom) as { name: string }).name || "il token"
+            : "il token"}
+          ». Esc per annullare.
         </div>
       )}
 

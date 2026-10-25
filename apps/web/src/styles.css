@@ -1312,3 +1312,11 @@ button.danger {
   font-size: 0.65rem;
   font-weight: 700;
 }
+
+/* In basso: in alto c'è il pannello di selezione del token che si sta agganciando. */
+.toolbar-style.attach-hint {
+  top: auto;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
