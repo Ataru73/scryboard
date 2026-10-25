@@ -18,8 +18,17 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   expect(total).toBeGreaterThanOrEqual(10);
   expect(total).toBeLessThanOrEqual(50);
   await expect(playerLog.getByLabel("Totale di Arwen")).toHaveText(String(total));
-  // Il tiro compare anche sulla lavagna, per tutti.
-  await expect(gm.getByRole("status", { name: "Ultimi tiri" })).toContainText("Arwen");
+  // Il tiro compare anche sulla lavagna, per tutti, con i dadi 2D animati.
+  await gm.emulateMedia({ reducedMotion: "reduce" });
+  const recent = gm.getByRole("status", { name: "Ultimi tiri" });
+  await expect(recent).toContainText("Arwen");
+  await expect(recent.locator(".roll-die")).toHaveCount(8);
+  const animationCount = await recent
+    .locator(".roll-die")
+    .first()
+    .evaluate((el) => el.getAnimations({ subtree: true }).length);
+  expect(animationCount).toBeGreaterThan(0);
+  await expect(recent.locator(".roll-die.settled")).toHaveCount(8);
 
   // Formule non valide si spiegano.
   await player.getByLabel("Formula dei dadi").fill("1d1");

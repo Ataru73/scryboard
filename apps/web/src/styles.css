@@ -1213,35 +1213,273 @@ button.danger {
 
 .roll-toasts {
   position: absolute;
-  left: 64px;
-  bottom: 12px;
+  inset: 0;
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
   pointer-events: none;
 }
 
 .roll-toast {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: var(--radius);
-  background: #1d1a24;
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.35);
+  gap: 0.7rem;
+  max-width: min(92%, 34rem);
+  padding: 0.9rem 1.25rem;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: calc(var(--radius) * 1.4);
+  background: rgb(24 21 31 / 0.92);
+  backdrop-filter: blur(8px);
+  color: #f4f1fa;
+  box-shadow:
+    0 12px 36px rgb(0 0 0 / 0.45),
+    0 2px 8px rgb(0 0 0 / 0.25);
+  animation: roll-toast-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 
 .roll-toast.secret {
-  outline: 1px dashed #ffffff88;
+  outline: 1.5px dashed rgb(255 255 255 / 0.55);
+  outline-offset: -4px;
+}
+
+.roll-toast-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.roll-toast-formula {
+  color: #b7b0c8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.roll-toast-secret {
+  color: #ffb224;
+  font-size: 0.78rem;
+}
+
+.roll-toast-tray {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.roll-die {
+  --die-delay: 0ms;
+  --die-duration: 950ms;
+  --die-rest: 0deg;
+  --die-throw-x: -28px;
+  --die-throw-y: -36px;
+  --die-spin-start: -540deg;
+  --die-fill: #2c2638;
+  --die-stroke: #9e8cfc;
+  position: relative;
+  width: 3.35rem;
+  height: 3.35rem;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 4px 8px rgb(0 0 0 / 0.4));
+  transform: rotate(var(--die-rest));
+  animation: die-tumble var(--die-duration) ease-out var(--die-delay) both;
+}
+
+.roll-die.exploded {
+  --die-fill: #3b2a14;
+  --die-stroke: #ffb224;
+}
+
+.roll-die.settled {
+  animation: die-land 0.28s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+
+.roll-die.success,
+.roll-die.crit-max {
+  --die-fill: #193629;
+  --die-stroke: #4cc38a;
+}
+
+.roll-die.crit-min {
+  --die-fill: #3b1c22;
+  --die-stroke: #ff6b6b;
+}
+
+.roll-die.fail {
+  --die-stroke: #635c73;
+  opacity: 0.68;
+}
+
+.roll-die.discarded {
+  --die-fill: #211d29;
+  --die-stroke: #565063;
+  opacity: 0.42;
+}
+
+.die-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.roll-die.rolling .die-svg {
+  animation: die-spin 0.32s linear var(--die-delay) infinite;
+}
+
+.die-poly {
+  fill: var(--die-fill);
+  stroke: var(--die-stroke);
+  stroke-width: 2.4;
+}
+
+.die-facet {
+  fill: none;
+  stroke: var(--die-stroke);
+  stroke-width: 1;
+  opacity: 0.32;
+}
+
+.die-value {
+  position: relative;
+  z-index: 1;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.65);
+}
+
+.die-d4 .die-value {
+  transform: translateY(4px);
+}
+
+.roll-die.discarded .die-value {
+  text-decoration: line-through;
+}
+
+.die-tag {
+  position: absolute;
+  right: 1px;
+  bottom: -2px;
+  z-index: 1;
+  padding: 0 0.22rem;
+  border-radius: 4px;
+  background: rgb(18 16 22 / 0.85);
+  color: #b7b0c8;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.roll-die-mod,
+.roll-die-more {
+  padding: 0.25rem 0.55rem;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  color: #e4dff0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.roll-toast-footer {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.roll-toast-footer.pending {
+  opacity: 0.35;
+}
+
+.roll-toast-footer.ready {
+  animation: roll-total-pop 0.32s cubic-bezier(0.22, 1.35, 0.36, 1) both;
 }
 
 .roll-toast-total {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1;
   min-width: 2ch;
   text-align: center;
+  color: #ffffff;
+}
+
+.roll-toast-unit {
+  color: #b7b0c8;
+  font-size: 0.85rem;
+}
+
+@keyframes roll-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes die-tumble {
+  0% {
+    opacity: 0;
+    transform: translate(var(--die-throw-x), var(--die-throw-y)) scale(0.35);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(calc(var(--die-throw-x) * -0.45), 10px) scale(1.12);
+  }
+  50% {
+    transform: translate(calc(var(--die-throw-x) * 0.25), -8px) scale(0.92);
+  }
+  75% {
+    transform: translate(calc(var(--die-throw-x) * -0.1), 4px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+@keyframes die-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes die-land {
+  0% {
+    transform: scale(1.18) rotate(calc(var(--die-rest) - 12deg));
+  }
+  60% {
+    transform: scale(0.95) rotate(calc(var(--die-rest) + 4deg));
+  }
+  100% {
+    transform: scale(1) rotate(var(--die-rest));
+  }
+}
+
+@keyframes roll-total-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .ping-arrow {
