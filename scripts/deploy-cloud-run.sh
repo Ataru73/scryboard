@@ -4,10 +4,12 @@
 #   scripts/deploy-cloud-run.sh               # deploy standard
 #   scripts/deploy-cloud-run.sh --memory 2Gi  # flag extra passati a gcloud run deploy
 #
-# Senza un volume montato, database e immagini caricate vivono nel filesystem del
-# container, che su Cloud Run è effimero: a ogni riavvio, redeploy o spegnimento
-# (scale to zero) si riparte da un database vuoto. Va bene per demo e test; per
-# i dati veri servono Fly.io o una VPS.
+# Con DATA_BUCKET=<nome-bucket> il database viene replicato di continuo sul bucket
+# (Litestream) e le immagini vi vengono salvate: sopravvivono a riavvii, redeploy e
+# spegnimenti. Lo script crea il service account del servizio (se manca) e gli dà
+# roles/storage.objectAdmin sul bucket. Senza DATA_BUCKET database e immagini vivono nel
+# filesystem effimero del container e a ogni riavvio si riparte da zero: va bene
+# solo per demo e test.
 #
 # `--max-instances 1` è obbligatorio: lo stato vive nel processo e due istanze
 # avrebbero due database separati.
@@ -20,6 +22,17 @@ PROJECT="${PROJECT:-gen-lang-client-0514761082}"
 REGION="${REGION:-europe-west8}"
 SERVICE="${SERVICE:-scryboard}"
 BUILD_SA="${BUILD_SA:-scryboard-builder@${PROJECT}.iam.gserviceaccount.com}"
+DATA_BUCKET="${DATA_BUCKET:-}"
+# Service account con cui gira il servizio: con DATA_BUCKET ne serve uno dedicato, perché quello
+# predefinito di Compute è disattivato su questo progetto.
+RUN_SA="${RUN_SA:-scryboard-runtime@${PROJECT}.iam.gserviceaccount.com}"
+
+ENV_VARS="DATABASE_PATH=/data/scryboard.db,ASSETS_DIR=/data/assets,TRUST_PROXY=true"
+EXTRA_FLAGS=()
+if [ -n "$DATA_BUCKET" ]; then
+  ENV_VARS="$ENV_VARS,ASSET_STORAGE=gcs,GCS_BUCKET=$DATA_BUCKET,LITESTREAM_REPLICA_URL=gcs://$DATA_BUCKET/scryboard.db"
+  EXTRA_FLAGS+=(--service-account "$RUN_SA")
+fi
 
 cd "$(dirname "$0")/.."
 
@@ -36,6 +49,25 @@ gcloud iam service-accounts describe "$BUILD_SA" --project="$PROJECT" >/dev/null
   exit 1
 }
 
+if [ -n "$DATA_BUCKET" ]; then
+  gcloud storage buckets describe "gs://$DATA_BUCKET" --project="$PROJECT" >/dev/null 2>&1 || {
+    echo "Il bucket gs://$DATA_BUCKET non esiste: crealo con" >&2
+    echo "  gcloud storage buckets create gs://$DATA_BUCKET --project $PROJECT --location $REGION" >&2
+    exit 1
+  }
+  if ! gcloud iam service-accounts describe "$RUN_SA" --project="$PROJECT" >/dev/null 2>&1; then
+    echo "Creo il service account $RUN_SA..."
+    gcloud iam service-accounts create "${RUN_SA%%@*}" --project="$PROJECT" \
+      --display-name="Scryboard (Cloud Run)"
+  fi
+  # Idempotente: se il ruolo c'è già non cambia nulla.
+  gcloud storage buckets add-iam-policy-binding "gs://$DATA_BUCKET" --project="$PROJECT" \
+    --member="serviceAccount:$RUN_SA" --role=roles/storage.objectAdmin >/dev/null
+  echo "Dati su gs://$DATA_BUCKET (database replicato con Litestream, immagini nel bucket)."
+else
+  echo "ATTENZIONE: DATA_BUCKET non impostato, i dati andranno persi a ogni riavvio." >&2
+fi
+
 echo "Deploy di $SERVICE in $REGION (progetto $PROJECT)..."
 gcloud run deploy "$SERVICE" \
   --source . \
@@ -48,7 +80,8 @@ gcloud run deploy "$SERVICE" \
   --memory 1Gi \
   --min-instances 0 \
   --max-instances 1 \
-  --set-env-vars DATABASE_PATH=/data/scryboard.db,ASSETS_DIR=/data/assets,TRUST_PROXY=true \
+  --set-env-vars "$ENV_VARS" \
+  ${EXTRA_FLAGS[@]+"${EXTRA_FLAGS[@]}"} \
   "$@"
 
 URL=$(gcloud run services describe "$SERVICE" \

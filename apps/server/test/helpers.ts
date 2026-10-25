@@ -31,6 +31,7 @@ export async function startTestServer(
     host: "127.0.0.1",
     databasePath,
     assetsDir: join(dirname(databasePath), "assets"),
+    assetStorage: { type: "local" },
   };
   const server = await startServer(config);
   return { ...server, baseUrl: `http://127.0.0.1:${server.port}`, databasePath };

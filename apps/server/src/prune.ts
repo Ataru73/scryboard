@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { createAssetStore } from "./assets/store";
 import { loadConfig } from "./config";
 import { openDatabase } from "./db/client";
 import { pruneInactiveRooms } from "./rooms/prune";
@@ -24,7 +25,7 @@ if (values["dry-run"]) {
   const ids = rooms.inactiveSince(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
   console.log(`${ids.length} stanze inattive da più di ${days} giorni (nessuna eliminata).`);
 } else {
-  const ids = await pruneInactiveRooms(db, rooms, config.assetsDir, days);
+  const ids = await pruneInactiveRooms(db, rooms, await createAssetStore(config), days);
   console.log(`Eliminate ${ids.length} stanze inattive da più di ${days} giorni.`);
 }
 close();

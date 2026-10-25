@@ -5,6 +5,8 @@ export interface Config {
   host: string;
   databasePath: string;
   assetsDir: string;
+  /** Dove stanno le immagini: su disco, o su un bucket Google Cloud Storage. */
+  assetStorage: { type: "local" } | { type: "gcs"; bucket: string };
   migrationsDir: string;
   webDistDir: string | null;
   /** Richieste consentite per IP ogni 10 minuti. */
@@ -14,11 +16,20 @@ export interface Config {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+  const storage = env.ASSET_STORAGE ?? "local";
+  if (storage !== "local" && storage !== "gcs") {
+    throw new Error(`ASSET_STORAGE non valido: "${storage}" (usa "local" o "gcs")`);
+  }
+  if (storage === "gcs" && !env.GCS_BUCKET) {
+    throw new Error("ASSET_STORAGE=gcs richiede GCS_BUCKET");
+  }
   return {
     port: Number(env.PORT ?? 3000),
     host: env.HOST ?? "0.0.0.0",
     databasePath: env.DATABASE_PATH ?? "./data/scryboard.db",
     assetsDir: env.ASSETS_DIR ?? "./data/assets",
+    assetStorage:
+      storage === "gcs" ? { type: "gcs", bucket: env.GCS_BUCKET as string } : { type: "local" },
     // Sia src/config.ts sia dist/index.js stanno un livello sotto la root del pacchetto.
     migrationsDir: fileURLToPath(new URL("../drizzle", import.meta.url)),
     webDistDir: env.WEB_DIST_DIR ?? null,

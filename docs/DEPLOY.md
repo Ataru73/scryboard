@@ -6,15 +6,18 @@ sulla porta 3000.
 
 ## Variabili d'ambiente
 
-| Variabile             | Default              | Note                                                        |
-| --------------------- | -------------------- | ----------------------------------------------------------- |
-| `PORT`                | `3000`               |                                                             |
-| `DATABASE_PATH`       | `/data/scryboard.db` | Nel container; in sviluppo `./data/scryboard.db`            |
-| `ASSETS_DIR`          | `/data/assets`       | Immagini caricate                                           |
-| `TRUST_PROXY`         | `false`              | `true` dietro un proxy: l'IP del client arriva negli header |
-| `ROOMS_PER_10_MIN`    | `20`                 | Stanze create per IP ogni 10 minuti                         |
-| `UPLOADS_PER_10_MIN`  | `200`                | Immagini caricate per IP ogni 10 minuti                     |
-| `MESSAGES_PER_10_MIN` | `300`                | Messaggi privati inviati per IP ogni 10 minuti              |
+| Variabile                | Default              | Note                                                                           |
+| ------------------------ | -------------------- | ------------------------------------------------------------------------------ |
+| `PORT`                   | `3000`               |                                                                                |
+| `DATABASE_PATH`          | `/data/scryboard.db` | Nel container; in sviluppo `./data/scryboard.db`                               |
+| `ASSETS_DIR`             | `/data/assets`       | Immagini caricate (con `ASSET_STORAGE=local`)                                  |
+| `ASSET_STORAGE`          | `local`              | `gcs` salva le immagini su un bucket Google Cloud Storage                      |
+| `GCS_BUCKET`             |                      | Nome del bucket, obbligatorio con `ASSET_STORAGE=gcs`                          |
+| `LITESTREAM_REPLICA_URL` |                      | Es. `gcs://bucket/scryboard.db`: replica e ripristina il database su un bucket |
+| `TRUST_PROXY`            | `false`              | `true` dietro un proxy: l'IP del client arriva negli header                    |
+| `ROOMS_PER_10_MIN`       | `20`                 | Stanze create per IP ogni 10 minuti                                            |
+| `UPLOADS_PER_10_MIN`     | `200`                | Immagini caricate per IP ogni 10 minuti                                        |
+| `MESSAGES_PER_10_MIN`    | `300`                | Messaggi privati inviati per IP ogni 10 minuti                                 |
 
 ## Fly.io
 
@@ -64,14 +67,37 @@ Lo script costruisce l'immagine con Cloud Build e aggiorna il servizio `scryboar
 `SERVICE`; eventuali flag extra passati allo script finiscono a `gcloud run deploy`.
 
 Il servizio è pubblico, su una sola istanza (`--max-instances 1`: lo stato vive nel processo) e
-si spegne quando non serve. Due differenze rispetto a Fly.io:
-- Niente volume: database e immagini stanno nel filesystem effimero del container, quindi a
-  ogni riavvio o redeploy si riparte da un database vuoto. Va bene per demo e test; per i
-  dati veri servono Fly.io o una VPS. Un bucket GCS montato con gcsfuse non è un'alternativa
-  per SQLite: manca il file locking che richiede.
-- Il progetto in uso è stato creato da AI Studio con il service account predefinito di Compute
-  disattivato: le build usano quindi il service account `scryboard-builder` con il ruolo
-  `roles/run.builder` (creato una volta con `gcloud iam service-accounts create`).
+si spegne quando non serve.
+
+### Dati su un bucket
+
+Senza configurazione database e immagini stanno nel filesystem effimero del container: a ogni
+riavvio o redeploy si riparte da zero. Per i dati veri si usa un bucket (un bucket montato con
+gcsfuse non va bene per SQLite: manca il file locking che richiede):
+- il **database** resta un file locale nel container ed è replicato di continuo sul bucket con
+  [Litestream](https://litestream.io); all'avvio, se il file non c'è, viene ripristinato dal
+  bucket. Se l'istanza viene fermata di colpo si possono perdere al massimo gli ultimi secondi;
+- le **immagini** vengono salvate direttamente nel bucket (`ASSET_STORAGE=gcs`).
+
+```bash
+gcloud storage buckets create gs://scryboard-storage --project $PROJECT --location europe-west8
+DATA_BUCKET=scryboard-storage scripts/deploy-cloud-run.sh
+```
+
+Lo script crea il service account `scryboard-runtime` (cambiabile con `RUN_SA`), gli dà
+`roles/storage.objectAdmin` sul bucket e lo usa per il servizio.
+
+`DATA_BUCKET` imposta da solo `ASSET_STORAGE`, `GCS_BUCKET` e `LITESTREAM_REPLICA_URL`. In
+locale, o su una VPS, non serve nulla di tutto questo: database e immagini restano in `/data`
+nel container (monta un volume per non perderli).
+
+La pulizia delle stanze inattive (`prune.js`) elimina anche le immagini dal bucket se lanciata
+con le stesse variabili `ASSET_STORAGE` e `GCS_BUCKET`; su Cloud Run va eseguita come job con
+le stesse variabili del servizio.
+
+Il progetto in uso è stato creato da AI Studio con il service account predefinito di Compute
+disattivato: le build usano quindi il service account `scryboard-builder` con il ruolo
+`roles/run.builder` (creato una volta con `gcloud iam service-accounts create`).
 
 I WebSocket funzionano, ma Cloud Run li chiude dopo 60 minuti: il client si riconnette da solo.
 

@@ -1,6 +1,5 @@
-import { rm } from "node:fs/promises";
-import { join } from "node:path";
 import { eq, like } from "drizzle-orm";
+import type { AssetStore } from "../assets/store";
 import type { Db } from "../db/client";
 import { assets, documents, players, rooms } from "../db/schema";
 import type { RoomService } from "./service";
@@ -12,7 +11,7 @@ import type { RoomService } from "./service";
 export async function pruneInactiveRooms(
   db: Db,
   roomService: RoomService,
-  assetsDir: string,
+  assetStore: AssetStore,
   days: number,
   now = new Date(),
 ): Promise<string[]> {
@@ -28,7 +27,7 @@ export async function pruneInactiveRooms(
       tx.delete(assets).where(eq(assets.roomId, id)).run();
       tx.delete(rooms).where(eq(rooms.id, id)).run();
     });
-    await rm(join(assetsDir, id), { recursive: true, force: true });
+    await assetStore.deleteRoom(id);
   }
   return ids;
 }

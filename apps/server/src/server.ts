@@ -8,7 +8,7 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { WebSocketServer } from "ws";
 import { AssetAccess } from "./assets/access";
-import { LocalAssetStore } from "./assets/store";
+import { createAssetStore } from "./assets/store";
 import { createCollab } from "./collab/hocuspocus";
 import { MessageService } from "./collab/messages";
 import { publicReferenceCheck } from "./collab/references";
@@ -27,6 +27,7 @@ export interface RunningServer {
 
 export async function startServer(config: Config): Promise<RunningServer> {
   const { db, close: closeDb } = openDatabase(config.databasePath, config.migrationsDir);
+  const assetStore = await createAssetStore(config);
   const rooms = new RoomService(db);
   const players = new PlayerService(db);
   const collab = createCollab(db, rooms, players);
@@ -38,7 +39,7 @@ export async function startServer(config: Config): Promise<RunningServer> {
     "/api",
     createApi(
       rooms,
-      new LocalAssetStore(config.assetsDir),
+      assetStore,
       access,
       {
         limits: config.limits,

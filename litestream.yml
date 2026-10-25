@@ -1,0 +1,5 @@
+# Replica continua del database SQLite su un bucket. Le variabili sono espanse da Litestream.
+dbs:
+  - path: ${DATABASE_PATH}
+    replicas:
+      - url: ${LITESTREAM_REPLICA_URL}

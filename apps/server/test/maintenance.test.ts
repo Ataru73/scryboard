@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { roomDocumentName } from "@scryboard/shared";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { LocalAssetStore } from "../src/assets/store";
 import { loadConfig } from "../src/config";
 import { openDatabase } from "../src/db/client";
 import { documents, rooms } from "../src/db/schema";
@@ -83,7 +84,7 @@ describe("room activity and pruning", () => {
     mkdirSync(join(assetsDir, old.id), { recursive: true });
     writeFileSync(join(assetsDir, old.id, "x.png"), "x");
 
-    const deleted = await pruneInactiveRooms(db, service, assetsDir, 90);
+    const deleted = await pruneInactiveRooms(db, service, new LocalAssetStore(assetsDir), 90);
     expect(deleted).toEqual([old.id]);
     expect(service.get(old.id)).toBeNull();
     expect(service.get(recent.id)).not.toBeNull();
