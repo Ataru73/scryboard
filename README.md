@@ -19,7 +19,8 @@ information and decides what the players see. Scope, architecture and work plan 
 - **Secrets enforced by the server**: hidden objects, fog of war and private messages never reach
   players' browsers.
 - **Multiple scenes** per room: prepare the next one while the players stay in the current one.
-- **Dice** rolled by the server, with a public log and secret GM rolls.
+- **Dice** rolled by the server, with 2D animations on the whiteboard, a public log and secret GM
+  rolls.
 - **Export and import** a whole room as a `.scryboard` file.
 - **Optional Gemini integration** to generate token images and maps and to trace walls.
 
@@ -108,12 +109,12 @@ for the GM, also walls and doors.
   cells and outline the tokens they touch. They stay visible for a few seconds; releasing with
   `Shift` pins them as objects that can be moved or deleted.
 - **Auras**: any token can have an aura (radius in cells and color) visible to everyone.
-- **Dice**: the _Table_ tab of the messages panel rolls formulas like `2d20kh1+5`, `8d6`, `4d6dl1`
+- **Dice**: the _Dice_ tab in the sidebar rolls formulas like `2d20kh1+5`, `8d6`, `4d6dl1`
   or `d%`, with quick buttons from d4 to d100. Dice can **explode** (`3d6!` rolls another die for
   every 6; `3d6!5` from 5 up) and a pool can **count successes** (`10d10>=7`, also `>`, `<=`, `<`,
   `=`), alone or together (`8d10!>=8`): the total is then the number of successes. Formulas you
   type can be saved as buttons, kept in your browser. Rolls are made by the server, appear in a public log
-  (the last 200) and pop up on the whiteboard for a few seconds. The GM can roll in secret (the
+  (the last 200) and roll as animated 2D dice at the center of the whiteboard for a few seconds. The GM can roll in secret (the
   result stays in their browser). Typing `/r 1d4` in any conversation rolls for the whole table.
 - **Initiative**: the _Turns_ panel (zoom toolbar) lists the tokens in the order; the GM adds them,
   sets their values and moves on with _Next_ (`N`). The active token gets a golden ring; players

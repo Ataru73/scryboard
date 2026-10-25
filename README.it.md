@@ -20,7 +20,8 @@ informazioni e decide cosa vedono i giocatori. Perimetro, architettura e piano d
 - **Segreti garantiti dal server**: oggetti nascosti, nebbia e messaggi privati non arrivano mai ai
   browser dei giocatori.
 - **Scene multiple** per stanza: si prepara la prossima mentre i giocatori restano in quella attuale.
-- **Dadi** tirati dal server, con registro pubblico e tiri nascosti del GM.
+- **Dadi** tirati dal server, con animazione 2D sulla lavagna, registro pubblico e tiri nascosti del
+  GM.
 - **Esporta e importa** un'intera stanza in un file `.scryboard`.
 - **Integrazione opzionale con Gemini** per generare immagini di token e mappe e tracciare i muri.
 
@@ -109,14 +110,14 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   caselle coperte e contornano i token toccati. Restano visibili qualche secondo; rilasciando con
   `Shift` si fissano come oggetti da spostare o cancellare.
 - **Aure**: ogni token può avere un'aura (raggio in caselle e colore) visibile a tutti.
-- **Dadi**: la scheda _Tavolo_ del pannello Messaggi tira formule come `2d20kh1+5`, `8d6`, `4d6dl1`
+- **Dadi**: la scheda _Dadi_ della barra laterale tira formule come `2d20kh1+5`, `8d6`, `4d6dl1`
   o `d%`, con pulsanti rapidi da d4 a d100. I dadi possono **esplodere** (`3d6!` tira un altro dado
   per ogni 6; `3d6!5` da 5 in su) e un pool può **contare i successi** (`10d10>=7`, anche `>`, `<=`,
   `<`, `=`), da soli o insieme (`8d10!>=8`): il totale è allora il numero di successi. Le formule
   scritte si salvano come pulsanti, nel tuo browser. I tiri li fa il server, compaiono in un registro
-  pubblico (gli ultimi 200) e per qualche secondo sulla lavagna. Il GM può tirare di nascosto (il
-  risultato resta nel suo browser). Scrivere `/r 1d4` in qualunque conversazione tira per tutto il
-  tavolo.
+  pubblico (gli ultimi 200) e rotolano con un'animazione 2D al centro della lavagna per qualche
+  secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser). Scrivere `/r 1d4` in
+  qualunque conversazione tira per tutto il tavolo.
 - **Iniziativa**: il pannello _Turni_ (barra dello zoom) elenca i token nell'ordine; il GM li
   aggiunge, scrive i valori e avanza con _Avanti_ (`N`). Il token di turno ha un anello dorato; i
   giocatori vedono l'ordine e possono ritoccare i valori. I token nascosti restano nascosti.
