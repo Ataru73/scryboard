@@ -109,7 +109,10 @@ for the GM, also walls and doors.
   `Shift` pins them as objects that can be moved or deleted.
 - **Auras**: any token can have an aura (radius in cells and color) visible to everyone.
 - **Dice**: the _Table_ tab of the messages panel rolls formulas like `2d20kh1+5`, `8d6`, `4d6dl1`
-  or `d%`, with quick buttons from d4 to d100. Rolls are made by the server, appear in a public log
+  or `d%`, with quick buttons from d4 to d100. Dice can **explode** (`3d6!` rolls another die for
+  every 6; `3d6!5` from 5 up) and a pool can **count successes** (`10d10>=7`, also `>`, `<=`, `<`,
+  `=`), alone or together (`8d10!>=8`): the total is then the number of successes. Formulas you
+  type can be saved as buttons, kept in your browser. Rolls are made by the server, appear in a public log
   (the last 200) and pop up on the whiteboard for a few seconds. The GM can roll in secret (the
   result stays in their browser). Typing `/r 1d4` in any conversation rolls for the whole table.
 - **Initiative**: the _Turns_ panel (zoom toolbar) lists the tokens in the order; the GM adds them,

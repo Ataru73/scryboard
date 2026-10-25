@@ -25,6 +25,8 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   await player.getByLabel("Formula dei dadi").fill("1d1");
   await player.getByRole("button", { name: "Tira" }).click();
   await expect(player.getByRole("alert")).toContainText("facce");
+  // L'errore sta subito sotto il campo, in vista, e non in fondo a una barra che scorre.
+  await expect(player.getByRole("alert")).toBeInViewport();
 
   // Il GM tira di nascosto: lo vede solo lui.
   await gm.getByLabel(/Tira di nascosto/).check();
@@ -40,4 +42,53 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   await player.getByRole("button", { name: "Invia" }).click();
   await gm.getByRole("button", { name: "Tavolo", exact: true }).click();
   await expect(gmLog.getByText("1d4", { exact: true })).toBeVisible();
+});
+
+test("success pools show their successes and formulas can be saved as presets", async ({
+  browser,
+}) => {
+  const { gm, player } = await setupTable(browser);
+  for (const page of [gm, player]) {
+    await page.getByRole("button", { name: "Tavolo", exact: true }).click();
+  }
+  const playerLog = player.getByRole("list", { name: "Registro dei tiri" });
+
+  await player.getByLabel("Formula dei dadi").fill("10d10!>=7");
+  await player.getByRole("button", { name: "Tira" }).click();
+  const entry = playerLog.getByRole("listitem").filter({ hasText: "10d10!>=7" });
+  await expect(entry).toHaveCount(1);
+  await expect(entry.getByText(/successi?/)).toBeVisible();
+  // Il GM vede lo stesso tiro, con il numero di successi come totale.
+  const total = Number(
+    await entry.locator("output").evaluate((el) => el.childNodes[0]?.textContent),
+  );
+  const gmEntry = gm
+    .getByRole("list", { name: "Registro dei tiri" })
+    .getByRole("listitem")
+    .filter({ hasText: "10d10!>=7" });
+  await expect(gmEntry.locator("output")).toContainText(String(total));
+
+  // Una formula non valida non si può salvare; una valida sì, e resta dopo il ricaricamento.
+  const save = player.getByRole("button", { name: "Salva", exact: true });
+  await player.getByLabel("Formula dei dadi").fill("1d10!1");
+  await expect(save).toBeDisabled();
+  await player.getByLabel("Formula dei dadi").fill("8d10 ! >= 8");
+  await expect(save).toBeEnabled();
+  await save.click();
+  const presets = player.getByRole("region", { name: "Formule salvate" });
+  await expect(presets.getByRole("button", { name: "8d10!>=8", exact: true })).toBeVisible();
+  await expect(save).toBeDisabled(); // già salvata
+
+  await player.reload();
+  await player.getByRole("button", { name: "Tavolo", exact: true }).click();
+  await presets.getByRole("button", { name: "8d10!>=8", exact: true }).click();
+  await expect(
+    player
+      .getByRole("list", { name: "Registro dei tiri" })
+      .getByRole("listitem")
+      .filter({ hasText: "8d10!>=8" }),
+  ).toHaveCount(1);
+
+  await presets.getByRole("button", { name: "Togli la formula 8d10!>=8" }).click();
+  await expect(presets.getByRole("button", { name: "8d10!>=8", exact: true })).toHaveCount(0);
 });

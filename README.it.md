@@ -110,7 +110,10 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   `Shift` si fissano come oggetti da spostare o cancellare.
 - **Aure**: ogni token può avere un'aura (raggio in caselle e colore) visibile a tutti.
 - **Dadi**: la scheda _Tavolo_ del pannello Messaggi tira formule come `2d20kh1+5`, `8d6`, `4d6dl1`
-  o `d%`, con pulsanti rapidi da d4 a d100. I tiri li fa il server, compaiono in un registro
+  o `d%`, con pulsanti rapidi da d4 a d100. I dadi possono **esplodere** (`3d6!` tira un altro dado
+  per ogni 6; `3d6!5` da 5 in su) e un pool può **contare i successi** (`10d10>=7`, anche `>`, `<=`,
+  `<`, `=`), da soli o insieme (`8d10!>=8`): il totale è allora il numero di successi. Le formule
+  scritte si salvano come pulsanti, nel tuo browser. I tiri li fa il server, compaiono in un registro
   pubblico (gli ultimi 200) e per qualche secondo sulla lavagna. Il GM può tirare di nascosto (il
   risultato resta nel suo browser). Scrivere `/r 1d4` in qualunque conversazione tira per tutto il
   tavolo.

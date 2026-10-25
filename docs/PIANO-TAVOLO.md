@@ -150,6 +150,11 @@ T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta 
   che si perde ricaricando la pagina. Non serve passare per la casella di posta.
 - Parser e tiro in `packages/shared/src/dice.ts` (`NdM`, `kh/kl/dh/dl`, `d%`, costanti, fino a 100
   dadi e 20 termini); il server tira con `crypto.randomInt`. Limite `ROLLS_PER_10_MIN` (600).
+- Aggiunta successiva: dadi esplosivi (`3d6!`, `3d6!5`) e pool di successi (`10d10>=7`, `8d10!>=8`)
+  in `dice.ts`, con tetto di 100 dadi di esplosione per termine, e formule salvabili come pulsanti
+  nel browser (`localStorage`, fino a 12). L'ordine dei modificatori è: tieni/scarta, esplosione,
+  successi. Nel registro i dadi usciti da un'esplosione hanno un asterisco e il termine mostra i
+  successi.
 - Scheda «Tavolo» nel pannello Messaggi (dadi rapidi, registro, casella «di nascosto» per il GM),
   notifica sulla lavagna per qualche secondo, e `/r formula` in qualunque conversazione.
 

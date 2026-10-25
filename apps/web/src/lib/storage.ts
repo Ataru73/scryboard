@@ -46,7 +46,10 @@ const RECENT_PORTRAITS_KEY = "scryboard:recent-portraits";
 const GEMINI_KEY = "scryboard:gemini-key";
 const GEMINI_MODEL_KEY = "scryboard:gemini-model";
 const GEMINI_VISION_MODEL_KEY = "scryboard:gemini-vision-model";
+const DICE_PRESETS_KEY = "scryboard:dice-presets";
 const MAX_GENERATED = 24;
+/** Quante formule si possono salvare: oltre, i pulsanti non starebbero più nel pannello. */
+export const MAX_DICE_PRESETS = 12;
 
 const geminiKeyListeners = new Set<() => void>();
 
@@ -64,6 +67,21 @@ export function subscribeGeminiKey(listener: () => void): () => void {
 }
 
 export const storage = {
+  /** Formule dei dadi salvate in questo browser (valgono per ogni stanza). */
+  getDicePresets: (): string[] => {
+    try {
+      const saved: unknown = JSON.parse(read(DICE_PRESETS_KEY) ?? "[]");
+      return Array.isArray(saved)
+        ? saved
+            .filter((f): f is string => typeof f === "string" && f.length > 0 && f.length <= 100)
+            .slice(0, MAX_DICE_PRESETS)
+        : [];
+    } catch {
+      return [];
+    }
+  },
+  setDicePresets: (formulas: string[]) =>
+    write(DICE_PRESETS_KEY, JSON.stringify(formulas.slice(0, MAX_DICE_PRESETS))),
   getLanguage: () => read(LANGUAGE_KEY),
   setLanguage: (language: string) => write(LANGUAGE_KEY, language),
   /** Chiave API di Gemini: resta in questo browser, non si invia mai al server di Scryboard. */

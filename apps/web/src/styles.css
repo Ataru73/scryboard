@@ -278,6 +278,11 @@ button.danger {
   background: var(--danger);
 }
 
+/* Con tante sezioni la barra scorre: senza questo le sezioni si schiacciavano e si sovrapponevano. */
+.sidebar > * {
+  flex-shrink: 0;
+}
+
 .sidebar {
   grid-area: sidebar;
   display: flex;
@@ -1358,4 +1363,46 @@ button.danger {
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.roll-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.roll-preset {
+  display: inline-flex;
+}
+
+.roll-preset button {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.roll-preset button:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.roll-preset-remove {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding-inline: 0.35rem;
+}
+
+.roll-preset-save {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.roll-help {
+  margin: 0;
+}
+
+.roll-unit {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 400;
+  text-align: center;
 }

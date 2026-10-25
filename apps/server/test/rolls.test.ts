@@ -42,6 +42,26 @@ describe("dice rolls", () => {
     watcher.provider.destroy();
   });
 
+  it("rolls exploding dice and success pools on the server", async () => {
+    const room = await createRoom(server);
+    const res = await post(room.id, `Player ${arwen}`, { formula: "10d10!>=7", name: "Arwen" });
+    expect(res.status).toBe(201);
+    const roll = (await res.json()) as Roll;
+    expect(roll.formula).toBe("10d10!>=7");
+    const term = roll.terms[0] as { dice: number[]; extra: boolean[]; successes: number };
+    // Un dado in più per ogni 10 uscito; i successi sono i dadi da 7 in su e il totale li conta.
+    const tens = term.dice.filter((v, i) => v === 10 && i < term.dice.length).length;
+    expect(term.dice.length).toBeGreaterThanOrEqual(10);
+    expect(term.dice.length).toBeLessThanOrEqual(10 + tens);
+    expect(term.extra.filter(Boolean)).toHaveLength(term.dice.length - 10);
+    expect(term.successes).toBe(term.dice.filter((v) => v >= 7).length);
+    expect(roll.total).toBe(term.successes);
+
+    const bad = await post(room.id, `Player ${arwen}`, { formula: "1d10!1", name: "Arwen" });
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { error: string }).error).toMatch(/esplosione/);
+  });
+
   it("keeps the GM's hidden rolls out of the shared log, and only the GM may ask", async () => {
     const room = await createRoom(server);
     const watcher = await connect(server, roomDocumentName(room.id, "public"), "player");

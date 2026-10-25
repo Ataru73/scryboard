@@ -45,5 +45,13 @@ export const social = {
     hiddenSuffix: "(nascosto)",
     total: "Totale di {{name}}",
     recent: "Ultimi tiri",
+    presetsLabel: "Formule salvate",
+    presetRoll: "Tira {{formula}}",
+    presetRemove: "Togli la formula {{formula}}",
+    presetSave: "Salva",
+    presetSaveHint: "Salva la formula scritta tra i pulsanti rapidi (resta in questo browser)",
+    help: "Tieni i migliori: 2d20kh1 · esplode: 3d6! · successi: 10d10>=7 · insieme: 8d10!>=8",
+    successes_one: "successo",
+    successes_other: "successi",
   },
 };
