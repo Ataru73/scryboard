@@ -7,6 +7,15 @@ async function enableGrid(gm: Page) {
   await gm.getByRole("button", { name: "Chiudi" }).click();
 }
 
+/** Quanti nodi della lavagna (Konva) corrispondono al selettore. */
+const countNodes = (page: Page, selector: string) =>
+  page.evaluate((name) => {
+    const { Konva } = window as unknown as {
+      Konva: { stages: { find: (s: string) => unknown[] }[] };
+    };
+    return Konva.stages[0]?.find(name).length ?? 0;
+  }, selector);
+
 const names = async (page: Page) =>
   (await tokenList(page).getByRole("listitem").allTextContents()).map((t) => t.split(",")[0]);
 
@@ -40,9 +49,19 @@ test("dynamic vision: walls hide what is behind them, night needs light, memory 
   await expect.poll(() => names(player)).toEqual(["Eroe"]);
   await expect.poll(() => names(gm)).toEqual(["Eroe", "Mostro"]);
 
-  // La porta è dal lato del giocatore: la vede, la apre e il mostro appare.
+  // La porta è dal lato del giocatore: la vede, la apre e il mostro appare. Su un runner lento il
+  // primo clic può arrivare prima che la porta sia cliccabile: si riprova finché non risulta
+  // aperta (con una pausa tra i tentativi, per non richiuderla con un secondo clic).
   await player.keyboard.press("v");
-  await click(player, 280, 315);
+  await expect
+    .poll(
+      async () => {
+        if ((await countNodes(player, ".door-open")) === 0) await click(player, 280, 315);
+        return countNodes(player, ".door-open");
+      },
+      { intervals: [1500], timeout: 15_000 },
+    )
+    .toBe(1);
   await expect.poll(() => names(player)).toEqual(["Eroe", "Mostro"]);
 
   // Di notte, senza luci né scurovisione, il mostro non si vede; con una torcia vicino sì.
