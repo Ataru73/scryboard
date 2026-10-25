@@ -110,6 +110,19 @@ T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta 
 
 ### T3 — Ordine di iniziativa (≈ 1 settimana)
 
+**Stato**: completata. Note rispetto al piano:
+- Niente Y.Map `initiative`: il valore sta sul token (`initiative`, assente o null = fuori
+  dall'ordine). Un token nascosto sta nel documento del GM e quindi il suo valore non arriva ai
+  giocatori, senza una seconda mappa da tenere allineata. Il turno corrente (`activeId`, `round`)
+  è in `settings.turn`, scrivibile solo dal GM.
+- Il guard permette ai giocatori di cambiare il valore di un token già nell'ordine (come possono
+  muovere qualunque token non bloccato), ma non di aggiungerlo o toglierlo. Non si usa `owners`:
+  il server non conosce l'id del profilo nelle connessioni.
+- Il pannello «Turni» (pulsante nella barra dello zoom, `N` per avanzare) sta in basso a destra;
+  il token attivo ha un anello dorato. Il GM ha «Indietro» e «Fine combattimento».
+- Correzione collaterale: il pannello di selezione dei token andava a capo con i campi a tutta
+  larghezza da quando la T2 vi aveva aggiunto l'aura; ora i campi numerici sono stretti.
+
 **Cosa vede l'utente**
 - Pannello flottante **Turni**: il GM aggiunge token (dal menu del token o selezionandoli),
   scrive il valore, riordina, preme **Avanti** (`N`). Il token attivo ha un anello pulsante e

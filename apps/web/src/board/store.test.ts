@@ -1,4 +1,4 @@
-import type { BoardItem, TextItem } from "@scryboard/shared";
+import type { BoardItem, TextItem, TokenItem } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { BoardStore } from "./store";
@@ -18,6 +18,24 @@ function text(id: string, z = 0, layer: BoardItem["layer"] = "draw"): TextItem {
     fontSize: 20,
     color: "#000000",
     width: null,
+  };
+}
+
+function token(id: string): TokenItem {
+  return {
+    id,
+    layer: "token",
+    z: 0,
+    kind: "token",
+    x: 0,
+    y: 0,
+    rotation: 0,
+    locked: false,
+    createdBy: "u1",
+    name: id,
+    color: "#46a758",
+    assetId: null,
+    size: 1,
   };
 }
 
@@ -78,6 +96,32 @@ describe("BoardStore", () => {
     expect(store.getSnapshot().map((i) => i.id)).toEqual(["a", "b"]);
     store.undo();
     expect(store.getSnapshot().map((i) => i.id)).toEqual(["a"]);
+  });
+
+  it("keeps the turn order on tokens, so hidden ones stay out of the public document", () => {
+    const [pubA, pubB] = linkedDocs();
+    const gmDoc = new Y.Doc();
+    const gm = new BoardStore(pubA, gmDoc, "gm");
+    const player = new BoardStore(pubB, null, "player");
+    gm.add([token("a"), token("b")]);
+    gm.add([token("h")], { hidden: true });
+    gm.setInitiative(["a", "b", "h"], 0);
+    gm.setInitiative(["a"], 10);
+    gm.setInitiative(["h"], 20);
+    expect(gm.getInitiativeOrder().map((t) => t.id)).toEqual(["h", "a", "b"]);
+    expect(player.getInitiativeOrder().map((t) => t.id)).toEqual(["a", "b"]);
+
+    gm.advanceTurn();
+    expect(player.getTurn()).toEqual({ activeId: "h", round: 1 });
+    gm.advanceTurn();
+    gm.advanceTurn();
+    gm.advanceTurn();
+    expect(player.getTurn()).toEqual({ activeId: "h", round: 2 });
+
+    gm.setInitiative(["a", "b", "h"], null);
+    gm.resetTurn();
+    expect(gm.getInitiativeOrder()).toEqual([]);
+    expect(player.getTurn()).toEqual({ activeId: null, round: 1 });
   });
 
   it("shares grid settings and undoes them like any other action", () => {

@@ -93,6 +93,11 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
           if (ui.tool === "calibrate" || ui.tool === "ruler") ui.setTool("select");
           else ui.selectWall(null);
           return;
+        case "n":
+        case "N":
+          // Turno successivo: solo il GM, e solo se c'è un ordine.
+          if (role === "gm") store.advanceTurn(1);
+          return;
         case "]":
           store.bringToFront(editable);
           return;

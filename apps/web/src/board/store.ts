@@ -4,19 +4,25 @@ import {
   compareItems,
   DEFAULT_GRID,
   DEFAULT_LIGHTING,
+  DEFAULT_TURN,
   FOG_MAP,
   type FogOp,
   fogOpSchema,
   type GridSettings,
   gridSettingsSchema,
   ITEMS_MAP,
+  initiativeOrder,
   type Layer,
   type LightingSettings,
   lightingSettingsSchema,
   SETTINGS_MAP,
+  stepTurn,
   TERRAIN_MAP,
   type TerrainOp,
+  type TokenItem,
+  type TurnSettings,
   terrainOpSchema,
+  turnSettingsSchema,
   WALLS_MAP,
   type Wall,
   type WallDraft,
@@ -52,6 +58,7 @@ export class BoardStore {
   private readonly wallsMap: Y.Map<unknown>;
   private grid: GridSettings = DEFAULT_GRID;
   private lighting: LightingSettings = DEFAULT_LIGHTING;
+  private turn: TurnSettings = DEFAULT_TURN;
   private fog: FogOp[] = [];
   private terrain: TerrainOp[] = [];
   private walls: Wall[] = [];
@@ -129,6 +136,9 @@ export class BoardStore {
     const next = lighting.success ? lighting.data : DEFAULT_LIGHTING;
     // Stesso oggetto se non cambia nulla: lo snapshot per React resta stabile.
     if (JSON.stringify(next) !== JSON.stringify(this.lighting)) this.lighting = next;
+    const turn = turnSettingsSchema.safeParse(this.settings.get("turn"));
+    const nextTurn = turn.success ? turn.data : DEFAULT_TURN;
+    if (JSON.stringify(nextTurn) !== JSON.stringify(this.turn)) this.turn = nextTurn;
   }
 
   private loadFog() {
@@ -182,6 +192,7 @@ export class BoardStore {
   getSnapshot = (): BoardItem[] => this.sorted;
   getGrid = (): GridSettings => this.grid;
   getLighting = (): LightingSettings => this.lighting;
+  getTurn = (): TurnSettings => this.turn;
   getFog = (): FogOp[] => this.fog;
   getTerrain = (): TerrainOp[] => this.terrain;
   getWalls = (): Wall[] => this.walls;
@@ -331,6 +342,34 @@ export class BoardStore {
     const next = { ...this.lighting, ...patch };
     if (!lightingSettingsSchema.safeParse(next).success) return;
     this.action(() => this.transact(this.pub, () => this.settings.set("lighting", next)));
+  }
+
+  /** Token nell'ordine dei turni (anche quelli nascosti, se questo store è del GM). */
+  getInitiativeOrder(): TokenItem[] {
+    return initiativeOrder(this.sorted.filter((i): i is TokenItem => i.kind === "token"));
+  }
+
+  /** Mette i token nell'ordine dei turni con questo valore, o li toglie (`null`). */
+  setInitiative(ids: string[], value: number | null) {
+    const patches: Record<string, ItemPatch> = {};
+    for (const id of ids)
+      if (this.byId.get(id)?.kind === "token") patches[id] = { initiative: value };
+    if (Object.keys(patches).length > 0) this.update(patches);
+  }
+
+  /** Passa al token successivo (o precedente) dell'ordine. */
+  advanceTurn(direction: 1 | -1 = 1) {
+    this.setTurn(stepTurn(this.getInitiativeOrder(), this.turn, direction));
+  }
+
+  /** Riporta i turni all'inizio, lasciando l'ordine com'è. */
+  resetTurn() {
+    this.setTurn(DEFAULT_TURN);
+  }
+
+  private setTurn(next: TurnSettings) {
+    if (!turnSettingsSchema.safeParse(next).success) return;
+    this.action(() => this.transact(this.pub, () => this.settings.set("turn", next)));
   }
 
   updateGrid(patch: Partial<GridSettings>) {

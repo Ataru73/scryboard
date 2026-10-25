@@ -38,6 +38,8 @@ interface Props {
   concealed: boolean;
   /** Evidenzia la selezione dei token, che non usano il Transformer. */
   selected: boolean;
+  /** È il turno di questo token. */
+  turn?: boolean;
   /** Luce ambientale che tinge le immagini; assente con le luci spente. */
   ambient?: LightingSettings["ambient"];
   onDragStart?: (event: Konva.KonvaEventObject<DragEvent>) => void;
@@ -53,6 +55,7 @@ export const ItemNode = memo(function ItemNode({
   editing,
   concealed,
   selected,
+  turn,
   ambient,
   onDragStart,
   onDragMove,
@@ -72,7 +75,13 @@ export const ItemNode = memo(function ItemNode({
       onDragEnd={onDragEnd}
     >
       {item.kind === "token" ? (
-        <TokenContent item={item} roomId={roomId} cellSize={cellSize} selected={selected} />
+        <TokenContent
+          item={item}
+          roomId={roomId}
+          cellSize={cellSize}
+          selected={selected}
+          turn={turn}
+        />
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
       ) : item.kind === "stamp" ? (
@@ -213,11 +222,13 @@ function TokenContent({
   roomId,
   cellSize,
   selected,
+  turn,
 }: {
   item: TokenItem;
   roomId: string;
   cellSize: number;
   selected: boolean;
+  turn?: boolean;
 }) {
   const r = (item.size * cellSize) / 2;
   const ring = Math.max(2, r * 0.1);
@@ -233,6 +244,18 @@ function TokenContent({
           strokeWidth={2}
           dash={[10, 6]}
           listening={false}
+        />
+      )}
+      {turn && (
+        <Circle
+          radius={r + ring + 7}
+          stroke="#ffc53d"
+          strokeWidth={5}
+          shadowColor="#ffc53d"
+          shadowBlur={14}
+          shadowOpacity={0.9}
+          listening={false}
+          name="turn-ring"
         />
       )}
       {selected && (

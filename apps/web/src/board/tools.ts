@@ -105,6 +105,8 @@ interface BoardUiState {
   measuring: boolean;
   /** Cosa traccia lo strumento Righello: una misura o una sagoma d'area. */
   rulerShape: "ruler" | TemplateShape;
+  /** Pannello dei turni aperto. */
+  initiativeOpen: boolean;
   tokenDraft: TokenDraft;
   gridPanelOpen: boolean;
   fogMode: FogMode;
@@ -148,6 +150,7 @@ interface BoardUiState {
   setSpacePan: (on: boolean) => void;
   setMeasuring: (on: boolean) => void;
   setRulerShape: (shape: BoardUiState["rulerShape"]) => void;
+  setInitiativeOpen: (open: boolean) => void;
   setTokenDraft: (patch: Partial<TokenDraft>) => void;
   setGridPanelOpen: (open: boolean) => void;
   setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
@@ -207,6 +210,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   spacePan: false,
   measuring: false,
   rulerShape: "ruler",
+  initiativeOpen: false,
   tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null, portrait: null },
   gridPanelOpen: false,
   fogMode: "cover",
@@ -240,6 +244,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setSpacePan: (spacePan) => set({ spacePan }),
   setMeasuring: (measuring) => set({ measuring }),
   setRulerShape: (rulerShape) => set({ rulerShape }),
+  setInitiativeOpen: (initiativeOpen) => set({ initiativeOpen }),
   setTokenDraft: (patch) => set((s) => ({ tokenDraft: { ...s.tokenDraft, ...patch } })),
   setGridPanelOpen: (gridPanelOpen) => set({ gridPanelOpen }),
   setFog: (patch) => set(patch),

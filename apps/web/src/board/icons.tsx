@@ -159,6 +159,13 @@ export const TokenIcon = (
   </Icon>
 );
 
+export const TurnsIcon = (
+  <Icon>
+    <path d="M4 6h10M4 12h10M4 18h10" />
+    <path d="M18 5v14m0 0l-3-3m3 3l3-3" />
+  </Icon>
+);
+
 export const GridIcon = (
   <Icon>
     <rect x="3.5" y="3.5" width="17" height="17" rx="1.5" />

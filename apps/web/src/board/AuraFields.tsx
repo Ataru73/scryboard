@@ -10,27 +10,29 @@ export function AuraFields({ token, store }: { token: TokenItem; store: BoardSto
   const aura = token.aura ?? null;
   return (
     <>
-      <label htmlFor={radiusId} className="small muted">
-        Aura (caselle)
-      </label>
-      <input
-        id={radiusId}
-        className="number-field"
-        type="number"
-        min={0}
-        max={100}
-        step={0.5}
-        value={aura?.radius ?? 0}
-        onChange={(e) => {
-          const radius = Number(e.target.value);
-          if (!Number.isFinite(radius) || radius < 0 || radius > 100) return;
-          store.update({
-            [token.id]: {
-              aura: radius === 0 ? null : { radius, color: aura?.color ?? token.color },
-            },
-          });
-        }}
-      />
+      <span className="field-group">
+        <label htmlFor={radiusId} className="small muted">
+          Aura (caselle)
+        </label>
+        <input
+          id={radiusId}
+          className="number-field"
+          type="number"
+          min={0}
+          max={100}
+          step={0.5}
+          value={aura?.radius ?? 0}
+          onChange={(e) => {
+            const radius = Number(e.target.value);
+            if (!Number.isFinite(radius) || radius < 0 || radius > 100) return;
+            store.update({
+              [token.id]: {
+                aura: radius === 0 ? null : { radius, color: aura?.color ?? token.color },
+              },
+            });
+          }}
+        />
+      </span>
       {aura && (
         <>
           <label htmlFor={colorId} className="visually-hidden">

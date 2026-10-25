@@ -15,7 +15,7 @@ function NumberField({
 }) {
   const id = useId();
   return (
-    <>
+    <span className="field-group">
       <label htmlFor={id} className="small muted">
         {label}
       </label>
@@ -32,7 +32,7 @@ function NumberField({
           if (Number.isFinite(n) && n >= 0 && n <= 100) onChange(n);
         }}
       />
-    </>
+    </span>
   );
 }
 

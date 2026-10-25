@@ -49,6 +49,14 @@ function visionFields(token: Extract<BoardItem, { kind: "token" }> | null): stri
   });
 }
 
+/** Chi sta nell'ordine dei turni lo decide il GM: i giocatori possono solo cambiare il valore. */
+function sameInitiativeMembership(
+  before: Extract<BoardItem, { kind: "token" }> | null,
+  after: Extract<BoardItem, { kind: "token" }>,
+): boolean {
+  return (typeof before?.initiative === "number") === (typeof after.initiative === "number");
+}
+
 /** Un giocatore può creare, modificare o cancellare solo oggetti che potrebbe toccare dall'interfaccia. */
 export function isAllowedPlayerItemChange(
   action: Action,
@@ -66,7 +74,10 @@ export function isAllowedPlayerItemChange(
   // Visione, luce portata e assegnazione dei token le decide il GM: un giocatore non può darsi
   // scurovisione o prendersi il token di un altro.
   if (after.kind === "token") {
-    return visionFields(before?.kind === "token" ? before : null) === visionFields(after);
+    const previous = before?.kind === "token" ? before : null;
+    return (
+      visionFields(previous) === visionFields(after) && sameInitiativeMembership(previous, after)
+    );
   }
   return true;
 }

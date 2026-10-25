@@ -62,6 +62,7 @@ import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
 import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
+import { InitiativePanel } from "./InitiativePanel";
 import { ItemNode, SELECTION_COLOR, StampContent } from "./ItemNode";
 import { formatDistance, pathCells, snapRulerPoint } from "./measure";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
@@ -224,6 +225,8 @@ export function Board({ store, provider, roomId, role }: Props) {
   const editingTextId = useBoardUi((s) => s.editingTextId);
   const viewport = useBoardUi((s) => s.viewport);
   const spacePan = useBoardUi((s) => s.spacePan);
+  const initiativeOpen = useBoardUi((s) => s.initiativeOpen);
+  const turn = useSyncExternalStore(store.subscribe, store.getTurn);
   const fogMode = useBoardUi((s) => s.fogMode);
   const fogShape = useBoardUi((s) => s.fogShape);
   const fogBrush = useBoardUi((s) => s.fogBrush);
@@ -1438,6 +1441,7 @@ export function Board({ store, provider, roomId, role }: Props) {
         editing={item.id === editingTextId}
         concealed={store.isHidden(item.id)}
         selected={selectedIds.includes(item.id)}
+        turn={item.id === turn.activeId}
         ambient={lighting.enabled ? lighting.ambient : undefined}
         onDragStart={onItemDragStart}
         onDragMove={onItemDragMove}
@@ -1829,6 +1833,14 @@ export function Board({ store, provider, roomId, role }: Props) {
       <div className="visually-hidden" role="status" aria-label="Distanza misurata">
         {measureText}
       </div>
+      {initiativeOpen && (
+        <InitiativePanel
+          store={store}
+          role={role}
+          tokens={visibleTokens}
+          onClose={() => useBoardUi.getState().setInitiativeOpen(false)}
+        />
+      )}
       <TokenList
         // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
         items={

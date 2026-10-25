@@ -21,6 +21,7 @@ import {
   RedoIcon,
   TOOL_ICONS,
   TrashIcon,
+  TurnsIcon,
   UndoIcon,
 } from "./icons";
 import { LightPanel } from "./LightPanel";
@@ -82,6 +83,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     gridPanelOpen,
     createHidden,
     rulerShape,
+    initiativeOpen,
   } = useBoardUi();
   const {
     setTool,
@@ -93,6 +95,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     setGridPanelOpen,
     setCreateHidden,
     setRulerShape,
+    setInitiativeOpen,
     select,
     setEditingText,
   } = useBoardUi.getState();
@@ -381,6 +384,16 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
           onClick={() => setTool("ruler")}
         >
           {TOOL_ICONS.ruler}
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          aria-pressed={initiativeOpen}
+          aria-label="Turni"
+          title="Ordine dei turni"
+          onClick={() => setInitiativeOpen(!initiativeOpen)}
+        >
+          {TurnsIcon}
         </button>
         <span className="toolbar-separator" />
         <button

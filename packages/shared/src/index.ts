@@ -2,6 +2,7 @@ export * from "./assets";
 export * from "./board";
 export * from "./documents";
 export * from "./fog";
+export * from "./initiative";
 export * from "./messages";
 export * from "./permissions";
 export * from "./portraits";

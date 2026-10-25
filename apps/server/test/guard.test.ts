@@ -74,6 +74,19 @@ describe("isAllowedPlayerItemChange", () => {
     expect(isAllowedPlayerItemChange("update", "t", token("t"), token("t", { aura }))).toBe(true);
   });
 
+  it("lets players change an initiative value but not join or leave the order", () => {
+    const tracked = token("t", { initiative: 12 });
+    expect(isAllowedPlayerItemChange("update", "t", tracked, token("t", { initiative: 17 }))).toBe(
+      true,
+    );
+    expect(isAllowedPlayerItemChange("update", "t", token("t"), tracked)).toBe(false);
+    expect(
+      isAllowedPlayerItemChange("update", "t", tracked, token("t", { initiative: null })),
+    ).toBe(false);
+    expect(isAllowedPlayerItemChange("add", "t", undefined, tracked)).toBe(false);
+    expect(isAllowedPlayerItemChange("update", "t", token("t"), token("t", { x: 4 }))).toBe(true);
+  });
+
   it("rejects map items, locked items, invalid data and kind changes", () => {
     expect(isAllowedPlayerItemChange("add", "m", undefined, mapImage("m"))).toBe(false);
     const river = {

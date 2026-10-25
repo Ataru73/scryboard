@@ -101,6 +101,11 @@ export const tokenItemSchema = z.object({
   light: lightSpecSchema.nullable().optional(),
   /** Utenti (id del profilo) che vedono attraverso il token, oltre a chi l'ha creato. */
   owners: z.array(z.string().max(64)).max(20).optional(),
+  /**
+   * Valore di iniziativa: se c'è, il token è nell'ordine dei turni (assente o null = fuori). Sta
+   * sul token, così i token nascosti restano nel documento del GM insieme al loro valore.
+   */
+  initiative: z.number().min(-1000).max(1000).nullable().optional(),
   /** Aura attorno al token (raggio in caselle dal bordo), visibile a tutti. */
   aura: z
     .object({ radius: z.number().positive().max(100), color })
@@ -319,6 +324,15 @@ export const DEFAULT_LIGHTING: LightingSettings = {
   ambient: "day",
   explorationEpoch: 0,
 };
+
+/** Turno corrente: token attivo (se c'è ancora) e numero del round. Lo scrive solo il GM. */
+export const turnSettingsSchema = z.object({
+  activeId: z.string().max(64).nullable(),
+  round: z.number().int().min(1).max(10000),
+});
+export type TurnSettings = z.infer<typeof turnSettingsSchema>;
+
+export const DEFAULT_TURN: TurnSettings = { activeId: null, round: 1 };
 
 /** Ordina per livello e poi per z, con l'id come spareggio stabile. */
 export function compareItems(a: BoardItem, b: BoardItem): number {
