@@ -6,7 +6,7 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
 }) => {
   const { gm, player } = await setupTable(browser);
   for (const page of [gm, player]) {
-    await page.getByRole("button", { name: "Tavolo", exact: true }).click();
+    await page.getByRole("button", { name: "Dadi", exact: true }).click();
   }
 
   await player.getByLabel("Formula dei dadi").fill("8d6+2");
@@ -36,11 +36,11 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   await gm.getByLabel(/Tira di nascosto/).uncheck();
 
   // «/r» in una conversazione tira in pubblico.
-  await player.getByRole("button", { name: "Privati" }).click();
+  await player.getByRole("button", { name: "Messaggi" }).click();
   await player.getByLabel("Scrivi a").selectOption({ label: "GM" });
   await player.getByLabel("Messaggio").fill("/r 1d4");
   await player.getByRole("button", { name: "Invia" }).click();
-  await gm.getByRole("button", { name: "Tavolo", exact: true }).click();
+  await gm.getByRole("button", { name: "Dadi", exact: true }).click();
   await expect(gmLog.getByText("1d4", { exact: true })).toBeVisible();
 });
 
@@ -49,7 +49,7 @@ test("success pools show their successes and formulas can be saved as presets", 
 }) => {
   const { gm, player } = await setupTable(browser);
   for (const page of [gm, player]) {
-    await page.getByRole("button", { name: "Tavolo", exact: true }).click();
+    await page.getByRole("button", { name: "Dadi", exact: true }).click();
   }
   const playerLog = player.getByRole("list", { name: "Registro dei tiri" });
 
@@ -80,7 +80,7 @@ test("success pools show their successes and formulas can be saved as presets", 
   await expect(save).toBeDisabled(); // già salvata
 
   await player.reload();
-  await player.getByRole("button", { name: "Tavolo", exact: true }).click();
+  await player.getByRole("button", { name: "Dadi", exact: true }).click();
   await presets.getByRole("button", { name: "8d10!>=8", exact: true }).click();
   await expect(
     player

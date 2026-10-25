@@ -1,8 +1,6 @@
 export const social = {
   messages: {
     title: "Messaggi",
-    privateTab: "Privati",
-    tableTab: "Tavolo",
     gmNotice: "Il GM può leggere tutti i messaggi.",
     writeTo: "Scrivi a",
     writeToPlaceholder: "Scrivi a…",
@@ -37,6 +35,7 @@ export const social = {
     add: "Aggiungi",
   },
   dice: {
+    title: "Dadi",
     formulaLabel: "Formula dei dadi",
     roll: "Tira",
     hiddenLabel: "Tira di nascosto (solo tu lo vedi)",

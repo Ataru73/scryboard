@@ -15,7 +15,7 @@ interface Props {
   auth: Auth;
 }
 
-/** Scheda «Tavolo»: dadi e registro dei tiri, visibili a tutti. */
+/** Scheda «Dadi»: dadi e registro dei tiri, visibili a tutti. */
 export function RollPanel({ roomId, provider, myName, auth }: Props) {
   const { t } = useTranslation();
   const shared = useRolls(provider);

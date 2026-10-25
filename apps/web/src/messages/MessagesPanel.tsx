@@ -28,7 +28,7 @@ interface Props {
 export function MessagesPanel({ roomId, me, myName, mailProvider, provider, users, auth }: Props) {
   const { t, i18n } = useTranslation();
   const language = i18n.resolvedLanguage;
-  const [tab, setTab] = useState<"private" | "table">("private");
+  const [tab, setTab] = useState<"messages" | "dice">("messages");
   const messages = useMailbox(mailProvider);
   const { lastRead, markRead } = useLastRead(`scryboard:read:${roomId}:${me}`);
   // I nomi dei giocatori connessi valgono più di quelli salvati (chi non ha mai scritto non ne ha).
@@ -68,20 +68,20 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
   }, [open, markRead]);
 
   return (
-    <section className="messages" aria-label={t("social.messages.title")}>
-      <h2>
-        {t("social.messages.title")}{" "}
-        {unread > 0 && <span className="badge unread-badge">{unread}</span>}
-      </h2>
+    <section
+      className="messages"
+      aria-label={t(tab === "dice" ? "social.dice.title" : "social.messages.title")}
+    >
       <div className="tabs">
-        <button type="button" aria-pressed={tab === "private"} onClick={() => setTab("private")}>
-          {t("social.messages.privateTab")}
+        <button type="button" aria-pressed={tab === "messages"} onClick={() => setTab("messages")}>
+          {t("social.messages.title")}
+          {unread > 0 && <span className="badge unread-badge">{unread}</span>}
         </button>
-        <button type="button" aria-pressed={tab === "table"} onClick={() => setTab("table")}>
-          {t("social.messages.tableTab")}
+        <button type="button" aria-pressed={tab === "dice"} onClick={() => setTab("dice")}>
+          {t("social.dice.title")}
         </button>
       </div>
-      {tab === "table" ? (
+      {tab === "dice" ? (
         <RollPanel roomId={roomId} provider={provider} myName={myName} auth={auth} />
       ) : openKey ? (
         <Thread

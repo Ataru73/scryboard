@@ -1,8 +1,6 @@
 export const social = {
   messages: {
     title: "Messages",
-    privateTab: "Private",
-    tableTab: "Table",
     gmNotice: "The GM can read all messages.",
     writeTo: "Write to",
     writeToPlaceholder: "Write to…",
@@ -37,6 +35,7 @@ export const social = {
     add: "Add",
   },
   dice: {
+    title: "Dice",
     formulaLabel: "Dice formula",
     roll: "Roll",
     hiddenLabel: "Roll secretly (only you can see it)",
