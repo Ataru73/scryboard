@@ -1,7 +1,8 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import type { PresenceUser } from "@scryboard/shared";
+import type { GridSettings, PresenceUser } from "@scryboard/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Circle, Group, Label, Line, Path, Tag, Text } from "react-konva";
+import { RulerShape, type RulerState } from "./Ruler";
 import type { Point } from "./viewport";
 
 /** Tratto a mano libera ancora in corso, condiviso per mostrarlo mentre lo si disegna. */
@@ -66,6 +67,7 @@ interface RemoteState {
   cursor: Point | null;
   draft: DraftStroke | null;
   ping: Ping | null;
+  ruler: RulerState | null;
 }
 
 interface ActivePing extends Ping {
@@ -78,7 +80,15 @@ interface ActivePing extends Ping {
  * Presenza degli altri: puntatori, tratti in corso e ping (anche i propri). Puntatori e ping
  * hanno dimensione costante a qualsiasi zoom.
  */
-export function Presence({ provider, scale }: { provider: HocuspocusProvider; scale: number }) {
+export function Presence({
+  provider,
+  scale,
+  grid,
+}: {
+  provider: HocuspocusProvider;
+  scale: number;
+  grid: GridSettings;
+}) {
   const [states, setStates] = useState<RemoteState[]>([]);
   const [pings, setPings] = useState<ActivePing[]>([]);
   const seenPings = useRef(new Set<string>());
@@ -105,6 +115,7 @@ export function Presence({ provider, scale }: { provider: HocuspocusProvider; sc
           cursor: (state.cursor as Point | null) ?? null,
           draft: (state.draft as DraftStroke | null) ?? null,
           ping,
+          ruler: (state.ruler as RulerState | null) ?? null,
         });
       });
       setStates(next);
@@ -144,6 +155,18 @@ export function Presence({ provider, scale }: { provider: HocuspocusProvider; sc
               lineJoin="round"
               tension={0.4}
               name="draft"
+            />
+          ),
+      )}
+      {others.map(
+        ({ clientId, user, ruler }) =>
+          ruler && (
+            <RulerShape
+              key={`ruler-${clientId}`}
+              points={ruler.points}
+              color={user.color}
+              grid={grid}
+              scale={scale}
             />
           ),
       )}

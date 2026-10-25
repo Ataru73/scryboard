@@ -329,6 +329,18 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       )}
 
       <div className="toolbar toolbar-zoom" role="toolbar" aria-label="Zoom">
+        {/* Il righello sta qui: la colonna degli strumenti è già alta quanto la finestra. */}
+        <button
+          type="button"
+          className="icon-button"
+          aria-pressed={tool === "ruler"}
+          aria-label="Righello"
+          title="Righello (M)"
+          onClick={() => setTool("ruler")}
+        >
+          {TOOL_ICONS.ruler}
+        </button>
+        <span className="toolbar-separator" />
         <button
           type="button"
           className="icon-button"

@@ -1,4 +1,4 @@
-import type { GridSettings } from "@scryboard/shared";
+import { DEFAULT_GRID, type GridSettings } from "@scryboard/shared";
 import {
   hexOffsetCoords,
   hexToPixel,
@@ -63,6 +63,7 @@ export function calibrateFromBox(
     const size = half((across + (along * Math.sqrt(3)) / 2) / 2);
     if (size < 8) return null;
     const grid = {
+      ...DEFAULT_GRID,
       enabled: true,
       type,
       size,

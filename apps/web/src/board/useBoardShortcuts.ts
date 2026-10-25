@@ -53,7 +53,8 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
 
       if (e.code === "Space") {
         e.preventDefault();
-        if (!e.repeat) ui.setSpacePan(true);
+        // Durante una misura Spazio aggiunge una tappa (lo gestisce la lavagna), non muove la vista.
+        if (!e.repeat && !ui.measuring) ui.setSpacePan(true);
         return;
       }
       if (e.shiftKey && e.code === "Digit1") {
@@ -87,7 +88,9 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
           }
           return;
         case "Escape":
-          if (ui.tool === "calibrate") ui.setTool("select");
+          // Durante una misura Esc la annulla (lo gestisce la lavagna) e basta.
+          if (ui.measuring) return;
+          if (ui.tool === "calibrate" || ui.tool === "ruler") ui.setTool("select");
           else ui.selectWall(null);
           return;
         case "]":

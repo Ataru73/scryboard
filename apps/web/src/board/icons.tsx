@@ -68,6 +68,12 @@ export const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M6 20h12" />
     </Icon>
   ),
+  ruler: (
+    <Icon>
+      <path d="M3 16.5L16.5 3 21 7.5 7.5 21z" />
+      <path d="M7 12.5l2.5 2.5M10 9.5l1.5 1.5M13 6.5L15.5 9" />
+    </Icon>
+  ),
   calibrate: (
     <Icon>
       <rect x="6" y="6" width="12" height="12" strokeDasharray="3 2" />

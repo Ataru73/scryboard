@@ -233,6 +233,14 @@ export const GRID_TYPES = [
 ] as const;
 export type GridType = (typeof GRID_TYPES)[number]["id"];
 
+/** Come si contano le diagonali sulla griglia quadrata (sugli esagoni non serve). */
+export const DIAGONAL_RULES = [
+  { id: "one", label: "Ogni diagonale vale 1 (5e)" },
+  { id: "alternate", label: "1-2-1-2 (3.5, Pathfinder)" },
+  { id: "euclid", label: "Distanza in linea retta" },
+] as const;
+export type DiagonalRule = (typeof DIAGONAL_RULES)[number]["id"];
+
 export const gridSettingsSchema = z.object({
   enabled: z.boolean(),
   /** Le griglie salvate prima degli esagoni sono quadrate. */
@@ -245,6 +253,11 @@ export const gridSettingsSchema = z.object({
   /** Spostamento della griglia: per gli esagoni, il centro dell'esagono di riferimento. */
   offsetX: z.number(),
   offsetY: z.number(),
+  /** Valore di una casella per il righello (es. 5 "ft"); le stanze vecchie ripiegano su 5 ft. */
+  scale: z
+    .object({ amount: z.number().positive().max(10000), unit: z.string().trim().max(8) })
+    .default({ amount: 5, unit: "ft" }),
+  diagonals: z.enum(["one", "alternate", "euclid"]).default("one"),
 });
 export type GridSettings = z.infer<typeof gridSettingsSchema>;
 
@@ -254,6 +267,8 @@ export const DEFAULT_GRID: GridSettings = {
   size: 70,
   offsetX: 0,
   offsetY: 0,
+  scale: { amount: 5, unit: "ft" },
+  diagonals: "one",
 };
 
 /**

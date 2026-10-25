@@ -23,6 +23,8 @@ export type Tool =
   | "text"
   | "eraser"
   | "token"
+  /** Misura distanze (tappe con Spazio); gli altri vedono il righello. */
+  | "ruler"
   /** Solo GM: traccia una casella sulla mappa per calibrare la griglia. */
   | "calibrate"
   /** Solo GM: copre o scopre aree con la nebbia. */
@@ -48,6 +50,7 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   t: "text",
   e: "eraser",
   k: "token",
+  m: "ruler",
   f: "fog",
   b: "terrain",
   j: "path",
@@ -97,6 +100,8 @@ interface BoardUiState {
   viewport: Viewport;
   /** Barra spaziatrice premuta: pan temporaneo con qualsiasi strumento. */
   spacePan: boolean;
+  /** Misura in corso (righello o trascinamento di un token): Spazio aggiunge una tappa. */
+  measuring: boolean;
   tokenDraft: TokenDraft;
   gridPanelOpen: boolean;
   fogMode: FogMode;
@@ -138,6 +143,7 @@ interface BoardUiState {
   setEditingText: (id: string | null) => void;
   setViewport: (viewport: Viewport) => void;
   setSpacePan: (on: boolean) => void;
+  setMeasuring: (on: boolean) => void;
   setTokenDraft: (patch: Partial<TokenDraft>) => void;
   setGridPanelOpen: (open: boolean) => void;
   setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
@@ -195,6 +201,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   editingTextId: null,
   viewport: { x: 0, y: 0, scale: 1 },
   spacePan: false,
+  measuring: false,
   tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null, portrait: null },
   gridPanelOpen: false,
   fogMode: "cover",
@@ -226,6 +233,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setEditingText: (editingTextId) => set({ editingTextId }),
   setViewport: (viewport) => set({ viewport }),
   setSpacePan: (spacePan) => set({ spacePan }),
+  setMeasuring: (measuring) => set({ measuring }),
   setTokenDraft: (patch) => set((s) => ({ tokenDraft: { ...s.tokenDraft, ...patch } })),
   setGridPanelOpen: (gridPanelOpen) => set({ gridPanelOpen }),
   setFog: (patch) => set(patch),

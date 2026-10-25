@@ -61,7 +61,9 @@ import { GridLines } from "./GridLines";
 import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
 import { ItemNode, SELECTION_COLOR, StampContent } from "./ItemNode";
+import { formatDistance, pathCells, snapRulerPoint } from "./measure";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
+import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
 import { type BoardStore, newItemId } from "./store";
@@ -88,6 +90,8 @@ type Interaction =
   | { type: "shape"; shape: ShapeItem["shape"]; start: Point; end: Point }
   | { type: "erase" }
   | { type: "calibrate"; start: Point; end: Point }
+  /** Righello: tappe fisse e punto sotto il cursore. */
+  | { type: "ruler"; points: Point[]; cursor: Point }
   | { type: "fogRect"; start: Point; end: Point }
   | { type: "fogBrush"; points: number[] }
   | { type: "marquee"; start: Point; end: Point; additive: boolean }
@@ -264,9 +268,72 @@ export function Board({ store, provider, roomId, role }: Props) {
   const panMode = tool === "hand" || spacePan;
   const broadcastCursor = useAwarenessBroadcast<Point>(provider, "cursor");
   const broadcastDraft = useAwarenessBroadcast<DraftStroke>(provider, "draft");
+  const broadcastRuler = useAwarenessBroadcast<RulerState>(provider, "ruler");
+  /** Distanza di un token trascinato: tappe fisse e posizione attuale. */
+  const [dragMeasure, setDragMeasureState] = useState<{ points: Point[]; cursor: Point } | null>(
+    null,
+  );
+  const dragMeasureRef = useRef<{ id: string; shared: boolean; points: Point[]; cursor: Point }>(
+    null,
+  );
   const pressRef = useRef<{ timer: ReturnType<typeof setTimeout>; screen: Point } | null>(null);
   /** Ultime posizioni sicure degli oggetti durante il trascinamento (inizialmente quelle di partenza). */
   const dragLastRef = useRef<Map<string, Point> | null>(null);
+  const myColor =
+    (provider.awareness?.getLocalState()?.user as { color?: string } | undefined)?.color ??
+    "#e5484d";
+
+  /** Aggiorna la misura del token trascinato; gli altri la vedono salvo che il token sia nascosto. */
+  function setDragMeasure(
+    next: { id: string; shared: boolean; points: Point[]; cursor: Point } | null,
+  ) {
+    dragMeasureRef.current = next;
+    setDragMeasureState(next && { points: next.points, cursor: next.cursor });
+    const moved =
+      next &&
+      Math.hypot(
+        next.cursor.x - (next.points.at(-1) as Point).x,
+        next.cursor.y - (next.points.at(-1) as Point).y,
+      ) > 1;
+    broadcastRuler(
+      next?.shared && moved ? { points: flattenPoints([...next.points, next.cursor]) } : null,
+    );
+  }
+
+  const measurePoints =
+    interaction?.type === "ruler"
+      ? [...interaction.points, interaction.cursor]
+      : dragMeasure && [...dragMeasure.points, dragMeasure.cursor];
+  const measureText = measurePoints ? formatDistance(pathCells(measurePoints, grid), grid) : "";
+
+  // Spazio aggiunge una tappa alla misura in corso, Esc annulla il righello.
+  const measuring = interaction?.type === "ruler" || dragMeasure !== null;
+  useEffect(() => {
+    useBoardUi.getState().setMeasuring(measuring);
+    return () => useBoardUi.getState().setMeasuring(false);
+  }, [measuring]);
+  useEffect(() => {
+    if (!measuring) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.code === "Space") {
+        const drag = dragMeasureRef.current;
+        if (drag) {
+          setDragMeasure({ ...drag, points: [...drag.points, drag.cursor] });
+        } else {
+          setInteraction((current) =>
+            current?.type === "ruler"
+              ? { ...current, points: [...current.points, current.cursor] }
+              : current,
+          );
+        }
+      } else if (e.key === "Escape" && !dragMeasureRef.current) {
+        setInteraction(null);
+        broadcastRuler(null);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
   const gmToken = useAssetAuth();
 
   // Visione: il giocatore guarda dai suoi token; il GM vede tutto o, in anteprima, come un giocatore.
@@ -566,6 +633,11 @@ export function Board({ store, provider, roomId, role }: Props) {
       case "calibrate":
         setInteraction({ type: "calibrate", start: p.world, end: p.world });
         return;
+      case "ruler": {
+        const start = snapRulerPoint(p.world, grid, e.evt.altKey);
+        setInteraction({ type: "ruler", points: [start], cursor: start });
+        return;
+      }
       case "fog":
         if (fogShape === "rect") setInteraction({ type: "fogRect", start: p.world, end: p.world });
         else if (fogShape === "brush")
@@ -875,6 +947,12 @@ export function Board({ store, provider, roomId, role }: Props) {
         }
         return;
       }
+      case "ruler": {
+        const cursor = snapRulerPoint(p.world, grid, e.evt.altKey);
+        setInteraction({ ...interaction, cursor });
+        broadcastRuler({ points: flattenPoints([...interaction.points, cursor]) });
+        return;
+      }
       case "shape":
       case "calibrate":
       case "fogRect":
@@ -920,6 +998,10 @@ export function Board({ store, provider, roomId, role }: Props) {
     const current = interaction;
     setInteraction(null);
     if (!current) return;
+    if (current.type === "ruler") {
+      broadcastRuler(null);
+      return;
+    }
     if (current.type === "stampScatter") {
       // Tutti i timbri sparsi con un trascinamento sono un solo passo di annulla.
       addItems(
@@ -1040,6 +1122,11 @@ export function Board({ store, provider, roomId, role }: Props) {
   function onItemDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     cancelPress();
     dragLastRef.current = new Map(selectedNodes(e.target).map((n) => [n.id(), n.position()]));
+    const id = e.target.id();
+    if (store.get(id)?.kind === "token") {
+      const start = e.target.position();
+      setDragMeasure({ id, shared: !store.isHidden(id), points: [start], cursor: start });
+    }
   }
 
   function applyItemDrag(e: Konva.KonvaEventObject<DragEvent>) {
@@ -1083,6 +1170,8 @@ export function Board({ store, provider, roomId, role }: Props) {
       node.position(next);
       lastPositions.set(node.id(), next);
     }
+    const drag = dragMeasureRef.current;
+    if (drag?.id === dragged.id()) setDragMeasure({ ...drag, cursor: dragged.position() });
   }
 
   function onItemDragMove(e: Konva.KonvaEventObject<DragEvent>) {
@@ -1093,6 +1182,7 @@ export function Board({ store, provider, roomId, role }: Props) {
     const patches: Record<string, { x: number; y: number }> = {};
     for (const node of selectedNodes(e.target)) patches[node.id()] = { x: node.x(), y: node.y() };
     dragLastRef.current = null;
+    if (dragMeasureRef.current) setDragMeasure(null);
     store.update(patches);
   }
 
@@ -1565,7 +1655,25 @@ export function Board({ store, provider, roomId, role }: Props) {
                 strokeWidth={1.5 / viewport.scale}
               />
             ))}
-            <Presence provider={provider} scale={viewport.scale} />
+            <Presence provider={provider} scale={viewport.scale} grid={grid} />
+            {interaction?.type === "ruler" && (
+              <RulerShape
+                points={flattenPoints([...interaction.points, interaction.cursor])}
+                color={myColor}
+                grid={grid}
+                scale={viewport.scale}
+              />
+            )}
+            {dragMeasure &&
+              (dragMeasure.cursor.x !== (dragMeasure.points.at(-1) as Point).x ||
+                dragMeasure.cursor.y !== (dragMeasure.points.at(-1) as Point).y) && (
+                <RulerShape
+                  points={flattenPoints([...dragMeasure.points, dragMeasure.cursor])}
+                  color={myColor}
+                  grid={grid}
+                  scale={viewport.scale}
+                />
+              )}
           </Layer>
         </Stage>
       )}
@@ -1596,6 +1704,9 @@ export function Board({ store, provider, roomId, role }: Props) {
         <SelectionPanel store={store} role={role} roomId={roomId} provider={provider} />
       )}
       {tool === "select" && selectedWallId && <WallSelectionPanel store={store} />}
+      <div className="visually-hidden" role="status" aria-label="Distanza misurata">
+        {measureText}
+      </div>
       <TokenList
         // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
         items={

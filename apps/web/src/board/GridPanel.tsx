@@ -1,4 +1,4 @@
-import { GRID_TYPES, type GridSettings } from "@scryboard/shared";
+import { DIAGONAL_RULES, GRID_TYPES, type GridSettings } from "@scryboard/shared";
 import { useId, useSyncExternalStore } from "react";
 import { normalizeGridOffsets } from "./grid";
 import type { BoardStore } from "./store";
@@ -13,7 +13,16 @@ interface Props {
 export function GridPanel({ store, onClose }: Props) {
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const setTool = useBoardUi((s) => s.setTool);
-  const ids = { enabled: useId(), type: useId(), size: useId(), x: useId(), y: useId() };
+  const ids = {
+    enabled: useId(),
+    type: useId(),
+    size: useId(),
+    x: useId(),
+    y: useId(),
+    amount: useId(),
+    unit: useId(),
+    diagonals: useId(),
+  };
   /** Aggiorna la griglia riportando gli offset al suo periodo (la griglia resta dov'è). */
   const update = (patch: Partial<GridSettings>) => {
     const next = { ...grid, ...patch };
@@ -87,6 +96,53 @@ export function GridPanel({ store, onClose }: Props) {
           onChange={(e) => update({ offsetY: number(e.target.value, grid.offsetY) })}
         />
       </div>
+      <details className="grid-measure">
+        <summary>Righello</summary>
+        <div className="grid-fields">
+          <label htmlFor={ids.amount} title="Quanto vale una casella per il righello">
+            Una casella =
+          </label>
+          <span className="grid-scale">
+            <input
+              id={ids.amount}
+              type="number"
+              min={0.1}
+              step={0.5}
+              value={grid.scale.amount}
+              onChange={(e) => {
+                const amount = number(e.target.value, grid.scale.amount);
+                if (amount > 0) store.updateGrid({ scale: { ...grid.scale, amount } });
+              }}
+            />
+            <input
+              id={ids.unit}
+              type="text"
+              maxLength={8}
+              aria-label="Unità di misura"
+              value={grid.scale.unit}
+              onChange={(e) => store.updateGrid({ scale: { ...grid.scale, unit: e.target.value } })}
+            />
+          </span>
+          {grid.type === "square" && (
+            <>
+              <label htmlFor={ids.diagonals}>Diagonali</label>
+              <select
+                id={ids.diagonals}
+                value={grid.diagonals}
+                onChange={(e) =>
+                  store.updateGrid({ diagonals: e.target.value as GridSettings["diagonals"] })
+                }
+              >
+                {DIAGONAL_RULES.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+        </div>
+      </details>
       <button type="button" className="primary" onClick={() => setTool("calibrate")}>
         Calibra sulla mappa
       </button>

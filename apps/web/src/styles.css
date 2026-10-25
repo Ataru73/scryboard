@@ -783,6 +783,21 @@ button.danger {
   padding: 0.35rem 0.5rem;
 }
 
+.grid-measure summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.grid-scale {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.grid-scale input[type="text"] {
+  width: 4.5rem;
+}
+
 .checkbox {
   display: flex;
   align-items: center;
