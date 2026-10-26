@@ -15,6 +15,9 @@ export const core = {
       uploading_other: "Uploading {{count}} images…",
       mapUploaded_one: "Map uploaded.",
       mapUploaded_other: "Maps uploaded.",
+      invalidUvtt: "{{filename}} is not a valid Universal VTT map.",
+      uvttImported:
+        "Map imported: {{walls}} walls, {{doors}} doors and {{lights}} lights, attached to the image.",
       coverWithFog_one: "Cover it with fog",
       coverWithFog_other: "Cover them with fog",
     },

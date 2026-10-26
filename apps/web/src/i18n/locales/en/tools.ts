@@ -22,6 +22,8 @@ export const tools = {
     upload: {
       label: "Upload image",
       title: "Upload image (you can also drag or paste it)",
+      titleGm:
+        "Upload an image, a video or a Universal VTT map (.uvtt, .dd2vtt) with walls, doors and lights",
     },
     generateMap: {
       label: "Generate map",

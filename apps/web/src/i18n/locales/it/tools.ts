@@ -22,6 +22,8 @@ export const tools = {
     upload: {
       label: "Carica immagine",
       title: "Carica immagine (puoi anche trascinarla o incollarla)",
+      titleGm:
+        "Carica un'immagine, un video o una mappa Universal VTT (.uvtt, .dd2vtt) con muri, porte e luci",
     },
     generateMap: {
       label: "Genera mappa",

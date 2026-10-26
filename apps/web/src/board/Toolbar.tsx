@@ -145,7 +145,9 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         <button
           type="button"
           className="icon-button"
-          title={t("tools.toolbar.upload.title")}
+          title={
+            role === "gm" ? t("tools.toolbar.upload.titleGm") : t("tools.toolbar.upload.title")
+          }
           aria-label={t("tools.toolbar.upload.label")}
           onClick={() => fileInput.current?.click()}
         >
@@ -195,7 +197,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
           type="file"
           accept={
             role === "gm"
-              ? "image/png,image/jpeg,image/webp,image/gif,video/webm,video/mp4"
+              ? "image/png,image/jpeg,image/webp,image/gif,video/webm,video/mp4,.uvtt,.dd2vtt,.df2vtt"
               : "image/png,image/jpeg,image/webp,image/gif"
           }
           multiple

@@ -12,4 +12,5 @@ export * from "./presence";
 export * from "./rooms";
 export * from "./scenes";
 export * from "./terrain";
+export * from "./uvtt";
 export * from "./walls";

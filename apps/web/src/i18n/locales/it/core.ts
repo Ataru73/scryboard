@@ -15,6 +15,9 @@ export const core = {
       uploading_other: "Caricamento di {{count}} immagini…",
       mapUploaded_one: "Mappa caricata.",
       mapUploaded_other: "Mappe caricate.",
+      invalidUvtt: "{{filename}} non è una mappa Universal VTT valida.",
+      uvttImported:
+        "Mappa importata: {{walls}} muri, {{doors}} porte e {{lights}} luci, agganciati all'immagine.",
       coverWithFog_one: "Coprila con la nebbia",
       coverWithFog_other: "Coprila con la nebbia",
     },

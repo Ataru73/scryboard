@@ -96,6 +96,7 @@ import {
   uploadVideo,
 } from "./upload";
 import { useBoardShortcuts } from "./useBoardShortcuts";
+import { isUvttFile, parseUvtt, UvttError, uvttToBoard } from "./uvtt";
 import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
 import { WallSelectionPanel } from "./WallPanel";
 
@@ -1427,7 +1428,94 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     store.update(patches);
   }
 
+  /**
+   * Importa una mappa Universal VTT (Dungeondraft, Dungeon Alchemist…): immagine, muri, porte e
+   * luci. La mappa si adatta alla griglia della scena (la attiva se è spenta) e i muri restano
+   * agganciati all'immagine, così la seguono se la si sposta o ridimensiona.
+   */
+  async function importUvtt(file: File, at: Point) {
+    let map: ReturnType<typeof parseUvtt>;
+    try {
+      map = parseUvtt(JSON.parse(await file.text()), file.name);
+    } catch (error) {
+      if (!(error instanceof UvttError || error instanceof SyntaxError)) throw error;
+      setNotice(t("core.board.notices.invalidUvtt", { filename: file.name }));
+      return;
+    }
+    setNotice(t("core.board.notices.uploading", { count: 1 }), undefined, "loading");
+    let assetId: string;
+    try {
+      ({ assetId } = await uploadImage(roomId, map.image, gmToken));
+    } catch (error) {
+      setNotice(error instanceof UploadError ? error.message : t("core.upload.failed"));
+      return;
+    }
+    const cell = grid.size;
+    const snap = (v: number, offset: number) =>
+      grid.enabled && grid.type === "square" ? offset + Math.round((v - offset) / cell) * cell : v;
+    const origin = {
+      x: snap(at.x - (map.cols * cell) / 2, grid.offsetX),
+      y: snap(at.y - (map.rows * cell) / 2, grid.offsetY),
+    };
+    if (!grid.enabled) {
+      store.updateGrid({ enabled: true, type: "square", offsetX: origin.x, offsetY: origin.y });
+    }
+    const { walls, lights, width, height } = uvttToBoard(map, origin, cell);
+    const imageId = newItemId();
+    const common = { rotation: 0, locked: false, createdBy: store.userId };
+    let z = store.topZ("map");
+    store.importMap(
+      [
+        {
+          ...common,
+          id: imageId,
+          layer: "map",
+          kind: "image",
+          ...origin,
+          z,
+          assetId,
+          width,
+          height,
+        },
+        ...lights.map(
+          (light): BoardItem => ({
+            ...common,
+            ...light,
+            id: newItemId(),
+            layer: "map",
+            kind: "light",
+            z: ++z,
+          }),
+        ),
+      ],
+      walls.map((wall) => ({ ...wall, attachedTo: imageId })),
+    );
+    const doors = walls.filter((w) => w.kind === "door").length;
+    setNotice(
+      t("core.board.notices.uvttImported", {
+        walls: walls.length - doors,
+        doors,
+        lights: lights.length,
+      }),
+      {
+        label: t("core.board.notices.coverWithFog", { count: 1 }),
+        run: () =>
+          store.addFog({
+            mode: "cover",
+            shape: "rect",
+            points: [origin.x, origin.y, width, height],
+          }),
+      },
+    );
+  }
+
   async function addImages(files: File[], at: Point) {
+    // Le mappe Universal VTT le importa solo il GM, una alla volta.
+    if (role === "gm" && files.some(isUvttFile)) {
+      for (const file of files.filter(isUvttFile)) await importUvtt(file, at);
+      files = files.filter((file) => !isUvttFile(file));
+      if (files.length === 0) return;
+    }
     // I video (mappe animate) li carica solo il GM.
     const videos = role === "gm" ? files.filter(isSupportedVideo) : [];
     const images = [...files.filter(isSupportedImage), ...videos];

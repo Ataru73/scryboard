@@ -675,6 +675,19 @@ export class BoardStore {
     return valid;
   }
 
+  /** Mappa importata: oggetti (immagine, luci), muri e porte come una sola azione di annulla. */
+  importMap(items: BoardItem[], drafts: WallDraft[]) {
+    const walls = drafts
+      .map((draft) => ({ ...draft, id: newItemId() }) as Wall)
+      .filter((wall) => wallSchema.safeParse(wall).success);
+    this.action(() =>
+      this.transact(this.pub, () => {
+        for (const item of items) this.pub.items.set(item.id, item);
+        for (const wall of walls) this.wallsMap.set(wall.id, wall);
+      }),
+    );
+  }
+
   addWall(draft: WallDraft): Wall | undefined {
     return this.addWalls([draft])[0];
   }
