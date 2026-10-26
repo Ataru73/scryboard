@@ -15,6 +15,7 @@ export const core = {
       uploading_other: "Uploading {{count}} images…",
       mapUploaded_one: "Map uploaded.",
       mapUploaded_other: "Maps uploaded.",
+      gmWallBypass: "A wall blocks the token: hold Alt while dragging to pass through it.",
       connectFromItem: "Drag from one item to another to link them with an arrow.",
       invalidUvtt: "{{filename}} is not a valid Universal VTT map.",
       uvttImported:

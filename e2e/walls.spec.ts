@@ -145,8 +145,13 @@ test("walls block the whole token drag, Alt only bypasses them for the GM, open 
   // Alt del giocatore disattiva lo snap, ma non attraversa il muro.
   await dragWithAlt(player, [209.5, 315], [385, 315]);
   await expect.poll(async () => (await tokenPosition(player)).x).toBeLessThan(210);
-  // Alt del GM ignora invece sia snap sia muri.
+  await expect(player.getByText(/tieni premuto Alt/)).toHaveCount(0);
+  // Senza Alt il muro ferma anche il GM, che però scopre come attraversarlo.
   await gm.keyboard.press("v");
+  await drag(gm, [209.5, 315], [385, 315]);
+  await expect.poll(async () => (await tokenPosition(gm)).x).toBeLessThan(210);
+  await expect(gm.getByRole("status").filter({ hasText: "tieni premuto Alt" })).toBeVisible();
+  // Alt del GM ignora invece sia snap sia muri.
   await dragWithAlt(gm, [209.5, 315], [385, 315]);
   await expect.poll(async () => Math.abs((await tokenPosition(gm)).x - 385)).toBeLessThan(1);
 

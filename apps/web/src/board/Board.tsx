@@ -243,6 +243,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [interaction, setInteraction] = useState<Interaction | null>(null);
   const [notice, setNoticeState] = useState<Notice | null>(null);
+  /** Il suggerimento «Alt attraversa i muri» è già comparso in questo trascinamento. */
+  const wallHintShownRef = useRef(false);
   const setNotice = useCallback(
     (text: string | null, action?: Notice["action"], kind?: Notice["kind"]) =>
       setNoticeState(text ? { text, action, kind } : null),
@@ -1386,6 +1388,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
 
   function onItemDragStart(e: Konva.KonvaEventObject<DragEvent>) {
     cancelPress();
+    wallHintShownRef.current = false;
     const nodes = selectedNodes(e.target);
     dragLastRef.current = new Map(nodes.map((n) => [n.id(), n.position()]));
     dragStartRef.current = new Map(nodes.map((n) => [n.id(), n.position()]));
@@ -1427,6 +1430,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       }
       dx *= fraction;
       dy *= fraction;
+      // Il GM che urta un muro scopre che con Alt può attraversarlo (una volta per trascinamento).
+      if (fraction < 1 && role === "gm" && !wallHintShownRef.current) {
+        wallHintShownRef.current = true;
+        setNotice(t("core.board.notices.gmWallBypass"));
+      }
     }
 
     // Gli altri oggetti selezionati (token compresi, che il Transformer non gestisce) seguono.

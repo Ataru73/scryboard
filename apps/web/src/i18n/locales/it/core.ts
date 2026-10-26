@@ -15,6 +15,7 @@ export const core = {
       uploading_other: "Caricamento di {{count}} immagini…",
       mapUploaded_one: "Mappa caricata.",
       mapUploaded_other: "Mappe caricate.",
+      gmWallBypass: "Un muro blocca il token: tieni premuto Alt mentre trascini per attraversarlo.",
       connectFromItem: "Trascina da un oggetto a un altro per collegarli con una freccia.",
       invalidUvtt: "{{filename}} non è una mappa Universal VTT valida.",
       uvttImported:
