@@ -1,4 +1,4 @@
-import type { BoardItem, NoteItem, TextItem, TokenItem } from "@scryboard/shared";
+import type { BoardItem, ConnectorItem, NoteItem, TextItem, TokenItem } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { BoardStore } from "./store";
@@ -306,6 +306,25 @@ describe("BoardStore", () => {
     expect(player.get("pin")).toBeUndefined();
     gm.setHidden(["pin"], false);
     expect(player.get("pin")).toMatchObject({ kind: "note", text: "**CD 12** Destrezza" });
+  });
+
+  it("removes the connectors of a removed item in the same undo step", () => {
+    const store = new BoardStore(new Y.Doc(), null, "gm");
+    const link: ConnectorItem = {
+      ...text("link"),
+      kind: "connector",
+      from: "a",
+      to: "b",
+      color: "#e5484d",
+      strokeWidth: 3,
+      arrow: true,
+      label: "fratello di",
+    };
+    store.add([token("a"), token("b"), link]);
+    store.remove(["b"]);
+    expect(store.get("link")).toBeUndefined();
+    store.undo();
+    expect(store.get("link")).toMatchObject({ from: "a", to: "b" });
   });
 
   it("ignores hiding without a GM document", () => {

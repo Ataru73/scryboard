@@ -12,6 +12,7 @@ export const tools = {
       text: "Text",
       eraser: "Eraser",
       token: "Token",
+      connector: "Connect",
       terrain: "Terrain",
       path: "Path",
       light: "Light",

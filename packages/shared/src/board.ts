@@ -156,6 +156,25 @@ export const lightItemSchema = z.object({
   ...lightSpecSchema.shape,
 });
 
+/**
+ * Connettore tra due oggetti (freccia di una bacheca investigativa, legame tra fazioni): i suoi
+ * estremi seguono gli oggetti collegati, quindi (x, y) non contano. Se uno dei due non c'è (o è
+ * nascosto a chi guarda) il connettore non si disegna; cancellando un oggetto spariscono anche i
+ * suoi connettori.
+ */
+export const connectorItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("connector"),
+  from: z.string().min(1).max(64),
+  to: z.string().min(1).max(64),
+  color,
+  strokeWidth: z.number().positive().max(64),
+  /** Punta di freccia sull'oggetto di arrivo. */
+  arrow: z.boolean(),
+  /** Scritta a metà del connettore («fratello di», «gli deve 100 mo»). */
+  label: z.string().max(80),
+});
+
 /** Icone dei pin con le note del GM, con il loro colore. */
 export const NOTE_ICONS = [
   { id: "note", color: "#8e4ec6" },
@@ -280,6 +299,7 @@ export const boardItemSchema = z.discriminatedUnion("kind", [
   stampItemSchema,
   templateItemSchema,
   noteItemSchema,
+  connectorItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
@@ -292,6 +312,7 @@ export type LightItem = z.infer<typeof lightItemSchema>;
 export type StampItem = z.infer<typeof stampItemSchema>;
 export type TemplateItem = z.infer<typeof templateItemSchema>;
 export type NoteItem = z.infer<typeof noteItemSchema>;
+export type ConnectorItem = z.infer<typeof connectorItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 

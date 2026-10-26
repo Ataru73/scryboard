@@ -12,6 +12,7 @@ export const tools = {
       text: "Testo",
       eraser: "Gomma",
       token: "Token",
+      connector: "Collega",
       terrain: "Terreno",
       path: "Percorso",
       light: "Luce",

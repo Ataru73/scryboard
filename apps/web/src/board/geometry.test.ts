@@ -1,6 +1,13 @@
-import type { ShapeItem, StrokeItem } from "@scryboard/shared";
+import type { ShapeItem, StrokeItem, TokenItem } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
-import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
+import {
+  bakeScale,
+  boxesIntersect,
+  connectorEnds,
+  itemBounds,
+  normalizeBox,
+  unionBounds,
+} from "./geometry";
 
 const base = { layer: "draw" as const, z: 0, rotation: 0, locked: false, createdBy: "u" };
 const rect: ShapeItem = {
@@ -65,5 +72,42 @@ describe("geometry", () => {
     expect(boxesIntersect(a, { x: 5, y: 5, width: 10, height: 10 })).toBe(true);
     expect(boxesIntersect(a, { x: 10, y: 0, width: 5, height: 5 })).toBe(true);
     expect(boxesIntersect(a, { x: 11, y: 0, width: 5, height: 5 })).toBe(false);
+  });
+});
+
+describe("connectorEnds", () => {
+  const token = (id: string, x: number, y: number): TokenItem => ({
+    ...base,
+    layer: "token",
+    id,
+    kind: "token",
+    x,
+    y,
+    name: id,
+    color: "#000000",
+    assetId: null,
+    size: 1,
+  });
+
+  it("runs from the edge of one token to the edge of the other", () => {
+    // Token di 50 px (raggio 25) più 4 px di margine.
+    expect(connectorEnds(token("a", 0, 0), token("b", 200, 0), 50)).toEqual({
+      from: { x: 29, y: 0 },
+      to: { x: 171, y: 0 },
+    });
+  });
+
+  it("stops on the border of boxes and follows dragged items", () => {
+    // Il rettangolo va da (10, 20) a (110, 70): centro (60, 45).
+    const ends = connectorEnds(token("a", 60, 300), rect, 50, new Map([["a", { x: 0, y: -50 }]]));
+    expect(ends.from).toEqual({ x: 60, y: 221 });
+    expect(ends.to).toEqual({ x: 60, y: 74 });
+  });
+
+  it("joins the centers of overlapping items", () => {
+    expect(connectorEnds(token("a", 0, 0), token("b", 10, 0), 50)).toEqual({
+      from: { x: 0, y: 0 },
+      to: { x: 10, y: 0 },
+    });
   });
 });

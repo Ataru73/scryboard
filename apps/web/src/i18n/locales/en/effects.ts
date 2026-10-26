@@ -26,6 +26,15 @@ export const effects = {
     noPlayer: "No player",
     disconnectedPlayer: "Disconnected player",
   },
+  connector: {
+    label: "Connection label",
+    labelPlaceholder: "Label (e.g. “brother of”)",
+    color: "Connection color",
+    arrow: "Arrow",
+    arrowTitle: "Show the arrowhead on the target item",
+    reverse: "Reverse",
+    reverseTitle: "Swap start and end",
+  },
   note: {
     label: "Note",
     untitled: "Untitled note",

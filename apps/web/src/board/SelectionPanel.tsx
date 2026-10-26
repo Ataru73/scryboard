@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { AuraFields } from "./AuraFields";
 import { parentOf } from "./attach";
+import { ConnectorFields } from "./ConnectorFields";
 import { ElevationField } from "./ElevationField";
 import {
   CopyIcon,
@@ -79,6 +80,9 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
       )}
       {single?.kind === "token" && role === "gm" && canModify(single, role) && (
         <VisionFields token={single} store={store} provider={provider} />
+      )}
+      {single?.kind === "connector" && canModify(single, role) && (
+        <ConnectorFields key={single.id} connector={single} store={store} />
       )}
       {single?.kind === "light" && canModify(single, role) && (
         <LightFields light={single} store={store} />

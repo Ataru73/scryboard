@@ -15,6 +15,7 @@ export const core = {
       uploading_other: "Uploading {{count}} images…",
       mapUploaded_one: "Map uploaded.",
       mapUploaded_other: "Maps uploaded.",
+      connectFromItem: "Drag from one item to another to link them with an arrow.",
       invalidUvtt: "{{filename}} is not a valid Universal VTT map.",
       uvttImported:
         "Map imported: {{walls}} walls, {{doors}} doors and {{lights}} lights, attached to the image.",

@@ -26,6 +26,15 @@ export const effects = {
     noPlayer: "Nessun giocatore",
     disconnectedPlayer: "Giocatore non connesso",
   },
+  connector: {
+    label: "Etichetta del collegamento",
+    labelPlaceholder: "Etichetta (es. «fratello di»)",
+    color: "Colore del collegamento",
+    arrow: "Freccia",
+    arrowTitle: "Mostra la punta sull'oggetto di arrivo",
+    reverse: "Inverti",
+    reverseTitle: "Scambia partenza e arrivo",
+  },
   note: {
     label: "Nota",
     untitled: "Nota senza titolo",

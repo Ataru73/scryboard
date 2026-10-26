@@ -24,6 +24,8 @@ export type Tool =
   | "text"
   | "eraser"
   | "token"
+  /** Freccia tra due oggetti che li segue quando si spostano. */
+  | "connector"
   /** Misura distanze (tappe con Spazio); gli altri vedono il righello. */
   | "ruler"
   /** Solo GM: traccia una casella sulla mappa per calibrare la griglia. */
@@ -53,6 +55,7 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   t: "text",
   e: "eraser",
   k: "token",
+  c: "connector",
   m: "ruler",
   f: "fog",
   b: "terrain",

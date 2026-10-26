@@ -1093,6 +1093,10 @@ button.danger {
 }
 
 /* In basso a destra, sopra lo zoom: in alto stanno gli altri pannelli (griglia, nebbia…). */
+.connector-label {
+  width: 12rem;
+}
+
 .note-panel {
   width: min(20rem, calc(100vw - 24px));
   max-height: calc(100vh - 160px);

@@ -405,7 +405,15 @@ export class BoardStore {
   }
 
   remove(ids: Iterable<string>) {
-    const list = [...ids];
+    const requested = new Set(ids);
+    // I connettori di un oggetto che sparisce spariscono con lui (annullando tornano).
+    const connectors = [...this.byId.values()].filter(
+      (i) =>
+        i.kind === "connector" &&
+        !requested.has(i.id) &&
+        (requested.has(i.from) || requested.has(i.to)),
+    );
+    const list = [...requested, ...connectors.map((c) => c.id)];
     const removed = new Set(list);
     // I token agganciati a uno che sparisce si sganciano, nella stessa azione (annullando tornano).
     const orphans = [...this.byId.values()].filter(

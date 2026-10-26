@@ -48,6 +48,7 @@ const TOOLS: { tool: Tool; key: string }[] = [
   { tool: "text", key: "T" },
   { tool: "eraser", key: "E" },
   { tool: "token", key: "K" },
+  { tool: "connector", key: "C" },
 ];
 const GM_ONLY: { tool: Tool; key: string }[] = [
   { tool: "terrain", key: "B" },
@@ -64,7 +65,7 @@ const RULER_MODES: ("ruler" | TemplateShape)[] = [
   ...TEMPLATE_SHAPES.map((shape) => shape.id),
 ];
 
-const DRAWING_TOOLS: Tool[] = ["pen", "line", "rect", "ellipse", "text"];
+const DRAWING_TOOLS: Tool[] = ["pen", "line", "rect", "ellipse", "text", "connector"];
 
 interface Props {
   store: BoardStore;

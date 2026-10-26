@@ -109,6 +109,13 @@ export const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M9 14v6M16.5 18v2" />
     </Icon>
   ),
+  connector: (
+    <Icon>
+      <circle cx="5" cy="18" r="2.5" />
+      <circle cx="19" cy="6" r="2.5" />
+      <path d="M7 16l9.5-8M12.5 7.5h4v4" />
+    </Icon>
+  ),
   note: (
     <Icon>
       <path d="M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11z" />

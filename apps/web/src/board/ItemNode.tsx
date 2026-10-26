@@ -1,6 +1,7 @@
 import {
   assetUrl,
   type BoardItem,
+  type ConnectorItem,
   type ImageItem,
   isVideoAsset,
   type LightItem,
@@ -15,7 +16,19 @@ import {
 } from "@scryboard/shared";
 import Konva from "konva";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { Circle, Ellipse, Group, Image, Line, Path, Rect, Text } from "react-konva";
+import {
+  Arrow,
+  Circle,
+  Ellipse,
+  Group,
+  Image,
+  Label,
+  Line,
+  Path,
+  Rect,
+  Tag,
+  Text,
+} from "react-konva";
 import { PathShape } from "../paths/PathShape";
 import { stampImage } from "../stamps/generate";
 import { useAssetAuth } from "./assetAuth";
@@ -49,6 +62,8 @@ interface Props {
   attached?: boolean;
   /** Token in incognito: il GM lo vede com'è, con un «?» nell'angolo; gli altri solo la sagoma. */
   unmasked?: boolean;
+  /** Estremi di un connettore, calcolati dagli oggetti collegati. */
+  connectorEnds?: { from: { x: number; y: number }; to: { x: number; y: number } };
   /** Quota del token già formattata («+15 ft»): assente se è a terra. */
   elevationLabel?: string;
   /** Luce ambientale che tinge le immagini; assente con le luci spente. */
@@ -70,6 +85,7 @@ export const ItemNode = memo(function ItemNode({
   attached,
   unmasked,
   elevationLabel,
+  connectorEnds,
   ambient,
   onDragStart,
   onDragMove,
@@ -105,6 +121,8 @@ export const ItemNode = memo(function ItemNode({
         <StampContent item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "template" ? (
         <TemplateContent item={item} cellSize={cellSize} selected={selected} />
+      ) : item.kind === "connector" ? (
+        connectorEnds && <ConnectorShape item={item} ends={connectorEnds} selected={selected} />
       ) : item.kind === "note" ? (
         <NotePin item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "light" ? (
@@ -139,7 +157,10 @@ function ItemContent({
   roomId,
   ambient,
 }: {
-  item: Exclude<BoardItem, TokenItem | PathItem | LightItem | StampItem | TemplateItem | NoteItem>;
+  item: Exclude<
+    BoardItem,
+    TokenItem | PathItem | LightItem | StampItem | TemplateItem | NoteItem | ConnectorItem
+  >;
   roomId: string;
   ambient?: LightingSettings["ambient"];
 }) {
@@ -564,6 +585,64 @@ function TokenImage({
         }}
       />
     </Group>
+  );
+}
+
+/** Freccia tra due oggetti, con l'etichetta a metà. */
+function ConnectorShape({
+  item,
+  ends,
+  selected,
+}: {
+  item: ConnectorItem;
+  ends: { from: { x: number; y: number }; to: { x: number; y: number } };
+  selected: boolean;
+}) {
+  const points = [ends.from.x, ends.from.y, ends.to.x, ends.to.y];
+  const head = Math.max(8, item.strokeWidth * 3);
+  const fontSize = Math.max(12, item.strokeWidth * 4);
+  return (
+    <>
+      {selected && (
+        <Line
+          points={points}
+          stroke={SELECTION_COLOR}
+          strokeWidth={item.strokeWidth + 6}
+          opacity={0.5}
+          lineCap="round"
+          listening={false}
+        />
+      )}
+      <Arrow
+        points={points}
+        stroke={item.color}
+        fill={item.color}
+        strokeWidth={item.strokeWidth}
+        pointerLength={item.arrow ? head : 0}
+        pointerWidth={item.arrow ? head : 0}
+        lineCap="round"
+        hitStrokeWidth={Math.max(HIT_WIDTH, item.strokeWidth + 8)}
+      />
+      {item.label && (
+        <Label
+          x={(ends.from.x + ends.to.x) / 2}
+          y={(ends.from.y + ends.to.y) / 2}
+          // Centrata sul punto medio: la larghezza del testo è stimata.
+          offsetX={(item.label.length * fontSize * 0.55 + fontSize * 0.6) / 2}
+          offsetY={fontSize * 0.8}
+          listening={false}
+        >
+          <Tag fill="#1d1a24" opacity={0.85} cornerRadius={4} />
+          <Text
+            text={item.label}
+            fontFamily={FONT_FAMILY}
+            fontSize={fontSize}
+            padding={fontSize * 0.3}
+            fill="#ffffff"
+          />
+        </Label>
+      )}
+    </>
   );
 }
 

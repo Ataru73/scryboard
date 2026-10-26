@@ -30,6 +30,9 @@ export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
       const r = (item.size * cellSize) / 2;
       return { x: -r, y: -r, width: 2 * r, height: 2 * r };
     }
+    case "connector":
+      // Gli estremi dipendono dagli oggetti collegati: vedi `connectorEnds`.
+      return { x: 0, y: 0, width: 0, height: 0 };
     case "note": {
       // Il pin: un disco di mezza casella attorno al punto.
       const r = cellSize * 0.3;
@@ -98,7 +101,9 @@ export function itemBounds(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
   return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
 }
 
-export function unionBounds(items: BoardItem[], cellSize = DEFAULT_GRID.size): Box | null {
+export function unionBounds(all: BoardItem[], cellSize = DEFAULT_GRID.size): Box | null {
+  // I connettori stanno tra oggetti già contati e non hanno un riquadro proprio.
+  const items = all.filter((i) => i.kind !== "connector");
   if (items.length === 0) return null;
   const boxes = items.map((item) => itemBounds(item, cellSize));
   const x = Math.min(...boxes.map((b) => b.x));
@@ -127,6 +132,7 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
     case "path":
     case "light":
     case "note":
+    case "connector":
     case "template":
       // Niente Transformer: la taglia dei token e i punti dei percorsi si cambiano a parte.
       return {};
@@ -136,6 +142,60 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
         width: item.width === null ? null : Math.max(10, item.width * sx),
       };
   }
+}
+
+/** Oggetti disegnati attorno al loro punto (x, y): un connettore si ferma sul loro cerchio. */
+const ROUND_KINDS: BoardItem["kind"][] = ["token", "stamp", "note", "light"];
+
+/** Spazio tra la punta del connettore e il bordo dell'oggetto. */
+const CONNECTOR_GAP = 4;
+
+/**
+ * Estremi di un connettore: dal bordo dell'oggetto di partenza a quello di arrivo, lungo la
+ * retta che ne unisce i centri. `offsets` sposta gli oggetti che si stanno trascinando.
+ */
+export function connectorEnds(
+  from: BoardItem,
+  to: BoardItem,
+  cellSize: number,
+  offsets?: ReadonlyMap<string, Point>,
+): { from: Point; to: Point } {
+  const shape = (item: BoardItem) => {
+    const offset = offsets?.get(item.id) ?? { x: 0, y: 0 };
+    if (ROUND_KINDS.includes(item.kind)) {
+      const r = localBox(item, cellSize).width / 2;
+      return { center: { x: item.x + offset.x, y: item.y + offset.y }, r, half: null };
+    }
+    const box = itemBounds(item, cellSize);
+    return {
+      center: { x: box.x + box.width / 2 + offset.x, y: box.y + box.height / 2 + offset.y },
+      r: 0,
+      half: { x: box.width / 2, y: box.height / 2 },
+    };
+  };
+  const a = shape(from);
+  const b = shape(to);
+  const dx = b.center.x - a.center.x;
+  const dy = b.center.y - a.center.y;
+  const length = Math.hypot(dx, dy);
+  if (length === 0) return { from: a.center, to: b.center };
+  // Distanza dal centro al bordo lungo la direzione (ux, uy).
+  const exit = (s: typeof a, ux: number, uy: number) => {
+    if (!s.half) return s.r;
+    const tx = ux === 0 ? Infinity : s.half.x / Math.abs(ux);
+    const ty = uy === 0 ? Infinity : s.half.y / Math.abs(uy);
+    return Math.min(tx, ty);
+  };
+  const ux = dx / length;
+  const uy = dy / length;
+  const start = exit(a, ux, uy) + CONNECTOR_GAP;
+  const end = exit(b, ux, uy) + CONNECTOR_GAP;
+  // Oggetti sovrapposti: si collegano i centri.
+  if (start + end >= length) return { from: a.center, to: b.center };
+  return {
+    from: { x: a.center.x + ux * start, y: a.center.y + uy * start },
+    to: { x: b.center.x - ux * end, y: b.center.y - uy * end },
+  };
 }
 
 export function boxesIntersect(a: Box, b: Box): boolean {

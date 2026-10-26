@@ -35,7 +35,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Circle, Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
+import { Arrow, Circle, Group, Layer, Line, Rect, Stage, Transformer } from "react-konva";
 import { RollToasts } from "../dice/RollToasts";
 import {
   insertPoint,
@@ -64,7 +64,14 @@ import { useAssetAuth } from "./assetAuth";
 import { attachError, followers, parentOf } from "./attach";
 import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
-import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
+import {
+  bakeScale,
+  boxesIntersect,
+  connectorEnds,
+  itemBounds,
+  normalizeBox,
+  unionBounds,
+} from "./geometry";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
 import { HandoutModal } from "./HandoutModal";
 import { InitiativePanel } from "./InitiativePanel";
@@ -126,7 +133,9 @@ type Interaction =
   | { type: "marquee"; start: Point; end: Point; additive: boolean }
   | { type: "terrainBrush"; points: number[]; erase: boolean }
   | { type: "stampScatter"; stamps: StampDraft[]; last: Point }
-  | { type: "terrainCopy"; start: Point; end: Point };
+  | { type: "terrainCopy"; start: Point; end: Point }
+  /** Connettore in corso: dall'oggetto di partenza al cursore. */
+  | { type: "connect"; from: string; cursor: Point };
 
 /** Timbro in anteprima mentre lo si sparge, prima di salvarlo. */
 interface StampDraft {
@@ -339,7 +348,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   /** Ultime posizioni sicure degli oggetti durante il trascinamento (inizialmente quelle di partenza). */
   const dragLastRef = useRef<Map<string, Point> | null>(null);
   const dragStartRef = useRef<Map<string, Point> | null>(null);
-  const [draggedWallOffsets, setDraggedWallOffsets] = useState<Map<string, Point>>(() => new Map());
+  /** Spostamento degli oggetti trascinati: muri ancorati e connettori li seguono in tempo reale. */
+  const [dragOffsets, setDragOffsets] = useState<Map<string, Point>>(() => new Map());
   const myColor =
     (provider.awareness?.getLocalState()?.user as { color?: string } | undefined)?.color ??
     "#e5484d";
@@ -599,7 +609,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       .filter(
         (id) =>
           canEdit(store.get(id)) &&
-          !["token", "path", "template", "note"].includes(store.get(id)?.kind ?? "") &&
+          !["token", "path", "template", "note", "connector"].includes(store.get(id)?.kind ?? "") &&
           id !== editingTextId,
       )
       .map((id) => stage.findOne((node: Konva.Node) => node.hasName("item") && node.id() === id))
@@ -768,6 +778,14 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         return;
       case "token":
         placeToken(p.world);
+        return;
+      case "connector":
+        // Si parte da un oggetto e si rilascia su un altro.
+        if (target && target.kind !== "connector") {
+          setInteraction({ type: "connect", from: target.id, cursor: p.world });
+        } else {
+          setNotice(t("core.board.notices.connectFromItem"));
+        }
         return;
       case "calibrate":
         setInteraction({ type: "calibrate", start: p.world, end: p.world });
@@ -1083,6 +1101,9 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     if (polygon) setPolygon({ ...polygon, cursor: p.world });
     if (!interaction) return;
     switch (interaction.type) {
+      case "connect":
+        setInteraction({ ...interaction, cursor: p.world });
+        return;
       case "pan":
         setViewport({
           ...interaction.viewport,
@@ -1225,11 +1246,34 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       );
       return;
     }
+    if (current.type === "connect") {
+      const toId = findItemId(e.target);
+      const to = toId ? store.get(toId) : undefined;
+      if (!to || to.id === current.from || to.kind === "connector") return;
+      addItems([
+        {
+          ...base("draw", { x: 0, y: 0 }),
+          kind: "connector",
+          from: current.from,
+          to: to.id,
+          color,
+          strokeWidth: strokeWidth / viewport.scale,
+          arrow: true,
+          label: "",
+        },
+      ]);
+      return;
+    }
     if (current.type === "marquee") {
       const box = normalizeBox(current.start, current.end);
       if (box.width * viewport.scale < 4 && box.height * viewport.scale < 4) return;
       const inside = items
-        .filter((i) => canSelect(i, role) && boxesIntersect(itemBounds(i, grid.size), box))
+        .filter(
+          (i) =>
+            canSelect(i, role) &&
+            i.kind !== "connector" &&
+            boxesIntersect(itemBounds(i, grid.size), box),
+        )
         .map((i) => i.id);
       select(current.additive ? [...new Set([...selectedIds, ...inside])] : inside);
       return;
@@ -1395,15 +1439,22 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     const drag = dragMeasureRef.current;
     if (drag?.id === dragged.id()) setDragMeasure({ ...drag, cursor: dragged.position() });
 
-    // Aggiorna la posizione in tempo reale dei muri ancorati alle immagini trascinate.
-    const imageNodes = nodes.filter((n) => store.get(n.id())?.kind === "image");
-    if (imageNodes.some((n) => walls.some((w) => w.attachedTo === n.id()))) {
+    // Aggiorna in tempo reale i muri ancorati alle immagini e i connettori degli oggetti
+    // trascinati.
+    const linked = new Set<string>();
+    for (const w of walls) if (w.attachedTo) linked.add(w.attachedTo);
+    for (const i of items) {
+      if (i.kind !== "connector") continue;
+      linked.add(i.from);
+      linked.add(i.to);
+    }
+    if (nodes.some((n) => linked.has(n.id()))) {
       const offsets = new Map<string, Point>();
-      for (const n of imageNodes) {
+      for (const n of nodes) {
         const start = dragStartRef.current?.get(n.id());
         if (start) offsets.set(n.id(), { x: n.x() - start.x, y: n.y() - start.y });
       }
-      setDraggedWallOffsets(offsets);
+      setDragOffsets(offsets);
     }
   }
 
@@ -1430,7 +1481,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     }
     dragLastRef.current = null;
     dragStartRef.current = null;
-    setDraggedWallOffsets(new Map());
+    setDragOffsets(new Map());
     if (dragMeasureRef.current) setDragMeasure(null);
     store.update(patches);
   }
@@ -1661,7 +1712,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const drawItems = items.filter((i) => i.layer === "draw");
   const drawnWalls = walls.map((wall) => {
     if (wallEdit?.id === wall.id) return { ...wall, points: wallEdit.points };
-    const offset = wall.attachedTo ? draggedWallOffsets.get(wall.attachedTo) : undefined;
+    const offset = wall.attachedTo ? dragOffsets.get(wall.attachedTo) : undefined;
     if (offset && (offset.x !== 0 || offset.y !== 0)) {
       return {
         ...wall,
@@ -1680,13 +1731,21 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       original.kind === "path" && pathEdit?.id === original.id
         ? { ...original, points: pathEdit.points }
         : original;
+    let ends: ReturnType<typeof connectorEnds> | undefined;
+    if (item.kind === "connector") {
+      // Senza uno dei due oggetti (cancellato, o nascosto a chi guarda) non si disegna.
+      const from = store.get(item.from);
+      const to = store.get(item.to);
+      if (!from || !to) return null;
+      ends = connectorEnds(from, to, grid.size, dragOffsets);
+    }
     return (
       <ItemNode
         key={item.id}
         item={item}
         roomId={roomId}
         cellSize={grid.size}
-        draggable={tool === "select" && !panMode && canEdit(item)}
+        draggable={tool === "select" && !panMode && canEdit(item) && item.kind !== "connector"}
         editing={item.id === editingTextId}
         concealed={store.isHidden(item.id)}
         selected={selectedIds.includes(item.id)}
@@ -1697,6 +1756,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           parentOf(store.getSnapshot(), item) !== undefined
         }
         unmasked={role === "gm" && !visionPreview}
+        connectorEnds={ends}
         elevationLabel={
           item.kind === "token" && item.elevation
             ? formatElevation(item.elevation, grid)
@@ -2042,6 +2102,15 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
                 scale={viewport.scale}
               />
             )}
+            {interaction?.type === "connect" && store.get(interaction.from) && (
+              <ConnectorPreview
+                from={itemBounds(store.get(interaction.from) as BoardItem, grid.size)}
+                to={interaction.cursor}
+                color={color}
+                width={strokeWidth / viewport.scale}
+                scale={viewport.scale}
+              />
+            )}
             {interaction?.type === "ruler" && (
               <RulerShape
                 points={flattenPoints([...interaction.points, interaction.cursor])}
@@ -2156,5 +2225,33 @@ function FogPreview({ children }: { children: ReactNode }) {
     <Group opacity={mode === "cover" ? 0.45 : 0.25} listening={false}>
       {children}
     </Group>
+  );
+}
+
+/** Connettore che si sta tirando: dal centro dell'oggetto di partenza al cursore. */
+function ConnectorPreview({
+  from,
+  to,
+  color,
+  width,
+  scale,
+}: {
+  from: { x: number; y: number; width: number; height: number };
+  to: Point;
+  color: string;
+  width: number;
+  scale: number;
+}) {
+  return (
+    <Arrow
+      points={[from.x + from.width / 2, from.y + from.height / 2, to.x, to.y]}
+      stroke={color}
+      fill={color}
+      strokeWidth={width}
+      pointerLength={Math.max(10 / scale, width * 3)}
+      pointerWidth={Math.max(10 / scale, width * 3)}
+      dash={[8 / scale, 6 / scale]}
+      opacity={0.8}
+    />
   );
 }
