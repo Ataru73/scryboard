@@ -30,6 +30,7 @@ import {
 import { LightPanel } from "./LightPanel";
 import { MapGenerator } from "./MapGenerator";
 import { PathPanel } from "./PathPanel";
+import { RoofPanel } from "./RoofPanel";
 import { StampPanel } from "./StampPanel";
 import type { BoardStore } from "./store";
 import { TerrainPanel } from "./TerrainPanel";
@@ -56,6 +57,7 @@ const GM_ONLY: { tool: Tool; key: string }[] = [
   { tool: "light", key: "I" },
   { tool: "stamp", key: "S" },
   { tool: "note", key: "A" },
+  { tool: "roof", key: "U" },
   { tool: "wall", key: "W" },
   { tool: "fog", key: "F" },
 ];
@@ -307,6 +309,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       {tool === "terrain" && role === "gm" && <TerrainPanel store={store} />}
       {tool === "path" && role === "gm" && <PathPanel />}
       {tool === "stamp" && role === "gm" && <StampPanel />}
+      {tool === "roof" && role === "gm" && <RoofPanel />}
       {tool === "light" && role === "gm" && <LightPanel store={store} provider={provider} />}
       {tool === "wall" && role === "gm" && <WallPanel store={store} roomId={roomId} />}
 

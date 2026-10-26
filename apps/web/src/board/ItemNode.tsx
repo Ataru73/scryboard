@@ -10,6 +10,7 @@ import {
   type NoteItem,
   OBSCURED_IDENTITY,
   type PathItem,
+  type RoofItem,
   type StampItem,
   type TemplateItem,
   type TokenItem,
@@ -31,8 +32,9 @@ import {
 } from "react-konva";
 import { PathShape } from "../paths/PathShape";
 import { stampImage } from "../stamps/generate";
+import { roofTexture, TEXTURE_SIZE } from "../terrain/textures";
 import { useAssetAuth } from "./assetAuth";
-import { normalizeBox } from "./geometry";
+import { localBox, normalizeBox } from "./geometry";
 import { tokenInitials } from "./grid";
 import { usePortraitPath } from "./portraitPaths";
 import { TemplateBody } from "./Templates";
@@ -44,6 +46,8 @@ export const LINE_HEIGHT = 1.2;
 const HIT_WIDTH = 12;
 
 export const SELECTION_COLOR = "#8e7cf0";
+/** Opacità di un tetto con un token sotto. */
+export const ROOF_FADED = 0.15;
 
 interface Props {
   item: BoardItem;
@@ -62,6 +66,10 @@ interface Props {
   attached?: boolean;
   /** Token in incognito: il GM lo vede com'è, con un «?» nell'angolo; gli altri solo la sagoma. */
   unmasked?: boolean;
+  /** false: l'oggetto non riceve i clic, che passano a ciò che sta sotto. */
+  listening?: boolean;
+  /** Opacità di un tetto (sotto c'è un token, o il GM lo vede in trasparenza). */
+  fade?: number;
   /** Estremi di un connettore, calcolati dagli oggetti collegati. */
   connectorEnds?: { from: { x: number; y: number }; to: { x: number; y: number } };
   /** Quota del token già formattata («+15 ft»): assente se è a terra. */
@@ -86,6 +94,8 @@ export const ItemNode = memo(function ItemNode({
   unmasked,
   elevationLabel,
   connectorEnds,
+  fade,
+  listening = true,
   ambient,
   onDragStart,
   onDragMove,
@@ -99,7 +109,9 @@ export const ItemNode = memo(function ItemNode({
       y={item.y}
       rotation={item.rotation}
       draggable={draggable}
-      opacity={editing ? 0 : concealed ? 0.4 : 1}
+      opacity={(editing ? 0 : concealed ? 0.4 : 1) * (fade ?? 1)}
+      // Un tetto svanito lascia passare i clic ai token che stanno sotto.
+      listening={listening && (fade === undefined || fade >= ROOF_FADED * 2)}
       onDragStart={onDragStart}
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
@@ -121,6 +133,8 @@ export const ItemNode = memo(function ItemNode({
         <StampContent item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "template" ? (
         <TemplateContent item={item} cellSize={cellSize} selected={selected} />
+      ) : item.kind === "roof" ? (
+        <RoofShape item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "connector" ? (
         connectorEnds && <ConnectorShape item={item} ends={connectorEnds} selected={selected} />
       ) : item.kind === "note" ? (
@@ -159,7 +173,14 @@ function ItemContent({
 }: {
   item: Exclude<
     BoardItem,
-    TokenItem | PathItem | LightItem | StampItem | TemplateItem | NoteItem | ConnectorItem
+    | TokenItem
+    | PathItem
+    | LightItem
+    | StampItem
+    | TemplateItem
+    | NoteItem
+    | ConnectorItem
+    | RoofItem
   >;
   roomId: string;
   ambient?: LightingSettings["ambient"];
@@ -585,6 +606,62 @@ function TokenImage({
         }}
       />
     </Group>
+  );
+}
+
+/** Tetto procedurale: il poligono riempito con la texture dello stile, a scala della griglia. */
+function RoofShape({
+  item,
+  cellSize,
+  selected,
+}: {
+  item: RoofItem;
+  cellSize: number;
+  selected: boolean;
+}) {
+  // Una texture copre due caselle: tegole e lastre restano proporzionate ai token.
+  const scale = (cellSize * 2) / TEXTURE_SIZE;
+  const box = localBox(item, cellSize);
+  // Il colmo corre lungo il lato lungo: una falda in luce e una in ombra.
+  const across =
+    box.width >= box.height
+      ? { start: { x: 0, y: box.y }, end: { x: 0, y: box.y + box.height } }
+      : { start: { x: box.x, y: 0 }, end: { x: box.x + box.width, y: 0 } };
+  return (
+    <>
+      <Line
+        points={item.points}
+        closed
+        fillPatternImage={roofTexture(item.style) as unknown as HTMLImageElement}
+        fillPatternRepeat="repeat"
+        fillPatternScale={{ x: scale, y: scale }}
+        stroke={selected ? SELECTION_COLOR : "#2b1d14"}
+        strokeWidth={selected ? 3 : Math.max(2, cellSize * 0.06)}
+        dash={selected ? [8, 5] : undefined}
+        lineJoin="round"
+        shadowColor="#000000"
+        shadowOpacity={0.45}
+        shadowBlur={cellSize * 0.25}
+        shadowOffsetY={cellSize * 0.06}
+      />
+      <Line
+        points={item.points}
+        closed
+        listening={false}
+        fillLinearGradientStartPoint={across.start}
+        fillLinearGradientEndPoint={across.end}
+        fillLinearGradientColorStops={[
+          0,
+          "rgba(255, 255, 255, 0.16)",
+          0.495,
+          "rgba(255, 255, 255, 0.02)",
+          0.505,
+          "rgba(0, 0, 0, 0.22)",
+          1,
+          "rgba(0, 0, 0, 0.1)",
+        ]}
+      />
+    </>
   );
 }
 

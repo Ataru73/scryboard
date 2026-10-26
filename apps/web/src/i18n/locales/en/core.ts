@@ -30,6 +30,9 @@ export const core = {
     hide: "Hide",
     revealTitle: "Reveal to players (Shift+H)",
     hideTitle: "Hide from players (Shift+H)",
+    overhead: "Roof",
+    overheadTitle:
+      "Roof or canopy: drawn above tokens, it turns transparent when a token moves under it",
     show: "Show to players",
     showTitle: "Show the image full screen to every player",
     stopShowing: "Stop showing",

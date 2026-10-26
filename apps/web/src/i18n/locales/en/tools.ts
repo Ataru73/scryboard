@@ -18,6 +18,7 @@ export const tools = {
       light: "Light",
       stamp: "Stamps",
       note: "Notes",
+      roof: "Roofs",
       wall: "Walls",
       fog: "Fog",
     },
@@ -145,6 +146,15 @@ export const tools = {
       copy: "Drag a rectangle over the terrain to copy.",
       paste: "Click where you want to paste the copied terrain.",
     },
+  },
+  roof: {
+    label: "Roofs",
+    styles: {
+      shingles: "Tiles",
+      thatch: "Thatch",
+      slate: "Slate",
+    },
+    hint: "Click the corners over the building, double-click or Enter to close. It fades when a token enters.",
   },
   stamp: {
     label: "Stamps",

@@ -30,6 +30,9 @@ export const core = {
     hide: "Nascondi",
     revealTitle: "Rivela ai giocatori (Shift+H)",
     hideTitle: "Nascondi ai giocatori (Shift+H)",
+    overhead: "Tetto",
+    overheadTitle:
+      "Tetto o chioma: sta sopra i token e diventa trasparente quando un token ci passa sotto",
     show: "Mostra ai giocatori",
     showTitle: "Mostra l'immagine a tutto schermo a tutti i giocatori",
     stopShowing: "Smetti di mostrare",

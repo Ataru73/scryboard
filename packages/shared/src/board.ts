@@ -27,6 +27,11 @@ export const imageItemSchema = z.object({
   assetId: z.string(),
   width: z.number().positive(),
   height: z.number().positive(),
+  /**
+   * Tetto o chioma: si disegna sopra i token e diventa quasi trasparente quando un token visibile
+   * ci passa sotto, svelando l'interno.
+   */
+  overhead: z.boolean().optional(),
 });
 
 export const strokeItemSchema = z.object({
@@ -175,6 +180,27 @@ export const connectorItemSchema = z.object({
   label: z.string().max(80),
 });
 
+/** Stili dei tetti procedurali. */
+export const ROOF_STYLES = ["shingles", "thatch", "slate"] as const;
+export type RoofStyle = (typeof ROOF_STYLES)[number];
+
+/**
+ * Tetto procedurale: un poligono riempito con tegole, paglia o ardesia, disegnato sopra i token.
+ * Diventa quasi trasparente quando un token visibile ci entra, svelando l'interno. Sta sul
+ * livello mappa: lo modifica solo il GM.
+ */
+export const roofItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("roof"),
+  style: z.enum(ROOF_STYLES),
+  /** Vertici relativi a (x, y): [x0, y0, x1, y1, ...], almeno tre. */
+  points: z
+    .array(z.number())
+    .min(6)
+    .max(2000)
+    .refine((points) => points.length % 2 === 0, "I punti vanno a coppie (x, y)"),
+});
+
 /** Icone dei pin con le note del GM, con il loro colore. */
 export const NOTE_ICONS = [
   { id: "note", color: "#8e4ec6" },
@@ -300,6 +326,7 @@ export const boardItemSchema = z.discriminatedUnion("kind", [
   templateItemSchema,
   noteItemSchema,
   connectorItemSchema,
+  roofItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
@@ -313,6 +340,7 @@ export type StampItem = z.infer<typeof stampItemSchema>;
 export type TemplateItem = z.infer<typeof templateItemSchema>;
 export type NoteItem = z.infer<typeof noteItemSchema>;
 export type ConnectorItem = z.infer<typeof connectorItemSchema>;
+export type RoofItem = z.infer<typeof roofItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 

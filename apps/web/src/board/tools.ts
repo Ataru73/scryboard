@@ -5,6 +5,7 @@ import {
   type LIGHT_PRESETS,
   PATH_STYLES,
   type PathStyleId,
+  type RoofStyle,
   STROKE_WIDTHS,
   type StampId,
   type TemplateShape,
@@ -43,7 +44,9 @@ export type Tool =
   /** Solo GM: timbri di scenario (alberi, rocce, mobili). */
   | "stamp"
   /** Solo GM: pin con le note (trappole, descrizioni, tesori). */
-  | "note";
+  | "note"
+  /** Solo GM: tetti procedurali che svaniscono quando un token entra. */
+  | "roof";
 
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
@@ -64,6 +67,7 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   i: "light",
   s: "stamp",
   a: "note",
+  u: "roof",
 };
 
 /** Strumenti riservati al GM: le scorciatoie non li attivano per i giocatori. */
@@ -76,6 +80,7 @@ export const GM_TOOLS: Tool[] = [
   "light",
   "stamp",
   "note",
+  "roof",
 ];
 
 /** Larghezze dei percorsi, in caselle della griglia. */
@@ -160,6 +165,8 @@ interface BoardUiState {
   stampId: StampId;
   /** Rotazione, taglia e variante casuali a ogni timbro, per un aspetto naturale. */
   stampRandom: boolean;
+  /** Stile del prossimo tetto. */
+  roofStyle: RoofStyle;
   setTool: (tool: Tool) => void;
   setColor: (color: string) => void;
   setStrokeWidth: (width: number) => void;
@@ -186,6 +193,7 @@ interface BoardUiState {
   setVisionPreview: (viewerId: string | null) => void;
   setOpenNote: (id: string | null) => void;
   setStamp: (patch: Partial<Pick<BoardUiState, "stampId" | "stampRandom">>) => void;
+  setRoofStyle: (style: RoofStyle) => void;
   setTerrain: (
     patch: Partial<
       Pick<
@@ -263,6 +271,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   openNoteId: null,
   stampId: "tree",
   stampRandom: true,
+  roofStyle: "shingles",
   setTool: (tool) =>
     set({
       tool,
@@ -304,4 +313,5 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setVisionPreview: (visionPreview) => set({ visionPreview }),
   setOpenNote: (openNoteId) => set({ openNoteId }),
   setStamp: (patch) => set(patch),
+  setRoofStyle: (roofStyle) => set({ roofStyle }),
 }));

@@ -107,6 +107,16 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           {allHidden ? EyeOffIcon : EyeIcon}
         </button>
       )}
+      {role === "gm" && single?.kind === "image" && (
+        <button
+          type="button"
+          aria-pressed={!!single.overhead}
+          title={t("core.selection.overheadTitle")}
+          onClick={() => store.update({ [single.id]: { overhead: !single.overhead } })}
+        >
+          {t("core.selection.overhead")}
+        </button>
+      )}
       {role === "gm" && showable && (
         <button
           type="button"

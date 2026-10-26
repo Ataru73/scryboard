@@ -70,12 +70,13 @@ import {
   connectorEnds,
   itemBounds,
   normalizeBox,
+  pointInItem,
   unionBounds,
 } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
 import { HandoutModal } from "./HandoutModal";
 import { InitiativePanel } from "./InitiativePanel";
-import { ItemNode, SELECTION_COLOR, StampContent } from "./ItemNode";
+import { ItemNode, ROOF_FADED, SELECTION_COLOR, StampContent } from "./ItemNode";
 import {
   formatDistance,
   formatElevation,
@@ -156,6 +157,9 @@ const PING_HOLD_MS = 550;
 
 /** Durata dello spostamento della vista quando il GM richiama i giocatori. */
 const SUMMON_MS = 450;
+/** Tetto o chioma (procedurale o immagine della mappa): disegnato sopra i token. */
+const isRoof = (item: BoardItem) =>
+  item.kind === "roof" || (item.kind === "image" && !!item.overhead);
 /** Segnaposto del livello mappa (luci e pin delle note): vanno sempre sopra le immagini. */
 const isMarker = (item: BoardItem) => item.kind === "light" || item.kind === "note";
 
@@ -254,7 +258,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const [polygon, setPolygon] = useState<{
     points: number[];
     cursor: Point;
-    purpose: "fog" | "terrain";
+    purpose: "fog" | "terrain" | "roof";
   } | null>(null);
   const [draftText, setDraftText] = useState<TextItem | null>(null);
   const fittedRef = useRef(false);
@@ -840,6 +844,9 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         setInteraction({ type: "stampScatter", stamps: [first], last: p.world });
         return;
       }
+      case "roof":
+        addPolygonPoint(p.world, "roof");
+        return;
       case "note": {
         // Le note nascono nascoste: il GM le rivela quando vuole farle leggere.
         const note: NoteItem = {
@@ -871,7 +878,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     }
   }
 
-  function addPolygonPoint(at: Point, purpose: "fog" | "terrain") {
+  function addPolygonPoint(at: Point, purpose: "fog" | "terrain" | "roof") {
     if (!polygon) {
       setPolygon({ points: [at.x, at.y], cursor: at, purpose });
       return;
@@ -898,6 +905,19 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     if (polygon && polygon.points.length >= 6) {
       if (polygon.purpose === "fog") {
         store.addFog({ mode: fogMode, shape: "polygon", points: polygon.points });
+      } else if (polygon.purpose === "roof") {
+        // L'origine del tetto è l'angolo in alto a sinistra: i vertici le sono relativi.
+        const xs = polygon.points.filter((_, i) => i % 2 === 0);
+        const ys = polygon.points.filter((_, i) => i % 2 === 1);
+        const origin = { x: Math.min(...xs), y: Math.min(...ys) };
+        addItems([
+          {
+            ...base("map", origin),
+            kind: "roof",
+            style: useBoardUi.getState().roofStyle,
+            points: polygon.points.map((v, i) => v - (i % 2 === 0 ? origin.x : origin.y)),
+          },
+        ]);
       } else {
         commitTerrain({
           biome: terrainBiome,
@@ -938,7 +958,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   useEffect(() => {
     const fogPolygon = tool === "fog" && fogShape === "polygon";
     const terrainRegion = tool === "terrain" && terrainMode === "region";
-    if (!fogPolygon && !terrainRegion) setPolygon(null);
+    if (!fogPolygon && !terrainRegion && tool !== "roof") setPolygon(null);
   }, [tool, fogShape, terrainMode]);
 
   /**
@@ -1457,7 +1477,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       linked.add(i.from);
       linked.add(i.to);
     }
-    if (nodes.some((n) => linked.has(n.id()))) {
+    // Anche i tetti devono sapere dove sono i token mentre si trascinano.
+    if (nodes.some((n) => linked.has(n.id())) || items.some(isRoof)) {
       const offsets = new Map<string, Point>();
       for (const n of nodes) {
         const start = dragStartRef.current?.get(n.id());
@@ -1715,8 +1736,24 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   // Luci e pin delle note sono segnaposto: stanno sempre sopra le mappe, anche se queste sono
   // state caricate dopo.
   const mapItems = items
-    .filter((i) => i.layer === "map" && (role === "gm" || i.kind !== "light"))
+    .filter((i) => i.layer === "map" && !isRoof(i) && (role === "gm" || i.kind !== "light"))
     .sort((a, b) => Number(isMarker(a)) - Number(isMarker(b)));
+  // Tetti e chiome: sopra i token, sotto visione e nebbia.
+  const roofItems = items.filter(isRoof);
+  /** Un tetto svanisce se sotto c'è un token che chi guarda può vedere (anche mentre lo si trascina). */
+  // In anteprima il GM vede i tetti come il giocatore: i token nascosti non li fanno svanire.
+  const gmView = role === "gm" && !visionPreview;
+  const roofTokens = gmView ? visibleTokens : visibleTokens.filter((t) => !store.isHidden(t.id));
+  const roofOpacity = (roof: BoardItem) => {
+    const covered = roofTokens.some((token) => {
+      const offset = dragOffsets.get(token.id);
+      const at = offset ? { x: token.x + offset.x, y: token.y + offset.y } : token;
+      return pointInItem(at, roof, grid.size);
+    });
+    if (covered) return ROOF_FADED;
+    // Il GM vede sempre sotto i tetti, come vede attraverso la nebbia.
+    return gmView ? 0.55 : 1;
+  };
   const tokenItems = items.filter((i) => i.layer === "token");
   const drawItems = items.filter((i) => i.layer === "draw");
   const drawnWalls = walls.map((wall) => {
@@ -1766,6 +1803,9 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         }
         unmasked={role === "gm" && !visionPreview}
         connectorEnds={ends}
+        fade={isRoof(item) ? roofOpacity(item) : undefined}
+        // I giocatori non selezionano i tetti: i loro clic passano a porte e token che stanno sotto.
+        listening={!isRoof(item) || role === "gm"}
         elevationLabel={
           item.kind === "token" && item.elevation
             ? formatElevation(item.elevation, grid)
@@ -1866,6 +1906,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
               onToggleDoor={toggleDoor}
             />
             {tokenItems.map(renderItem)}
+            {roofItems.map(renderItem)}
           </Layer>
           {lighting.enabled && (vision.active || role === "gm") && (
             <VisionLayer

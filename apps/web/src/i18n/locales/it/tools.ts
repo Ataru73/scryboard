@@ -18,6 +18,7 @@ export const tools = {
       light: "Luce",
       stamp: "Timbri",
       note: "Note",
+      roof: "Tetti",
       wall: "Muri",
       fog: "Nebbia",
     },
@@ -145,6 +146,15 @@ export const tools = {
       copy: "Trascina un riquadro sul terreno da copiare.",
       paste: "Clic dove incollare il terreno copiato.",
     },
+  },
+  roof: {
+    label: "Tetti",
+    styles: {
+      shingles: "Tegole",
+      thatch: "Paglia",
+      slate: "Ardesia",
+    },
+    hint: "Clic sui vertici sopra l'edificio, doppio clic o Invio per chiudere. Svanisce quando un token entra.",
   },
   stamp: {
     label: "Timbri",

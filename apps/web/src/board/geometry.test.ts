@@ -6,6 +6,8 @@ import {
   connectorEnds,
   itemBounds,
   normalizeBox,
+  pointInItem,
+  pointInPolygon,
   unionBounds,
 } from "./geometry";
 
@@ -109,5 +111,37 @@ describe("connectorEnds", () => {
       from: { x: 0, y: 0 },
       to: { x: 10, y: 0 },
     });
+  });
+});
+
+describe("pointInItem", () => {
+  it("accounts for rotation", () => {
+    // Rettangolo 100×50 con l'angolo in (10, 20).
+    expect(pointInItem({ x: 100, y: 60 }, rect)).toBe(true);
+    expect(pointInItem({ x: 100, y: 80 }, rect)).toBe(false);
+    // Ruotato di 90° attorno all'angolo: ora scende per 100 px verso il basso e va a sinistra.
+    const turned = { ...rect, rotation: 90 };
+    expect(pointInItem({ x: 0, y: 100 }, turned)).toBe(true);
+    expect(pointInItem({ x: 100, y: 60 }, turned)).toBe(false);
+  });
+});
+
+describe("pointInPolygon", () => {
+  it("follows the shape of an L-shaped roof", () => {
+    // Una L: 0..100 in larghezza, 0..100 in altezza, con il quadrante in alto a destra vuoto.
+    const roof = {
+      ...rect,
+      id: "roof",
+      kind: "roof" as const,
+      layer: "map" as const,
+      style: "slate" as const,
+      x: 0,
+      y: 0,
+      points: [0, 0, 50, 0, 50, 50, 100, 50, 100, 100, 0, 100],
+    };
+    expect(pointInPolygon({ x: 25, y: 25 }, roof.points)).toBe(true);
+    expect(pointInPolygon({ x: 75, y: 25 }, roof.points)).toBe(false);
+    expect(pointInItem({ x: 75, y: 75 }, roof)).toBe(true);
+    expect(pointInItem({ x: 75, y: 25 }, roof)).toBe(false);
   });
 });

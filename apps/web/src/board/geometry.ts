@@ -47,25 +47,16 @@ export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
       return { x: 0, y: 0, width: item.width, height: item.height };
     case "shape":
       return normalizeBox({ x: 0, y: 0 }, { x: item.width, y: item.height });
+    case "roof":
+      return pointsBox(item.points);
     case "stroke": {
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-      for (let i = 0; i + 1 < item.points.length; i += 2) {
-        const x = item.points[i] as number;
-        const y = item.points[i + 1] as number;
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-      }
+      const box = pointsBox(item.points);
       const half = item.strokeWidth / 2;
       return {
-        x: minX - half,
-        y: minY - half,
-        width: maxX - minX + item.strokeWidth,
-        height: maxY - minY + item.strokeWidth,
+        x: box.x - half,
+        y: box.y - half,
+        width: box.width + item.strokeWidth,
+        height: box.height + item.strokeWidth,
       };
     }
     case "text": {
@@ -80,6 +71,23 @@ export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
       };
     }
   }
+}
+
+/** Riquadro di una lista di punti [x0, y0, x1, y1, ...]. */
+function pointsBox(points: number[]): Box {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i + 1 < points.length; i += 2) {
+    const x = points[i] as number;
+    const y = points[i + 1] as number;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
 /** Riquadro in coordinate mondo, tenendo conto della rotazione. */
@@ -124,6 +132,7 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
     case "shape":
       return { width: item.width * sx, height: item.height * sy };
     case "stroke":
+    case "roof":
       return { points: item.points.map((v, i) => v * (i % 2 === 0 ? sx : sy)) };
     case "stamp":
       // Il Transformer mantiene le proporzioni: la scala diventa la taglia del timbro.
@@ -142,6 +151,33 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
         width: item.width === null ? null : Math.max(10, item.width * sx),
       };
   }
+}
+
+/** Il punto cade dentro il riquadro dell'oggetto, tenendo conto della rotazione. */
+export function pointInItem(p: Point, item: BoardItem, cellSize = DEFAULT_GRID.size): boolean {
+  const box = localBox(item, cellSize);
+  const rad = (-item.rotation * Math.PI) / 180;
+  const dx = p.x - item.x;
+  const dy = p.y - item.y;
+  const x = dx * Math.cos(rad) - dy * Math.sin(rad);
+  const y = dx * Math.sin(rad) + dy * Math.cos(rad);
+  // I tetti procedurali seguono la loro forma, non il riquadro.
+  if (item.kind === "roof") return pointInPolygon({ x, y }, item.points);
+  return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
+}
+
+/** Il punto sta dentro il poligono [x0, y0, x1, y1, ...] (regola pari-dispari). */
+export function pointInPolygon(p: Point, points: number[]): boolean {
+  let inside = false;
+  const n = points.length / 2;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = points[2 * i] as number;
+    const yi = points[2 * i + 1] as number;
+    const xj = points[2 * j] as number;
+    const yj = points[2 * j + 1] as number;
+    if (yi > p.y !== yj > p.y && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 /** Oggetti disegnati attorno al loro punto (x, y): un connettore si ferma sul loro cerchio. */

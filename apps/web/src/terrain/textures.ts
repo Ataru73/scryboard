@@ -1,4 +1,4 @@
-import type { BiomeId } from "@scryboard/shared";
+import type { BiomeId, RoofStyle } from "@scryboard/shared";
 import { hashString, seededRandom, tileableFbm } from "./noise";
 
 /** Lato della texture in pixel; nel mondo copre lo stesso numero di pixel. */
@@ -411,6 +411,107 @@ const PATH_TEXTURES: Record<PathTextureId, BiomeStyle> = {
   },
 };
 
+/** Tegole curve: file sfalsate di coppi, con l'ombra sotto il bordo di ognuno. */
+function roofTiles(ctx: Ctx, random: Random) {
+  const rows = 8;
+  const h = TEXTURE_SIZE / rows;
+  const w = TEXTURE_SIZE / 8;
+  for (let row = 0; row < rows; row++) {
+    const offset = row % 2 === 0 ? 0 : w / 2;
+    for (let x = -w; x < TEXTURE_SIZE + w; x += w) {
+      const cx = x + offset + w / 2;
+      const bottom = (row + 1) * h;
+      const shade = 0.85 + random() * 0.3;
+      const r = 178 * shade;
+      const g = 84 * shade;
+      const b = 52 * shade;
+      wrapped((dx, dy) => {
+        // Il coppo: un arco che chiude in basso, più chiaro al centro.
+        const gradient = ctx.createLinearGradient(cx - w / 2 + dx, 0, cx + w / 2 + dx, 0);
+        const rgb = (k: number) =>
+          `rgb(${Math.round(r * k)}, ${Math.round(g * k)}, ${Math.round(b * k)})`;
+        gradient.addColorStop(0, rgb(0.75));
+        gradient.addColorStop(0.5, rgb(1));
+        gradient.addColorStop(1, rgb(0.7));
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(cx - w / 2 + dx, bottom - h + dy);
+        ctx.lineTo(cx - w / 2 + dx, bottom - w / 2 + dy);
+        ctx.arc(cx + dx, bottom - w / 2 + dy, w / 2, Math.PI, 0, true);
+        ctx.lineTo(cx + w / 2 + dx, bottom - h + dy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(60, 25, 15, 0.55)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
+    }
+  }
+}
+
+/** Lastre di ardesia: rettangoli sfalsati con giunture scure e qualche lastra più chiara. */
+function slates(ctx: Ctx, random: Random) {
+  const rows = 8;
+  const h = TEXTURE_SIZE / rows;
+  const w = TEXTURE_SIZE / 6;
+  for (let row = 0; row < rows; row++) {
+    const offset = row % 2 === 0 ? 0 : w / 2;
+    for (let x = -w; x < TEXTURE_SIZE + w; x += w) {
+      const shade = 0.8 + random() * 0.4;
+      const [r, g, b] = [86 * shade, 96 * shade, 110 * shade].map(Math.round);
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      wrapped((dx, dy) => {
+        ctx.beginPath();
+        ctx.roundRect(x + offset + 1 + dx, row * h + 1 + dy, w - 2, h - 2, 2);
+        ctx.fill();
+        // L'ombra della fila sopra.
+        ctx.fillStyle = "rgba(20, 24, 32, 0.35)";
+        ctx.fillRect(x + offset + 1 + dx, row * h + 1 + dy, w - 2, h * 0.18);
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+      });
+    }
+  }
+}
+
+/** Paglia: fasci di steli in file orizzontali, con il bordo inferiore di ogni fila in ombra. */
+function thatchCourses(ctx: Ctx, random: Random) {
+  const rows = 6;
+  const h = TEXTURE_SIZE / rows;
+  ctx.lineCap = "round";
+  for (let row = 0; row < rows; row++) {
+    const top = row * h;
+    for (let i = 0; i < 260; i++) {
+      const x = random() * TEXTURE_SIZE;
+      const y = top + random() * h * 0.6;
+      const l = h * (0.5 + random() * 0.5);
+      const tilt = (random() - 0.5) * 0.25;
+      ctx.strokeStyle = ["#c9a95c", "#b08f45", "#dcc07a", "#9a7a3a"][
+        Math.floor(random() * 4)
+      ] as string;
+      ctx.lineWidth = 1 + random();
+      wrapped((dx, dy) => {
+        ctx.beginPath();
+        ctx.moveTo(x + dx, y + dy);
+        ctx.lineTo(x + dx + tilt * l, y + dy + l);
+        ctx.stroke();
+      });
+    }
+    ctx.fillStyle = "rgba(70, 50, 20, 0.35)";
+    ctx.fillRect(0, top + h * 0.88, TEXTURE_SIZE, h * 0.12);
+  }
+}
+
+const ROOF_TEXTURES: Record<RoofStyle, BiomeStyle> = {
+  shingles: { colors: ["#6e2f1c", "#80381f"], period: 4, octaves: 1, detail: roofTiles },
+  thatch: {
+    colors: ["#8a6a30", "#a5844a", "#bb9a58"],
+    period: 6,
+    octaves: 3,
+    detail: thatchCourses,
+  },
+  slate: { colors: ["#1f242c", "#2a3038"], period: 4, octaves: 1, detail: slates },
+};
+
 const textures = new Map<string, HTMLCanvasElement>();
 
 /** Texture del bioma, generata una volta e ripetibile senza cuciture. */
@@ -420,6 +521,10 @@ export function biomeTexture(id: BiomeId): HTMLCanvasElement {
 
 export function pathTexture(id: PathTextureId): HTMLCanvasElement {
   return generateTexture(`path:${id}`, PATH_TEXTURES[id]);
+}
+
+export function roofTexture(style: RoofStyle): HTMLCanvasElement {
+  return generateTexture(`roof:${style}`, ROOF_TEXTURES[style]);
 }
 
 function generateTexture(id: string, style: BiomeStyle): HTMLCanvasElement {
