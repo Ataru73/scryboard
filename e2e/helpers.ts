@@ -52,3 +52,15 @@ export async function placeToken(page: Page, name: string, x: number, y: number)
   await page.getByLabel("Nome del token").fill(name);
   await click(page, x, y);
 }
+
+/** Apre un gruppo della barra (Disegno, Mappa, Visibilità) e ne restituisce la fila di strumenti. */
+export async function openToolGroup(page: Page, group: string) {
+  await page.getByRole("button", { name: new RegExp(`^${group}:`) }).click();
+  return page.getByRole("toolbar", { name: group, exact: true });
+}
+
+/** Sceglie uno strumento dentro un gruppo della barra. */
+export async function pickTool(page: Page, group: string, tool: string) {
+  const flyout = await openToolGroup(page, group);
+  await flyout.getByRole("button", { name: tool, exact: true }).click();
+}

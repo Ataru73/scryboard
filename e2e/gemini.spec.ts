@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { board, click, setupTable } from "./helpers";
+import { board, click, openToolGroup, setupTable } from "./helpers";
 
 const KEY = "AIza-clave-di-prova";
 const PNG =
@@ -224,14 +224,18 @@ test("the GM generates a map from a description and it lands on the board as a m
 }) => {
   const { gm, player } = await setupTable(browser);
   // Senza chiave il pulsante non c'è, neanche per il GM.
-  await expect(gm.getByRole("button", { name: "Genera mappa" })).toHaveCount(0);
+  const generate = gm.getByRole("button", { name: "Genera mappa" });
+  await openToolGroup(gm, "Mappa");
+  await expect(generate).toHaveCount(0);
+  await gm.keyboard.press("Escape");
   const calls = await mockGemini(gm);
   await saveKey(gm);
-  await expect(gm.getByRole("button", { name: "Genera mappa" })).toBeVisible();
+  await openToolGroup(gm, "Mappa");
+  await expect(generate).toBeVisible();
   // I giocatori non generano mappe.
   await expect(player.getByRole("button", { name: "Genera mappa" })).toHaveCount(0);
 
-  await gm.getByRole("button", { name: "Genera mappa" }).click();
+  await generate.click();
   const dialog = gm.getByRole("dialog", { name: "Genera una mappa" });
   await dialog.getByLabel("Descrizione").fill("cripta con un altare");
   await dialog.getByLabel("Formato").selectOption("4:3");

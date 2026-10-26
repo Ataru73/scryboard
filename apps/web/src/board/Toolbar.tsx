@@ -36,32 +36,29 @@ import { StampPanel } from "./StampPanel";
 import type { BoardStore } from "./store";
 import { TerrainPanel } from "./TerrainPanel";
 import { TokenStyleFields } from "./TokenStyleFields";
+import { ToolGroup } from "./ToolGroup";
 import { type Tool, useBoardUi } from "./tools";
 import { clampScale, screenToWorld, zoomAt } from "./viewport";
 import { WallPanel } from "./WallPanel";
 
-const TOOLS: { tool: Tool; key: string }[] = [
-  { tool: "select", key: "V" },
-  { tool: "hand", key: "H" },
-  { tool: "pen", key: "P" },
-  { tool: "line", key: "L" },
-  { tool: "rect", key: "R" },
-  { tool: "ellipse", key: "O" },
-  { tool: "text", key: "T" },
-  { tool: "eraser", key: "E" },
-  { tool: "token", key: "K" },
-  { tool: "connector", key: "C" },
+type ToolItem = { kind: "tool"; tool: Tool; key: string };
+const item = (tool: Tool, key: string): ToolItem => ({ kind: "tool", tool, key });
+
+// Gli strumenti sono raggruppati per scopo, così la barra resta corta anche per il GM.
+const DRAW_GROUP = [
+  item("pen", "P"),
+  item("line", "L"),
+  item("rect", "R"),
+  item("ellipse", "O"),
+  item("text", "T"),
+  item("connector", "C"),
 ];
-const GM_ONLY: { tool: Tool; key: string }[] = [
-  { tool: "terrain", key: "B" },
-  { tool: "path", key: "J" },
-  { tool: "light", key: "I" },
-  { tool: "stamp", key: "S" },
-  { tool: "note", key: "A" },
-  { tool: "roof", key: "U" },
-  { tool: "wall", key: "W" },
-  { tool: "fog", key: "F" },
-];
+/** Ciò che si prepara prima della sessione (solo GM); carica e genera si aggiungono a parte. */
+const MAP_GROUP = [item("terrain", "B"), item("path", "J"), item("stamp", "S"), item("roof", "U")];
+/** Ciò che decide cosa vedono i giocatori (solo GM). */
+const VISIBILITY_GROUP = [item("wall", "W"), item("fog", "F"), item("light", "I")];
+
+type Group = "draw" | "map" | "visibility";
 
 const RULER_MODES: ("ruler" | TemplateShape)[] = [
   "ruler",
@@ -118,6 +115,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
   const isEmpty = useSyncExternalStore(store.subscribe, () => store.isEmpty());
   const [clearModalOpen, setClearModalOpen] = useState(false);
   const [mapModalOpen, setMapModalOpen] = useState(false);
+  /** Gruppo di strumenti aperto di lato: uno alla volta. */
+  const [openGroup, setOpenGroup] = useState<Group | null>(null);
   // Generare mappe richiede una chiave di Gemini; senza, il pulsante non compare.
   const geminiKey = useSyncExternalStore(subscribeGeminiKey, storage.getGeminiKey);
   const clearTitleId = useId();
@@ -130,48 +129,88 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     return catalogLabel(t, "templates", mode, shape?.label ?? mode);
   };
 
+  const toolButton = ({ tool: id, key }: ToolItem) => {
+    const label = t(`tools.toolbar.tools.${id}`);
+    return (
+      <button
+        key={id}
+        type="button"
+        className="icon-button"
+        aria-pressed={tool === id}
+        title={t("tools.toolbar.toolTitle", { label, key })}
+        aria-label={label}
+        onClick={() => setTool(id)}
+      >
+        {TOOL_ICONS[id]}
+      </button>
+    );
+  };
+  const groupProps = (group: Group) => ({
+    tool,
+    setTool,
+    open: openGroup === group,
+    onOpenChange: (open: boolean) =>
+      setOpenGroup((current) => (open ? group : current === group ? null : current)),
+  });
+  const uploadAction = {
+    kind: "action" as const,
+    id: "upload",
+    label: t("tools.toolbar.upload.label"),
+    title: t("tools.toolbar.upload.titleGm"),
+    icon: ImageIcon,
+    run: () => fileInput.current?.click(),
+  };
+  const generateAction = {
+    kind: "action" as const,
+    id: "generate",
+    label: t("tools.toolbar.generateMap.label"),
+    title: t("tools.toolbar.generateMap.title"),
+    icon: MapGenerateIcon,
+    run: () => setMapModalOpen(true),
+  };
+
   return (
     <>
       <div className="toolbar toolbar-tools" role="toolbar" aria-label={t("tools.toolbar.label")}>
-        {[...TOOLS, ...(role === "gm" ? GM_ONLY : [])].map((item) => {
-          const label = t(`tools.toolbar.tools.${item.tool}`);
-          return (
+        {toolButton(item("select", "V"))}
+        {toolButton(item("hand", "H"))}
+        <ToolGroup
+          label={t("tools.toolbar.groups.draw")}
+          items={DRAW_GROUP}
+          {...groupProps("draw")}
+        />
+        {toolButton(item("eraser", "E"))}
+        {toolButton(item("token", "K"))}
+        {role === "gm" ? (
+          <>
+            <span className="toolbar-separator" />
+            <ToolGroup
+              label={t("tools.toolbar.groups.map")}
+              items={[...MAP_GROUP, uploadAction, ...(geminiKey ? [generateAction] : [])]}
+              {...groupProps("map")}
+            />
+            <ToolGroup
+              label={t("tools.toolbar.groups.visibility")}
+              items={VISIBILITY_GROUP}
+              {...groupProps("visibility")}
+            />
+            {toolButton(item("note", "A"))}
+          </>
+        ) : (
+          <>
+            <span className="toolbar-separator" />
             <button
-              key={item.tool}
               type="button"
               className="icon-button"
-              aria-pressed={tool === item.tool}
-              title={t("tools.toolbar.toolTitle", { label, key: item.key })}
-              aria-label={label}
-              onClick={() => setTool(item.tool)}
+              title={t("tools.toolbar.upload.title")}
+              aria-label={t("tools.toolbar.upload.label")}
+              onClick={() => fileInput.current?.click()}
             >
-              {TOOL_ICONS[item.tool]}
+              {ImageIcon}
             </button>
-          );
-        })}
-        <span className="toolbar-separator" />
-        <button
-          type="button"
-          className="icon-button"
-          title={
-            role === "gm" ? t("tools.toolbar.upload.titleGm") : t("tools.toolbar.upload.title")
-          }
-          aria-label={t("tools.toolbar.upload.label")}
-          onClick={() => fileInput.current?.click()}
-        >
-          {ImageIcon}
-        </button>
-        {role === "gm" && geminiKey && (
-          <button
-            type="button"
-            className="icon-button"
-            title={t("tools.toolbar.generateMap.title")}
-            aria-label={t("tools.toolbar.generateMap.label")}
-            onClick={() => setMapModalOpen(true)}
-          >
-            {MapGenerateIcon}
-          </button>
+          </>
         )}
+        {role === "gm" && <span className="toolbar-separator" />}
         {role === "gm" && (
           <button
             type="button"

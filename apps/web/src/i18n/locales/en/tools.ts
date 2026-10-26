@@ -2,6 +2,13 @@ export const tools = {
   toolbar: {
     label: "Tools",
     toolTitle: "{{label}} ({{key}})",
+    groups: {
+      draw: "Drawing",
+      map: "Map",
+      visibility: "Visibility",
+    },
+    groupLabel: "{{group}}: {{tool}}",
+    groupTitle: "{{group}}: {{tool}} ({{key}}). Click for the other tools in the group",
     tools: {
       select: "Select",
       hand: "Pan",

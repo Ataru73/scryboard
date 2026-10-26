@@ -1,4 +1,5 @@
 import { type Browser, expect, type Page, test } from "@playwright/test";
+import { pickTool } from "./helpers";
 
 async function joinAs(page: Page, name: string) {
   await page.getByLabel("Nome", { exact: true }).fill(name);
@@ -45,13 +46,13 @@ test("GM and player draw together on a shared board", async ({ browser }) => {
   await expect(atTable(gm.page).filter({ hasText: "Arwen" })).toBeVisible();
 
   // Il GM disegna un rettangolo, il giocatore lo vede.
-  await gm.page.getByRole("button", { name: "Rettangolo" }).click();
+  await pickTool(gm.page, "Disegno", "Rettangolo");
   await drag(gm.page, [300, 200], [500, 320]);
   await expectItems(gm.page, 1);
   await expectItems(player, 1);
 
   // Il giocatore disegna a mano libera, il GM lo vede.
-  await player.getByRole("button", { name: "Matita" }).click();
+  await pickTool(player, "Disegno", "Matita");
   await drag(player, [600, 400], [750, 480]);
   await expectItems(player, 2);
   await expectItems(gm.page, 2);
@@ -66,7 +67,7 @@ test("GM and player draw together on a shared board", async ({ browser }) => {
   await expectItems(player, 3);
 
   // Testo.
-  await gm.page.getByRole("button", { name: "Testo" }).click();
+  await pickTool(gm.page, "Disegno", "Testo");
   const box = await board(gm.page).boundingBox();
   if (!box) throw new Error("board not visible");
   await gm.page.mouse.click(box.x + 300, box.y + 500);
@@ -110,9 +111,9 @@ test("players cannot move or erase the GM's map", async ({ browser }) => {
 
 test("select, move and delete items with the keyboard", async ({ browser }) => {
   const gm = await createRoomAsGm(browser);
-  await gm.page.getByRole("button", { name: "Rettangolo" }).click();
+  await pickTool(gm.page, "Disegno", "Rettangolo");
   await drag(gm.page, [300, 200], [500, 320]);
-  await gm.page.getByRole("button", { name: "Ellisse" }).click();
+  await pickTool(gm.page, "Disegno", "Ellisse");
   await drag(gm.page, [600, 200], [700, 300]);
   await expectItems(gm.page, 2);
 
@@ -132,7 +133,7 @@ test("select, move and delete items with the keyboard", async ({ browser }) => {
 
 test("drawing on an empty board does not move the view", async ({ browser }) => {
   const gm = await createRoomAsGm(browser);
-  await gm.page.getByRole("button", { name: "Rettangolo" }).click();
+  await pickTool(gm.page, "Disegno", "Rettangolo");
   await drag(gm.page, [300, 200], [500, 320]);
   await expectItems(gm.page, 1);
   await expect(gm.page.getByRole("button", { name: "Zoom al 100%" })).toHaveText("100%");
@@ -165,7 +166,7 @@ test("a late first sync does not move the view under someone already drawing", a
   await expect(page.getByText("Connesso")).toBeVisible();
   await expect(board(page)).toHaveAttribute("data-synced", "false");
 
-  await page.getByRole("button", { name: "Rettangolo" }).click();
+  await pickTool(page, "Disegno", "Rettangolo");
   await drag(page, [300, 200], [500, 320]);
   await expectItems(page, 1);
   held = false;
@@ -190,7 +191,7 @@ test("zoom with the wheel and pan with the hand tool", async ({ browser }) => {
   await expect(zoom).toHaveText("100%");
 
   // Disegna, sposta la vista di 200px con la mano: il rettangolo ora sta 200px più a destra.
-  await gm.page.getByRole("button", { name: "Rettangolo" }).click();
+  await pickTool(gm.page, "Disegno", "Rettangolo");
   await drag(gm.page, [300, 200], [500, 320]);
   await gm.page.getByRole("button", { name: "Sposta la vista" }).click();
   await drag(gm.page, [600, 500], [800, 500]);
@@ -211,7 +212,7 @@ test("GM clears the board after confirming in the modal, and can undo", async ({
   const clearButton = gm.page.getByRole("button", { name: "Svuota lavagna" });
   await expect(clearButton).toBeDisabled();
 
-  await gm.page.getByRole("button", { name: "Rettangolo" }).click();
+  await pickTool(gm.page, "Disegno", "Rettangolo");
   await drag(gm.page, [300, 200], [500, 320]);
   await expectItems(player, 1);
   await expect(clearButton).toBeEnabled();
