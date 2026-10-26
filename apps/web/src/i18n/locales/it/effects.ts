@@ -73,6 +73,8 @@ export const effects = {
     },
     selection: {
       toolbarLabel: "Muro selezionato",
+      secret: "Segreta",
+      secretTitle: "I giocatori vedono un muro qualsiasi finché non la riveli",
       reverseTitle: "Scambia il lato da cui si vede attraverso il muro",
       reverseDirection: "Inverti il verso",
       dragHint: "Trascina i vertici per modificare.",

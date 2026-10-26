@@ -196,6 +196,15 @@ describe("isAllowedPlayerWallChange", () => {
     expect(isAllowedPlayerWallChange("update", "d", open, door("d", "open"))).toBe(false);
   });
 
+  it("rejects toggling or revealing a secret door", () => {
+    const secret = door("d", "closed", { secret: true });
+    expect(
+      isAllowedPlayerWallChange("update", "d", secret, door("d", "open", { secret: true })),
+    ).toBe(false);
+    expect(isAllowedPlayerWallChange("update", "d", secret, door("d", "open"))).toBe(false);
+    expect(isAllowedPlayerWallChange("update", "d", secret, door("d"))).toBe(false);
+  });
+
   it("rejects player additions, updates and deletions of every barrier kind", () => {
     for (const kind of ["wall", "window", "invisible"] as const) {
       const before = wall("w", kind);

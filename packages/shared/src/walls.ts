@@ -31,6 +31,8 @@ const doorSchema = z
     /** Una porta è un singolo segmento, così stato e icona hanno un significato univoco. */
     points: barrierPoints.length(4),
     door: z.enum(DOOR_STATES),
+    /** Porta segreta: per i giocatori resta un muro qualsiasi finché il GM non la rivela. */
+    secret: z.boolean().optional(),
     attachedTo: z.string().max(64).nullable().optional(),
   })
   .strict();
@@ -76,9 +78,12 @@ export function blocksSight(wall: Wall): boolean {
   return wall.kind === "wall";
 }
 
-/** Un giocatore può aprire e chiudere una porta, ma mai bloccarla o aprirla se è chiusa a chiave. */
+/**
+ * Un giocatore può aprire e chiudere una porta, ma mai bloccarla, aprirla se è chiusa a chiave o
+ * toccarla se è segreta.
+ */
 export function canPlayerToggleDoor(wall: Wall | undefined): wall is Door {
-  return wall?.kind === "door" && wall.door !== "locked";
+  return wall?.kind === "door" && wall.door !== "locked" && !wall.secret;
 }
 
 /** Centro della porta, dove sta la sua icona. */

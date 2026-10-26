@@ -438,7 +438,9 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     const terrainBox = terrainBounds(store.getTerrain());
     // I giocatori adattano la vista soltanto alle porte, uniche barriere visibili nel loro client.
     const wallBox = wallsBounds(
-      role === "gm" ? store.getWalls() : store.getWalls().filter((wall) => wall.kind === "door"),
+      role === "gm"
+        ? store.getWalls()
+        : store.getWalls().filter((wall) => wall.kind === "door" && !wall.secret),
     );
     const boxes = [itemBox, terrainBox, wallBox].filter(
       (b): b is NonNullable<typeof b> => b !== null,

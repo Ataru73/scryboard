@@ -40,6 +40,7 @@ export type ItemPatch = Partial<Omit<BoardItem, "id" | "kind">> & Record<string,
 export type WallPatch = {
   points?: number[];
   door?: "open" | "closed" | "locked";
+  secret?: boolean;
   attachedTo?: string | null;
 };
 
@@ -501,7 +502,12 @@ export class BoardStore {
 
   updateWall(id: string, patch: WallPatch) {
     const current = this.wallsById.get(id);
-    if (!current || (current.kind !== "door" && patch.door !== undefined)) return;
+    if (
+      !current ||
+      (current.kind !== "door" && (patch.door !== undefined || patch.secret !== undefined))
+    ) {
+      return;
+    }
     const next = { ...current, ...patch, id } as Wall;
     if (!wallSchema.safeParse(next).success) return;
     this.action(() => this.transact(this.pub, () => this.wallsMap.set(id, next)));

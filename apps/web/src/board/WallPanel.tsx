@@ -210,6 +210,16 @@ export function WallSelectionPanel({ store }: { store: BoardStore }) {
               {t(`effects.walls.doorStates.${state}`)}
             </button>
           ))}
+          <span className="toolbar-separator" />
+          <button
+            type="button"
+            className="text-button"
+            aria-pressed={wall.secret === true}
+            title={t("effects.walls.selection.secretTitle")}
+            onClick={() => store.updateWall(wall.id, { secret: !wall.secret })}
+          >
+            {t("effects.walls.selection.secret")}
+          </button>
         </>
       )}
       {wall.kind === "one-way" && (

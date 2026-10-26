@@ -35,7 +35,8 @@ interface Props {
 
 /**
  * Muri visibili solo al GM; ai giocatori arrivano sullo schermo soltanto le icone delle porte, e
- * nemmeno quelle coperte dalla nebbia (che altrimenti si potrebbero aprire cliccando alla cieca).
+ * nemmeno quelle segrete o coperte dalla nebbia (che altrimenti si potrebbero aprire cliccando alla
+ * cieca). Le porte segrete restano comunque nei muri che fermano vista e movimento.
  */
 export function WallLayer({
   walls,
@@ -83,7 +84,8 @@ export function WallLayer({
             </>
           )}
           {wall.kind === "door" &&
-            (role === "gm" || (!isDoorFogged(wall, fog) && isDoorVisible(wall))) && (
+            (role === "gm" ||
+              (!wall.secret && !isDoorFogged(wall, fog) && isDoorVisible(wall))) && (
               <DoorIcon
                 door={wall}
                 scale={scale}
@@ -159,14 +161,22 @@ function DoorIcon({
   return (
     <Group
       id={`door-${door.id}`}
-      name={`door-icon door-${door.door}`}
+      name={`door-icon door-${door.door}${door.secret ? " door-secret" : ""}`}
       x={x}
       y={y}
       scale={{ x: 1 / scale, y: 1 / scale }}
       onPointerDown={handle}
     >
       <Rect x={-14} y={-14} width={28} height={28} fill="transparent" />
-      <Circle radius={11} fill={fill} stroke="#ffffff" strokeWidth={1.5} />
+      {/* Il GM riconosce le porte segrete dal bordo tratteggiato. */}
+      <Circle
+        radius={11}
+        fill={fill}
+        stroke="#ffffff"
+        strokeWidth={1.5}
+        dash={door.secret ? [3, 2.5] : undefined}
+        opacity={door.secret ? 0.75 : 1}
+      />
       {door.door === "locked" ? (
         <>
           <Rect x={-5} y={-1} width={10} height={8} cornerRadius={1} fill="#ffffff" />

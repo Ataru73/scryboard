@@ -73,6 +73,8 @@ export const effects = {
     },
     selection: {
       toolbarLabel: "Selected wall",
+      secret: "Secret",
+      secretTitle: "Players see a plain wall until you reveal it",
       reverseTitle: "Swap the side from which you can see through the wall",
       reverseDirection: "Reverse direction",
       dragHint: "Drag the vertices to edit.",

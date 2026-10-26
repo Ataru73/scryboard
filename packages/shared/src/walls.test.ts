@@ -56,6 +56,14 @@ describe("wall rules", () => {
     expect(canPlayerToggleDoor(wallSchema.parse({ ...door, door: "locked" }))).toBe(false);
     expect(canPlayerToggleDoor(wallSchema.parse(wall))).toBe(false);
   });
+
+  it("treats secret doors as walls for players while keeping their state", () => {
+    const secret = wallSchema.parse({ ...door, secret: true });
+    expect(canPlayerToggleDoor(secret)).toBe(false);
+    expect(blocksMovement(secret)).toBe(true);
+    expect(blocksSight(secret)).toBe(true);
+    expect(blocksMovement(wallSchema.parse({ ...door, door: "open", secret: true }))).toBe(false);
+  });
 });
 
 describe("blocksSight", () => {
