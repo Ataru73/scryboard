@@ -108,6 +108,7 @@ import { useBoardShortcuts } from "./useBoardShortcuts";
 import { isUvttFile, parseUvtt, UvttError, uvttToBoard } from "./uvtt";
 import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
 import { WallSelectionPanel } from "./WallPanel";
+import { WeatherOverlay } from "./WeatherOverlay";
 
 interface Props {
   store: BoardStore;
@@ -2178,6 +2179,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           onClose={() => useBoardUi.getState().setInitiativeOpen(false)}
         />
       )}
+      <WeatherOverlay weather={lighting.weather} width={size.width} height={size.height} />
       <HandoutModal store={store} role={role} roomId={roomId} />
       <NotePanel store={store} role={role} roomId={roomId} provider={provider} />
       <TokenList

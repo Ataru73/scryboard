@@ -350,9 +350,18 @@ describe("BoardStore", () => {
     const [docA, docB] = linkedDocs();
     const gm = new BoardStore(docA, null, "gm");
     const player = new BoardStore(docB, null, "p");
-    expect(player.getLighting()).toEqual({ enabled: false, ambient: "day", explorationEpoch: 0 });
-    gm.updateLighting({ enabled: true, ambient: "night" });
-    expect(player.getLighting()).toMatchObject({ enabled: true, ambient: "night" });
+    expect(player.getLighting()).toEqual({
+      enabled: false,
+      ambient: "day",
+      explorationEpoch: 0,
+      weather: "none",
+    });
+    gm.updateLighting({ enabled: true, ambient: "night", weather: "rain" });
+    expect(player.getLighting()).toMatchObject({
+      enabled: true,
+      ambient: "night",
+      weather: "rain",
+    });
     const snapshot = player.getLighting();
     gm.updateGrid({ size: 50 });
     expect(player.getLighting()).toBe(snapshot);

@@ -1,5 +1,5 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { LIGHT_PRESETS, type LightingSettings } from "@scryboard/shared";
+import { LIGHT_PRESETS, type LightingSettings, WEATHERS } from "@scryboard/shared";
 import { useId, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { catalogLabel } from "../i18n/catalog";
@@ -23,6 +23,7 @@ export function LightPanel({
   const players = usePlayers(provider);
   const enabledId = useId();
   const previewId = useId();
+  const weatherId = useId();
   return (
     <div
       className="toolbar toolbar-style light-panel"
@@ -79,6 +80,23 @@ export function LightPanel({
       >
         {t("effects.lighting.resetExploration")}
       </button>
+      <span className="toolbar-separator" />
+      <label className="small muted" htmlFor={weatherId}>
+        {t("effects.lighting.weather")}
+      </label>
+      <select
+        id={weatherId}
+        value={lighting.weather}
+        onChange={(e) =>
+          store.updateLighting({ weather: e.target.value as LightingSettings["weather"] })
+        }
+      >
+        {WEATHERS.map((weather) => (
+          <option key={weather} value={weather}>
+            {t(`effects.lighting.weathers.${weather}`)}
+          </option>
+        ))}
+      </select>
       <span className="toolbar-separator" />
       <label className="small muted" htmlFor={previewId}>
         {t("effects.lighting.view")}

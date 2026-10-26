@@ -390,6 +390,10 @@ export const DEFAULT_GRID: GridSettings = {
   diagonals: "one",
 };
 
+/** Effetti atmosferici animati sopra la mappa (pioggia, neve, braci, foschia). */
+export const WEATHERS = ["none", "rain", "snow", "embers", "mist"] as const;
+export type Weather = (typeof WEATHERS)[number];
+
 /**
  * Visione dinamica: se attiva, i giocatori vedono solo ciò che vedono i loro token. Di giorno
  * tutto è illuminato, al crepuscolo un po' meno, di notte solo le luci e la scurovisione.
@@ -399,6 +403,8 @@ export const lightingSettingsSchema = z.object({
   ambient: z.enum(["day", "twilight", "night"]),
   /** Cambia quando il GM azzera le zone esplorate: i client cancellano la loro memoria. */
   explorationEpoch: z.number(),
+  /** Effetto atmosferico animato sopra la mappa; le scene di prima non ne hanno. */
+  weather: z.enum(WEATHERS).default("none"),
 });
 export type LightingSettings = z.infer<typeof lightingSettingsSchema>;
 
@@ -406,6 +412,7 @@ export const DEFAULT_LIGHTING: LightingSettings = {
   enabled: false,
   ambient: "day",
   explorationEpoch: 0,
+  weather: "none",
 };
 
 /**

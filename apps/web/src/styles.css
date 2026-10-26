@@ -1037,6 +1037,13 @@ button.danger {
   object-fit: cover;
 }
 
+.weather-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .handout-banner {
   top: 16px;
   bottom: auto;
