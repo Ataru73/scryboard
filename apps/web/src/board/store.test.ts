@@ -223,6 +223,57 @@ describe("BoardStore", () => {
     expect(store.get("a")).toMatchObject({ name: "a", obscured: true });
   });
 
+  it("duplicates items one cell away, numbering token copies", () => {
+    const store = new BoardStore(new Y.Doc(), null, "gm");
+    store.add([
+      { ...token("Goblin"), initiative: 12, vision: { range: 0, darkvision: 12 } },
+      text("note", 3),
+    ]);
+    const [first] = store.duplicate(["Goblin"]);
+    const [second] = store.duplicate(["Goblin"]);
+    const step = store.getGrid().size;
+    expect(store.get(first as string)).toMatchObject({ name: "Goblin 2", x: step, y: step });
+    expect(store.get(second as string)).toMatchObject({ name: "Goblin 3" });
+    // La copia resta fuori dai turni ma, per il GM, vede come l'originale.
+    expect(store.get(first as string)).not.toHaveProperty("initiative");
+    expect(store.get(first as string)).toMatchObject({ vision: { darkvision: 12 } });
+    // Duplicare una copia numerata riparte dal nome base.
+    const [third] = store.duplicate([second as string]);
+    expect(store.get(third as string)).toMatchObject({ name: "Goblin 4" });
+
+    const [note] = store.duplicate(["note"]);
+    expect(store.get(note as string)).toMatchObject({ kind: "text", z: 4 });
+    store.undo();
+    expect(store.get(note as string)).toBeUndefined();
+  });
+
+  it("keeps copies of hidden and obscured items hidden and obscured", () => {
+    const publicDoc = new Y.Doc();
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, gmDoc, "gm");
+    store.add([token("Lich"), token("Spia")]);
+    store.setObscured(["Lich"], true);
+    store.setHidden(["Spia"], true);
+    const [lich, spia] = store.duplicate(["Lich", "Spia"]) as [string, string];
+    expect(publicDoc.getMap("items").get(lich)).toMatchObject({ obscured: true, name: "" });
+    expect(store.get(lich)).toMatchObject({ name: "Lich 2", obscured: true });
+    expect(store.isHidden(spia)).toBe(true);
+    store.undo();
+    expect(gmDoc.getMap("masks").has(lich)).toBe(false);
+  });
+
+  it("duplicates for players only what a player may create", () => {
+    const publicDoc = new Y.Doc();
+    const gm = new BoardStore(publicDoc, new Y.Doc(), "gm");
+    const player = new BoardStore(publicDoc, null, "p1");
+    gm.add([{ ...token("Elfo"), owners: ["p1"] }, token("Ombra")]);
+    gm.setObscured(["Ombra"], true);
+    const copies = player.duplicate(["Elfo", "Ombra"], { asPlayer: true });
+    expect(copies).toHaveLength(1);
+    expect(player.get(copies[0] as string)).toMatchObject({ name: "Elfo 2" });
+    expect(player.get(copies[0] as string)).not.toHaveProperty("owners");
+  });
+
   it("ignores hiding without a GM document", () => {
     const store = new BoardStore(new Y.Doc(), null, "player");
     store.add([text("a")]);

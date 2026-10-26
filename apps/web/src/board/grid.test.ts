@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   calibrateFromBox,
   cellAt,
+  duplicateTokenName,
   nextTokenName,
   normalizeOffset,
   snapGridCorner,
@@ -70,6 +71,13 @@ describe("grid", () => {
     expect(nextTokenName("Goblin", [])).toBe("Goblin");
     expect(nextTokenName("Goblin", ["Goblin", "Goblin 2"])).toBe("Goblin 3");
     expect(nextTokenName("  ", ["x"])).toBe("");
+  });
+
+  it("numbers copies of numbered tokens from their base name", () => {
+    expect(duplicateTokenName("Goblin", ["Goblin"])).toBe("Goblin 2");
+    expect(duplicateTokenName("Goblin 2", ["Goblin", "Goblin 2"])).toBe("Goblin 3");
+    expect(duplicateTokenName("Agente 47", ["Agente 47"])).toBe("Agente 47 2");
+    expect(duplicateTokenName("", [""])).toBe("");
   });
 });
 

@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { AuraFields } from "./AuraFields";
 import { parentOf } from "./attach";
-import { EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
+import { CopyIcon, EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
 import { LightFields, VisionFields } from "./LightFields";
 import { PathFields } from "./PathFields";
 import type { BoardStore } from "./store";
@@ -113,6 +113,23 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           }
         >
           {allLocked ? LockIcon : UnlockIcon}
+        </button>
+      )}
+      {removable.length > 0 && (
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={t("core.selection.duplicate")}
+          title={t("core.selection.duplicateTitle")}
+          onClick={() => {
+            const copies = store.duplicate(
+              removable.map((i) => i.id),
+              { asPlayer: role !== "gm" },
+            );
+            if (copies.length > 0) select(copies);
+          }}
+        >
+          {CopyIcon}
         </button>
       )}
       {removable.length > 0 && (

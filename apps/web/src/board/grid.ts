@@ -131,3 +131,13 @@ export function nextTokenName(base: string, existing: Iterable<string>): string 
     if (!taken.has(candidate)) return candidate;
   }
 }
+
+/**
+ * Nome della copia di un token: «Goblin 2» duplicato diventa il primo «Goblin N» libero, se c'è
+ * già un «Goblin»; un numero che fa parte del nome («Agente 47») resta.
+ */
+export function duplicateTokenName(name: string, existing: Iterable<string>): string {
+  const taken = new Set(existing);
+  const base = name.trim().replace(/\s+\d+$/, "");
+  return nextTokenName(base !== name.trim() && taken.has(base) ? base : name, taken);
+}

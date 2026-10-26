@@ -194,6 +194,13 @@ export const UnlockIcon = (
   </Icon>
 );
 
+export const CopyIcon = (
+  <Icon>
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" />
+  </Icon>
+);
+
 export const TrashIcon = (
   <Icon>
     <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />

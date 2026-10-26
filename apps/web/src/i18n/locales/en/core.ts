@@ -32,6 +32,8 @@ export const core = {
     unlock: "Unlock",
     lock: "Lock",
     lockTitle: "Lock: no one will be able to move or delete it until you unlock it",
+    duplicate: "Duplicate",
+    duplicateTitle: "Duplicate (Ctrl+D): copied tokens get numbered",
     delete: "Delete",
     deleteTitle: "Delete (Del)",
     detachTitle: "The token will no longer follow the main token",

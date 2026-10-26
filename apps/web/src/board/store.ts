@@ -38,6 +38,7 @@ import {
 } from "@scryboard/shared";
 import * as Y from "yjs";
 import { transformPointsWithImage } from "../walls/fromImage";
+import { duplicateTokenName } from "./grid";
 
 /** Modifica parziale di un oggetto: non si può cambiare tipo né id. */
 export type ItemPatch = Partial<Omit<BoardItem, "id" | "kind">> & Record<string, unknown>;
@@ -479,6 +480,65 @@ export class BoardStore {
         });
       }
     });
+  }
+
+  /**
+   * Copia gli oggetti una casella più in basso a destra, sopra agli altri e nello stesso
+   * documento (la copia di un oggetto nascosto resta nascosta, quella di un token in incognito
+   * resta in incognito). Le copie dei token prendono il primo nome numerato libero e restano
+   * fuori dall'ordine dei turni e dagli agganci; `asPlayer` lascia fuori ciò che un giocatore
+   * non può creare. Restituisce gli id delle copie.
+   */
+  duplicate(ids: string[], options: { asPlayer?: boolean } = {}): string[] {
+    const step = this.grid.size;
+    const names = this.sorted.flatMap((i) => (i.kind === "token" ? [i.name] : []));
+    const nextZ = new Map<Layer, number>();
+    const copies: { part: DocPart; item: BoardItem; mask: TokenIdentity | null }[] = [];
+    // In ordine di z, così le copie restano una sopra l'altra come gli originali.
+    const originals = ids
+      .map((id) => this.byId.get(id))
+      .filter((i): i is BoardItem => i !== undefined)
+      .sort(compareItems);
+    for (const shown of originals) {
+      const part = this.partOf(shown.id);
+      const raw = part?.loaded.get(shown.id);
+      if (!part || !raw) continue;
+      if (options.asPlayer && raw.kind === "token" && raw.obscured) continue;
+      const z = nextZ.get(raw.layer) ?? this.topZ(raw.layer);
+      nextZ.set(raw.layer, z + 1);
+      const moved = { id: newItemId(), x: raw.x + step, y: raw.y + step, z };
+      if (raw.kind !== "token" || shown.kind !== "token") {
+        copies.push({ part, item: { ...raw, ...moved }, mask: null });
+        continue;
+      }
+      const { initiative: _, attachedTo: __, ...token } = raw;
+      const { vision: ___, light: ____, owners: _____, ...playerToken } = token;
+      const name = duplicateTokenName(shown.name, names);
+      names.push(name);
+      const item: TokenItem = { ...(options.asPlayer ? playerToken : token), ...moved };
+      if (item.obscured) copies.push({ part, item, mask: { ...identityOf(shown), name } });
+      else copies.push({ part, item: { ...item, name }, mask: null });
+    }
+    if (copies.length === 0) return [];
+    const masks = this.masks;
+    this.action(() => {
+      // Prima le maschere (documento del GM), poi i token che le usano.
+      const masked = copies.filter((c) => c.mask);
+      if (masks && this.gm && masked.length > 0) {
+        this.transact(this.gm, () => {
+          for (const { item, mask } of masked) masks.set(item.id, mask);
+        });
+      }
+      for (const part of [this.pub, this.gm]) {
+        if (!part) continue;
+        const mine = copies.filter((c) => c.part === part);
+        if (mine.length === 0) continue;
+        this.transact(part, () => {
+          for (const { item } of mine) part.items.set(item.id, item);
+        });
+      }
+    });
+    return copies.map((c) => c.item.id);
   }
 
   bringToFront(ids: string[]) {

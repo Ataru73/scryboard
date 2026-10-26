@@ -49,6 +49,14 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
         store.redo();
         return;
       }
+      if (mod && key === "d") {
+        // Ctrl+D: duplica la selezione e seleziona le copie.
+        e.preventDefault();
+        const editable = ui.selectedIds.filter((id) => canEdit(store.get(id)));
+        const copies = store.duplicate(editable, { asPlayer: role !== "gm" });
+        if (copies.length > 0) ui.select(copies);
+        return;
+      }
       if (mod || e.altKey) return;
 
       if (e.code === "Space") {
