@@ -530,6 +530,15 @@ button.danger {
   top: 12px;
   left: 12px;
   flex-direction: column;
+  /* Su schermi bassi gli strumenti scorrono dentro la barra, invece di far scorrere la lavagna. */
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.toolbar-tools > * {
+  flex-shrink: 0;
 }
 
 .toolbar-style {
