@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { isUvttFile, parseUvtt, UvttError, uvttColor, uvttToBoard } from "./uvtt";
 
@@ -125,5 +126,16 @@ describe("uvtt", () => {
     expect(uvttColor("ff112233")).toBe("#112233");
     expect(uvttColor("#AABBCC")).toBe("#aabbcc");
     expect(uvttColor(undefined)).toBe("#ffe2a8");
+  });
+
+  it("reads the sample map shipped with the tests", () => {
+    // Generata da scripts/sample-dd2vtt.mjs.
+    const file = new URL("../../../../e2e/fixtures/sample.dd2vtt", import.meta.url);
+    const map = parseUvtt(JSON.parse(readFileSync(file, "utf8")), "sample.dd2vtt");
+    expect(map).toMatchObject({ cols: 8, rows: 6 });
+    expect(map.image).toMatchObject({ name: "sample.png", type: "image/png" });
+    expect(map.walls).toHaveLength(4);
+    expect(map.doors.map((d) => d.open)).toEqual([false, true]);
+    expect(map.lights.map((l) => l.color)).toEqual(["#ffb35c", "#a8c8ff"]);
   });
 });
