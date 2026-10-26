@@ -79,9 +79,11 @@ export class SceneCollab {
         await target.transact((doc) => {
           Y.applyUpdate(doc, state);
           if (scope === "public") {
-            // Il registro dei tiri e il richiamo appartengono alla scena originale.
+            // Il registro dei tiri, il richiamo e l'immagine mostrata appartengono alla scena
+            // originale.
             doc.getMap(ROLLS_MAP).clear();
             doc.getMap(SETTINGS_MAP).delete("summon");
+            doc.getMap(SETTINGS_MAP).delete("handout");
           }
         });
       } finally {

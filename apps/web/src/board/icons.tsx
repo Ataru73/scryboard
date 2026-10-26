@@ -194,6 +194,13 @@ export const UnlockIcon = (
   </Icon>
 );
 
+export const HandoutIcon = (
+  <Icon>
+    <rect x="3" y="4" width="18" height="13" rx="2" />
+    <path d="M8 21h8M12 17v4M7 13l3-3 2 2 3-4 2 5" />
+  </Icon>
+);
+
 export const CopyIcon = (
   <Icon>
     <rect x="8" y="8" width="12" height="12" rx="2" />

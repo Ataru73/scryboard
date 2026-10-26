@@ -237,6 +237,24 @@ describe("hidden assets", () => {
     gm.provider.destroy();
   });
 
+  it("lets players download the image the GM is showing them", async () => {
+    const room = await createRoom(server);
+    const res = await fetch(`${server.baseUrl}/api/rooms/${room.id}/assets`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${room.gmToken}` },
+      body: PNG,
+    });
+    const { assetId } = (await res.json()) as { assetId: string };
+    expect((await fetch(url(room.id, assetId))).status).toBe(404);
+
+    const gm = await connect(server, roomDocumentName(room.id, "public"), room.gmToken);
+    if (gm.status !== "synced") throw new Error("not synced");
+    gm.doc.getMap("settings").set("handout", { id: "h1", assetId });
+    await new Promise((r) => setTimeout(r, 100));
+    expect((await fetch(url(room.id, assetId))).status).toBe(200);
+    gm.provider.destroy();
+  });
+
   it("makes player uploads public", async () => {
     const room = await createRoom(server);
     const res = await fetch(`${server.baseUrl}/api/rooms/${room.id}/assets`, {

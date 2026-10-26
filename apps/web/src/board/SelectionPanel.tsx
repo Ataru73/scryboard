@@ -1,12 +1,20 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { BoardItem, Role, TokenItem } from "@scryboard/shared";
-import { canModify } from "@scryboard/shared";
+import { canModify, isVideoAsset } from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { AuraFields } from "./AuraFields";
 import { parentOf } from "./attach";
 import { ElevationField } from "./ElevationField";
-import { CopyIcon, EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
+import {
+  CopyIcon,
+  EyeIcon,
+  EyeOffIcon,
+  HandoutIcon,
+  LockIcon,
+  TrashIcon,
+  UnlockIcon,
+} from "./icons";
 import { LightFields, VisionFields } from "./LightFields";
 import { PathFields } from "./PathFields";
 import type { BoardStore } from "./store";
@@ -25,6 +33,7 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
   const { t } = useTranslation();
   // Si aggiorna anche quando gli oggetti cambiano da remoto.
   useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const handout = useSyncExternalStore(store.subscribe, store.getHandout);
   const selectedIds = useBoardUi((s) => s.selectedIds);
   const select = useBoardUi((s) => s.select);
   const selected = selectedIds
@@ -37,6 +46,14 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
   const allHidden = selected.every((i) => store.isHidden(i.id));
   const tokens = selected.filter((i): i is TokenItem => i.kind === "token");
   const allObscured = tokens.length > 0 && tokens.every((i) => i.obscured);
+  // Immagine (di una mappa o di un token) che il GM può mostrare a tutto schermo ai giocatori.
+  const showable =
+    (single?.kind === "image" || single?.kind === "token") &&
+    single.assetId &&
+    !isVideoAsset(single.assetId)
+      ? single.assetId
+      : null;
+  const showing = !!showable && handout?.assetId === showable;
   const removable = selected.filter((i) => canModify(i, role));
 
   return (
@@ -84,6 +101,18 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           }
         >
           {allHidden ? EyeOffIcon : EyeIcon}
+        </button>
+      )}
+      {role === "gm" && showable && (
+        <button
+          type="button"
+          className="icon-button"
+          aria-pressed={showing}
+          aria-label={showing ? t("core.selection.stopShowing") : t("core.selection.show")}
+          title={showing ? t("core.selection.stopShowing") : t("core.selection.showTitle")}
+          onClick={() => store.showHandout(showing ? null : showable)}
+        >
+          {HandoutIcon}
         </button>
       )}
       {role === "gm" && store.canHide && tokens.length > 0 && (

@@ -26,6 +26,14 @@ export const effects = {
     noPlayer: "Nessun giocatore",
     disconnectedPlayer: "Giocatore non connesso",
   },
+  handout: {
+    title: "Immagine mostrata dal GM",
+    alt: "Immagine mostrata dal GM",
+    loading: "Caricamento dell'immagine…",
+    close: "Chiudi",
+    stop: "Smetti di mostrare",
+    showing: "Stai mostrando un'immagine ai giocatori",
+  },
   elevation: {
     label: "Quota",
     labelWithUnit: "Quota ({{unit}})",

@@ -373,6 +373,17 @@ export const summonSchema = z.object({
 });
 export type Summon = z.infer<typeof summonSchema>;
 
+/**
+ * Immagine che il GM mostra a tutto schermo ai giocatori (una lettera, un ritratto, un indizio):
+ * resta aperta finché il GM non la chiude; ogni giocatore può chiuderla per sé. Ogni volta che il
+ * GM la mostra ha un id nuovo, così si riapre anche per chi l'aveva chiusa.
+ */
+export const handoutSchema = z.object({
+  id: z.string().min(1).max(64),
+  assetId: z.string().min(1).max(200),
+});
+export type Handout = z.infer<typeof handoutSchema>;
+
 /** Turno corrente: token attivo (se c'è ancora) e numero del round. Lo scrive solo il GM. */
 export const turnSettingsSchema = z.object({
   activeId: z.string().max(64).nullable(),

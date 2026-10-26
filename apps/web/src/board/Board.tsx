@@ -65,6 +65,7 @@ import { FogLayer, FogShape } from "./FogLayer";
 import { GridLines } from "./GridLines";
 import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
+import { HandoutModal } from "./HandoutModal";
 import { InitiativePanel } from "./InitiativePanel";
 import { ItemNode, SELECTION_COLOR, StampContent } from "./ItemNode";
 import {
@@ -1996,6 +1997,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           onClose={() => useBoardUi.getState().setInitiativeOpen(false)}
         />
       )}
+      <HandoutModal store={store} role={role} roomId={roomId} />
       <TokenList
         // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
         items={

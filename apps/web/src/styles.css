@@ -1037,6 +1037,28 @@ button.danger {
   object-fit: cover;
 }
 
+.handout-banner {
+  top: 16px;
+  bottom: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.handout-modal {
+  width: auto;
+  max-width: calc(100vw - 2rem);
+}
+
+.handout-image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 9rem);
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
 .modal-wide {
   width: min(calc(100% - 2rem), 34rem);
 }

@@ -274,6 +274,21 @@ describe("BoardStore", () => {
     expect(player.get(copies[0] as string)).not.toHaveProperty("owners");
   });
 
+  it("shows an image to the players until the GM stops, outside the undo history", () => {
+    const publicDoc = new Y.Doc();
+    const gm = new BoardStore(publicDoc, new Y.Doc(), "gm");
+    const player = new BoardStore(publicDoc, null, "p1");
+    gm.showHandout("letter.png");
+    const first = player.getHandout();
+    expect(first).toMatchObject({ assetId: "letter.png" });
+    expect(gm.canUndo()).toBe(false);
+    // Mostrarla di nuovo cambia l'id: si riapre per chi l'aveva chiusa.
+    gm.showHandout("letter.png");
+    expect(player.getHandout()?.id).not.toBe(first?.id);
+    gm.showHandout(null);
+    expect(player.getHandout()).toBeNull();
+  });
+
   it("ignores hiding without a GM document", () => {
     const store = new BoardStore(new Y.Doc(), null, "player");
     store.add([text("a")]);

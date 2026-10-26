@@ -26,6 +26,14 @@ export const effects = {
     noPlayer: "No player",
     disconnectedPlayer: "Disconnected player",
   },
+  handout: {
+    title: "Image shown by the GM",
+    alt: "Image shown by the GM",
+    loading: "Loading the image…",
+    close: "Close",
+    stop: "Stop showing",
+    showing: "You are showing an image to the players",
+  },
   elevation: {
     label: "Elevation",
     labelWithUnit: "Elevation ({{unit}})",

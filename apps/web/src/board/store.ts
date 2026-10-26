@@ -10,6 +10,8 @@ import {
   fogOpSchema,
   type GridSettings,
   gridSettingsSchema,
+  type Handout,
+  handoutSchema,
   type ImageItem,
   ITEMS_MAP,
   initiativeOrder,
@@ -77,6 +79,7 @@ export class BoardStore {
   private lighting: LightingSettings = DEFAULT_LIGHTING;
   private turn: TurnSettings = DEFAULT_TURN;
   private summonState: Summon | null = null;
+  private handoutState: Handout | null = null;
   private fog: FogOp[] = [];
   private terrain: TerrainOp[] = [];
   private walls: Wall[] = [];
@@ -163,6 +166,10 @@ export class BoardStore {
     const nextSummon = summon.success ? summon.data : null;
     if (JSON.stringify(nextSummon) !== JSON.stringify(this.summonState))
       this.summonState = nextSummon;
+    const handout = handoutSchema.safeParse(this.settings.get("handout"));
+    const nextHandout = handout.success ? handout.data : null;
+    if (JSON.stringify(nextHandout) !== JSON.stringify(this.handoutState))
+      this.handoutState = nextHandout;
   }
 
   private loadFog() {
@@ -224,6 +231,17 @@ export class BoardStore {
   getLighting = (): LightingSettings => this.lighting;
   getTurn = (): TurnSettings => this.turn;
   getSummon = (): Summon | null => this.summonState;
+  getHandout = (): Handout | null => this.handoutState;
+
+  /**
+   * Mostra un'immagine a tutto schermo ai giocatori, o smette di mostrarla (`null`). Come il
+   * richiamo, solo il GM può farlo e non entra nello storico.
+   */
+  showHandout(assetId: string | null) {
+    const next: Handout | null = assetId ? { id: newItemId(), assetId } : null;
+    if (next && !handoutSchema.safeParse(next).success) return;
+    this.pub.doc.transact(() => this.settings.set("handout", next), "handout");
+  }
 
   /**
    * Porta i giocatori su un punto (solo il GM può scrivere le impostazioni). Non entra nello
