@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { board, setupTable } from "./helpers";
+import { board, click, joinAs, setupTable } from "./helpers";
 
 async function image(page: Page) {
   const base64 = await page.evaluate(async () => {
@@ -67,4 +67,27 @@ test("each viewer can turn the animated weather off just for themselves", async 
   await expect(board(player)).toHaveAttribute("data-synced", "true");
   await expect(player.getByRole("button", { name: "Mostra il meteo" })).toBeVisible();
   await expect(overlay(player)).toHaveCount(0);
+});
+
+test("the GM sends a note to every connected player at once", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  const second = await (await browser.newContext()).newPage();
+  await second.goto(await gm.getByLabel("Link per i giocatori").inputValue());
+  await joinAs(second, "Bilbo");
+
+  await gm.keyboard.press("a");
+  await click(gm, 300, 300);
+  await gm.getByLabel("Titolo").fill("Botola");
+  await gm.getByLabel("Testo della nota").fill("**CD 15** Destrezza");
+  const recipient = gm.getByLabel("Invia come messaggio privato");
+  await recipient.selectOption({ label: "Tutti i giocatori connessi" });
+  await gm.getByRole("button", { name: "Invia", exact: true }).click();
+  await expect(gm.getByText("Nota inviata a 2 giocatori.")).toBeVisible();
+
+  // Ognuno la riceve nella conversazione con il GM, formattata.
+  for (const page of [player, second]) {
+    await page.getByRole("button", { name: /Nota: Botola/ }).click();
+    await expect(page.locator(".bubble-note strong").first()).toHaveText("Botola");
+    await expect(page.locator(".bubble-note .note-body strong")).toHaveText("CD 15");
+  }
 });

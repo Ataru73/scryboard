@@ -168,6 +168,9 @@ function NoteEditor({
   );
 }
 
+/** Valore del menu per inviare la nota a tutti i giocatori connessi. */
+const ALL_PLAYERS = "*";
+
 /**
  * Rivela la nota a un solo giocatore: gli arriva come messaggio privato (lo leggono solo lui e il
  * GM), mentre sulla lavagna resta nascosta agli altri.
@@ -191,24 +194,32 @@ function SendToPlayer({
   if (!gmToken) return null;
 
   async function send() {
-    const player = players.find((p) => p.id === to);
-    if (!player || !gmToken) return;
+    // «Tutti»: un messaggio privato per ogni giocatore connesso.
+    const recipients = to === ALL_PLAYERS ? players : players.filter((p) => p.id === to);
+    if (recipients.length === 0 || !gmToken) return;
     const me = provider.awareness?.getLocalState()?.user as PresenceUser | undefined;
     const title = note.title || t("effects.note.untitled");
     setSending(true);
     setStatus(null);
     try {
-      await api.sendMessage(
-        roomId,
-        {
-          to: player.id,
-          text: t("effects.note.messagePreview", { title }),
-          fromName: me?.name?.trim() || "GM",
-          note,
-        },
-        { gmToken },
-      );
-      setStatus({ text: t("effects.note.sent", { name: player.name }) });
+      for (const player of recipients) {
+        await api.sendMessage(
+          roomId,
+          {
+            to: player.id,
+            text: t("effects.note.messagePreview", { title }),
+            fromName: me?.name?.trim() || "GM",
+            note,
+          },
+          { gmToken },
+        );
+      }
+      setStatus({
+        text:
+          to === ALL_PLAYERS
+            ? t("effects.note.sentAll", { count: recipients.length })
+            : t("effects.note.sent", { name: recipients[0]?.name }),
+      });
     } catch (error) {
       setStatus({ text: describeApiError(error), error: true });
     } finally {
@@ -226,6 +237,9 @@ function SendToPlayer({
           <option value="">
             {players.length === 0 ? t("effects.note.noPlayers") : t("effects.note.choosePlayer")}
           </option>
+          {players.length > 1 && (
+            <option value={ALL_PLAYERS}>{t("effects.note.allPlayers")}</option>
+          )}
           {players.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
