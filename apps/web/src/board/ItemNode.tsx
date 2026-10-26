@@ -5,6 +5,8 @@ import {
   isVideoAsset,
   type LightItem,
   type LightingSettings,
+  NOTE_ICONS,
+  type NoteItem,
   OBSCURED_IDENTITY,
   type PathItem,
   type StampItem,
@@ -103,6 +105,8 @@ export const ItemNode = memo(function ItemNode({
         <StampContent item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "template" ? (
         <TemplateContent item={item} cellSize={cellSize} selected={selected} />
+      ) : item.kind === "note" ? (
+        <NotePin item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "light" ? (
         <LightIcon color={item.color} cellSize={cellSize} selected={selected} />
       ) : (
@@ -135,7 +139,7 @@ function ItemContent({
   roomId,
   ambient,
 }: {
-  item: Exclude<BoardItem, TokenItem | PathItem | LightItem | StampItem | TemplateItem>;
+  item: Exclude<BoardItem, TokenItem | PathItem | LightItem | StampItem | TemplateItem | NoteItem>;
   roomId: string;
   ambient?: LightingSettings["ambient"];
 }) {
@@ -560,6 +564,78 @@ function TokenImage({
         }}
       />
     </Group>
+  );
+}
+
+/** Simboli dei pin delle note, tracciati in un quadrato 24×24. */
+export const NOTE_GLYPHS: Record<NoteItem["icon"], string> = {
+  note: "M7 4h7l3 3v13H7z M10 10h4 M10 14h4",
+  trap: "M12 4l9 16H3z M12 10v4 M12 17h.01",
+  treasure: "M4 11h16v8H4z M4 11a8 5 0 0116 0 M11 14h2v2h-2z",
+  secret: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z",
+  npc: "M12 4a4 4 0 100 8 4 4 0 000-8z M4 21a8 8 0 0116 0",
+};
+
+/** Pin di una nota: un disco del colore dell'icona, con il titolo sotto. */
+function NotePin({
+  item,
+  cellSize,
+  selected,
+}: {
+  item: NoteItem;
+  cellSize: number;
+  selected: boolean;
+}) {
+  const r = cellSize * 0.28;
+  const color = NOTE_ICONS.find((i) => i.id === item.icon)?.color ?? "#8e4ec6";
+  const scale = (r * 1.15) / 24;
+  const labelSize = Math.max(9, cellSize * 0.18);
+  return (
+    <>
+      {selected && (
+        <Circle radius={r * 1.45} stroke={SELECTION_COLOR} strokeWidth={2} dash={[5, 3]} />
+      )}
+      <Circle
+        radius={r}
+        fill={color}
+        stroke="#ffffff"
+        strokeWidth={Math.max(1.5, r * 0.12)}
+        shadowColor="#000000"
+        shadowOpacity={0.35}
+        shadowBlur={5}
+        shadowOffsetY={2}
+      />
+      <Path
+        name="note-glyph"
+        data={NOTE_GLYPHS[item.icon]}
+        x={-12 * scale}
+        y={-12 * scale}
+        scaleX={scale}
+        scaleY={scale}
+        stroke="#ffffff"
+        strokeWidth={2.2}
+        lineCap="round"
+        lineJoin="round"
+        listening={false}
+      />
+      {item.title && (
+        <Text
+          text={item.title}
+          x={-cellSize * 2}
+          y={r + 3}
+          width={cellSize * 4}
+          align="center"
+          fontFamily={FONT_FAMILY}
+          fontStyle="bold"
+          fontSize={labelSize}
+          fill="#ffffff"
+          stroke="#1d1a24"
+          strokeWidth={labelSize * 0.25}
+          fillAfterStrokeEnabled
+          listening={false}
+        />
+      )}
+    </>
   );
 }
 

@@ -16,6 +16,7 @@ export const tools = {
       path: "Percorso",
       light: "Luce",
       stamp: "Timbri",
+      note: "Note",
       wall: "Muri",
       fog: "Nebbia",
     },

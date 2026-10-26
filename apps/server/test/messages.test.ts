@@ -110,6 +110,29 @@ describe("private messages", () => {
     close();
   });
 
+  it("lets only the GM reveal a note to a single player", async () => {
+    const { room, boxes, send, texts, close } = await table();
+    const note = { title: "Botola", text: "**CD 15** Destrezza" };
+    const res = await send(`Bearer ${room.gmToken}`, {
+      to: players.arwen.id,
+      text: "Nota: Botola",
+      fromName: "Master",
+      note,
+    });
+    expect(res.status).toBe(201);
+    const fromPlayer = await send(`Player ${creds("bilbo")}`, {
+      to: players.arwen.id,
+      text: "Nota falsa",
+      fromName: "Bilbo",
+      note,
+    });
+    expect(fromPlayer.status).toBe(400);
+    await settle();
+    expect(boxes.arwen.doc.getArray<Message>("messages").get(0)).toMatchObject({ note });
+    expect(texts("bilbo")).toEqual([]);
+    close();
+  });
+
   it("rejects impersonation, unknown recipients and messages to oneself", async () => {
     const { send, close } = await table();
     const fake = playerCredentials(players.arwen.id, "not-the-real-secret-123");

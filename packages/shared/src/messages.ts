@@ -8,6 +8,16 @@ export const MAX_MESSAGE_LENGTH = 2000;
 const participant = z.union([z.literal(GM_MAILBOX), z.string().regex(PROFILE_ID_PATTERN)]);
 
 /**
+ * Nota del GM allegata a un messaggio: così il GM la rivela a un solo giocatore (le note sulla
+ * lavagna, una volta rivelate, le vedono tutti). Il testo è in Markdown.
+ */
+export const messageNoteSchema = z.object({
+  title: z.string().max(80),
+  text: z.string().max(10000),
+});
+export type MessageNote = z.infer<typeof messageNoteSchema>;
+
+/**
  * Messaggio privato. Lo scrive solo il server, in tre caselle al massimo: quella del mittente,
  * quella del destinatario e quella del GM, che legge tutto.
  */
@@ -18,6 +28,7 @@ export const messageSchema = z.object({
   to: participant,
   toName: z.string().max(40),
   text: z.string().min(1).max(MAX_MESSAGE_LENGTH),
+  note: messageNoteSchema.optional(),
   at: z.iso.datetime(),
 });
 export type Message = z.infer<typeof messageSchema>;
@@ -25,6 +36,8 @@ export type Message = z.infer<typeof messageSchema>;
 export const sendMessageRequestSchema = z.object({
   to: participant,
   text: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+  /** Solo il GM allega note. */
+  note: messageNoteSchema.optional(),
   /** Nome con cui firma chi scrive (il profilo può cambiare nome). */
   fromName: z.string().trim().min(1).max(32),
 });

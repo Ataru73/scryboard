@@ -236,6 +236,7 @@ export function createApi(
         sender,
         parsed.data.to,
         parsed.data.text,
+        parsed.data.note,
       );
       return c.json({ id: message.id }, 201);
     } catch (error) {

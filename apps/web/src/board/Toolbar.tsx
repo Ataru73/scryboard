@@ -54,6 +54,7 @@ const GM_ONLY: { tool: Tool; key: string }[] = [
   { tool: "path", key: "J" },
   { tool: "light", key: "I" },
   { tool: "stamp", key: "S" },
+  { tool: "note", key: "A" },
   { tool: "wall", key: "W" },
   { tool: "fog", key: "F" },
 ];

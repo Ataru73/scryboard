@@ -1,6 +1,12 @@
 import { randomBytes } from "node:crypto";
 import type { Hocuspocus } from "@hocuspocus/server";
-import { GM_MAILBOX, MESSAGES_ARRAY, type Message, mailDocumentName } from "@scryboard/shared";
+import {
+  GM_MAILBOX,
+  MESSAGES_ARRAY,
+  type Message,
+  type MessageNote,
+  mailDocumentName,
+} from "@scryboard/shared";
 import type { PlayerService } from "../rooms/players";
 import type { ConnectionContext } from "./hocuspocus";
 
@@ -20,9 +26,16 @@ export class MessageService {
     private readonly players: PlayerService,
   ) {}
 
-  async send(roomId: string, sender: Sender, to: string, text: string): Promise<Message> {
+  async send(
+    roomId: string,
+    sender: Sender,
+    to: string,
+    text: string,
+    note?: MessageNote,
+  ): Promise<Message> {
     const from = sender.kind === "gm" ? GM_MAILBOX : sender.profileId;
     if (from === to) throw new MessageError("Non puoi scrivere a te stesso.");
+    if (note && sender.kind !== "gm") throw new MessageError("Solo il GM può inviare note.");
     if (to !== GM_MAILBOX && !this.players.exists(roomId, to)) {
       throw new MessageError("Questo giocatore non è mai entrato nella stanza.");
     }
@@ -36,6 +49,7 @@ export class MessageService {
       // Chi non ha ancora scritto non ha un nome registrato: lo completano i client dalla presenza.
       toName: to === GM_MAILBOX ? "GM" : this.players.name(roomId, to) || "Giocatore",
       text,
+      ...(note ? { note } : {}),
       at: new Date().toISOString(),
     };
     const mailboxes = new Set([GM_MAILBOX, from, to]);

@@ -39,7 +39,9 @@ export type Tool =
   /** Solo GM: sorgenti di luce e impostazioni della visione. */
   | "light"
   /** Solo GM: timbri di scenario (alberi, rocce, mobili). */
-  | "stamp";
+  | "stamp"
+  /** Solo GM: pin con le note (trappole, descrizioni, tesori). */
+  | "note";
 
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
@@ -58,10 +60,20 @@ export const TOOL_SHORTCUTS: Record<string, Tool> = {
   w: "wall",
   i: "light",
   s: "stamp",
+  a: "note",
 };
 
 /** Strumenti riservati al GM: le scorciatoie non li attivano per i giocatori. */
-export const GM_TOOLS: Tool[] = ["calibrate", "fog", "terrain", "path", "wall", "light", "stamp"];
+export const GM_TOOLS: Tool[] = [
+  "calibrate",
+  "fog",
+  "terrain",
+  "path",
+  "wall",
+  "light",
+  "stamp",
+  "note",
+];
 
 /** Larghezze dei percorsi, in caselle della griglia. */
 export const PATH_WIDTHS = [0.5, 1, 1.5, 2, 3] as const;
@@ -140,6 +152,8 @@ interface BoardUiState {
   lightPreset: (typeof LIGHT_PRESETS)[number]["id"];
   /** Solo GM: vede la lavagna come la vede questo giocatore (id del profilo). */
   visionPreview: string | null;
+  /** Nota che il giocatore sta leggendo (il GM legge e modifica quella selezionata). */
+  openNoteId: string | null;
   stampId: StampId;
   /** Rotazione, taglia e variante casuali a ogni timbro, per un aspetto naturale. */
   stampRandom: boolean;
@@ -167,6 +181,7 @@ interface BoardUiState {
   selectWall: (id: string | null) => void;
   setLightPreset: (preset: BoardUiState["lightPreset"]) => void;
   setVisionPreview: (viewerId: string | null) => void;
+  setOpenNote: (id: string | null) => void;
   setStamp: (patch: Partial<Pick<BoardUiState, "stampId" | "stampRandom">>) => void;
   setTerrain: (
     patch: Partial<
@@ -242,6 +257,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   selectedWallId: null,
   lightPreset: "torch",
   visionPreview: null,
+  openNoteId: null,
   stampId: "tree",
   stampRandom: true,
   setTool: (tool) =>
@@ -283,5 +299,6 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   selectWall: (selectedWallId) => set({ selectedWallId, selectedIds: [], pathPoint: null }),
   setLightPreset: (lightPreset) => set({ lightPreset }),
   setVisionPreview: (visionPreview) => set({ visionPreview }),
+  setOpenNote: (openNoteId) => set({ openNoteId }),
   setStamp: (patch) => set(patch),
 }));

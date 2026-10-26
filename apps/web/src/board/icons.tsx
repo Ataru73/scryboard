@@ -109,6 +109,12 @@ export const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M9 14v6M16.5 18v2" />
     </Icon>
   ),
+  note: (
+    <Icon>
+      <path d="M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11z" />
+      <path d="M10 8h4M10 11h3" />
+    </Icon>
+  ),
   fog: (
     <Icon>
       <path d="M4 9h11a3 3 0 100-3M3 13h15a3 3 0 110 3M6 17h7" />

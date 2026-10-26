@@ -30,6 +30,11 @@ export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
       const r = (item.size * cellSize) / 2;
       return { x: -r, y: -r, width: 2 * r, height: 2 * r };
     }
+    case "note": {
+      // Il pin: un disco di mezza casella attorno al punto.
+      const r = cellSize * 0.3;
+      return { x: -r, y: -r, width: 2 * r, height: 2 * r };
+    }
     case "light": {
       // L'icona della luce (solo per il GM): un piccolo disco attorno al centro.
       const r = cellSize * 0.3;
@@ -121,6 +126,7 @@ export function bakeScale(item: BoardItem, sx: number, sy: number): Record<strin
     case "token":
     case "path":
     case "light":
+    case "note":
     case "template":
       // Niente Transformer: la taglia dei token e i punti dei percorsi si cambiano a parte.
       return {};

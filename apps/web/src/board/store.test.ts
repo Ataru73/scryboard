@@ -1,4 +1,4 @@
-import type { BoardItem, TextItem, TokenItem } from "@scryboard/shared";
+import type { BoardItem, NoteItem, TextItem, TokenItem } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { BoardStore } from "./store";
@@ -287,6 +287,25 @@ describe("BoardStore", () => {
     expect(player.getHandout()?.id).not.toBe(first?.id);
     gm.showHandout(null);
     expect(player.getHandout()).toBeNull();
+  });
+
+  it("keeps GM notes away from players until revealed", () => {
+    const publicDoc = new Y.Doc();
+    const gm = new BoardStore(publicDoc, new Y.Doc(), "gm");
+    const player = new BoardStore(publicDoc, null, "p1");
+    const note: NoteItem = {
+      ...text("pin"),
+      layer: "map",
+      kind: "note",
+      icon: "trap",
+      title: "Botola",
+      text: "**CD 15** Destrezza",
+    };
+    gm.add([note], { hidden: true });
+    gm.update({ pin: { text: "**CD 12** Destrezza" } });
+    expect(player.get("pin")).toBeUndefined();
+    gm.setHidden(["pin"], false);
+    expect(player.get("pin")).toMatchObject({ kind: "note", text: "**CD 12** Destrezza" });
   });
 
   it("ignores hiding without a GM document", () => {

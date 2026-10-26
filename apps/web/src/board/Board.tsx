@@ -3,6 +3,7 @@ import type {
   BoardItem,
   Door,
   FogOp,
+  NoteItem,
   Role,
   ShapeItem,
   StrokeItem,
@@ -76,6 +77,7 @@ import {
   snapRulerPoint,
   withRise,
 } from "./measure";
+import { NotePanel } from "./NotePanel";
 import { PingArrows } from "./PingArrows";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
@@ -144,6 +146,8 @@ const PING_HOLD_MS = 550;
 
 /** Durata dello spostamento della vista quando il GM richiama i giocatori. */
 const SUMMON_MS = 450;
+/** Segnaposto del livello mappa (luci e pin delle note): vanno sempre sopra le immagini. */
+const isMarker = (item: BoardItem) => item.kind === "light" || item.kind === "note";
 
 /** Tempo in cui una sagoma non fissata resta visibile dopo il rilascio. */
 const TEMPLATE_LINGER_MS = 4000;
@@ -595,7 +599,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       .filter(
         (id) =>
           canEdit(store.get(id)) &&
-          !["token", "path", "template"].includes(store.get(id)?.kind ?? "") &&
+          !["token", "path", "template", "note"].includes(store.get(id)?.kind ?? "") &&
           id !== editingTextId,
       )
       .map((id) => stage.findOne((node: Konva.Node) => node.hasName("item") && node.id() === id))
@@ -695,6 +699,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
 
     switch (tool) {
       case "select": {
+        // I giocatori non selezionano i pin del GM: un clic apre la nota da leggere.
+        if (target?.kind === "note" && role !== "gm") {
+          useBoardUi.getState().setOpenNote(target.id);
+          return;
+        }
         if (targetWall) {
           setWallEdit(null);
           selectWall(targetWall.id);
@@ -808,6 +817,20 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       case "stamp": {
         const first = stampDraft(p.world);
         setInteraction({ type: "stampScatter", stamps: [first], last: p.world });
+        return;
+      }
+      case "note": {
+        // Le note nascono nascoste: il GM le rivela quando vuole farle leggere.
+        const note: NoteItem = {
+          ...base("map", p.world),
+          kind: "note",
+          icon: "note",
+          title: "",
+          text: "",
+        };
+        store.add([note], { hidden: true });
+        setTool("select");
+        select([note.id]);
         return;
       }
       case "light": {
@@ -1629,10 +1652,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   // I giocatori non vedono le linee dei muri, ma solo le icone delle porte; la nebbia copre tutto
   // tranne i disegni.
   const pathItems = items.filter((i) => i.layer === "paths");
-  // Le luci sono segnaposto: stanno sempre sopra le mappe, anche se queste sono state caricate dopo.
+  // Luci e pin delle note sono segnaposto: stanno sempre sopra le mappe, anche se queste sono
+  // state caricate dopo.
   const mapItems = items
     .filter((i) => i.layer === "map" && (role === "gm" || i.kind !== "light"))
-    .sort((a, b) => Number(a.kind === "light") - Number(b.kind === "light"));
+    .sort((a, b) => Number(isMarker(a)) - Number(isMarker(b)));
   const tokenItems = items.filter((i) => i.layer === "token");
   const drawItems = items.filter((i) => i.layer === "draw");
   const drawnWalls = walls.map((wall) => {
@@ -2086,6 +2110,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         />
       )}
       <HandoutModal store={store} role={role} roomId={roomId} />
+      <NotePanel store={store} role={role} roomId={roomId} provider={provider} />
       <TokenList
         // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
         items={

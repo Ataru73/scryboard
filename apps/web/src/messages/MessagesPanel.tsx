@@ -1,7 +1,8 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { GM_MAILBOX, MAX_MESSAGE_LENGTH, type PresenceUser } from "@scryboard/shared";
+import { GM_MAILBOX, MAX_MESSAGE_LENGTH, type Message, type PresenceUser } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Markdown } from "../board/markdown";
 import { RollPanel } from "../dice/RollPanel";
 import { rollFormula } from "../dice/rolls";
 import { api, describeApiError } from "../lib/api";
@@ -152,7 +153,7 @@ function Thread({
 }: {
   title: string;
   me: string;
-  messages: { id: string; from: string; fromName: string; text: string; at: string }[];
+  messages: Message[];
   readOnly: boolean;
   onBack: () => void;
   onSend: (text: string) => Promise<void>;
@@ -207,7 +208,16 @@ function Thread({
         {messages.map((m) => (
           <li key={m.id} className={m.from === me ? "bubble mine" : "bubble"}>
             {m.from !== me && <span className="bubble-author">{m.fromName}</span>}
-            <span className="bubble-text">{m.text}</span>
+            {m.note ? (
+              <div className="bubble-note">
+                <strong>{m.note.title || t("effects.note.untitled")}</strong>
+                <div className="note-body">
+                  <Markdown text={m.note.text} />
+                </div>
+              </div>
+            ) : (
+              <span className="bubble-text">{m.text}</span>
+            )}
             <time className="bubble-time" dateTime={m.at}>
               {new Date(m.at).toLocaleTimeString(timeLocale, {
                 hour: "2-digit",

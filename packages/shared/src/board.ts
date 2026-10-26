@@ -156,6 +156,30 @@ export const lightItemSchema = z.object({
   ...lightSpecSchema.shape,
 });
 
+/** Icone dei pin con le note del GM, con il loro colore. */
+export const NOTE_ICONS = [
+  { id: "note", color: "#8e4ec6" },
+  { id: "trap", color: "#e5484d" },
+  { id: "treasure", color: "#ffc53d" },
+  { id: "secret", color: "#0090ff" },
+  { id: "npc", color: "#46a758" },
+] as const;
+export type NoteIcon = (typeof NOTE_ICONS)[number]["id"];
+const NOTE_ICON_IDS = NOTE_ICONS.map((i) => i.id) as [NoteIcon, ...NoteIcon[]];
+
+/**
+ * Pin con una nota del GM (trappola, descrizione di una stanza, tesoro): un'icona compatta che
+ * al clic apre il testo, in Markdown. Sta sul livello mappa, quindi la modifica solo il GM; di
+ * solito nasce nascosta e il GM la rivela quando vuole farla leggere ai giocatori.
+ */
+export const noteItemSchema = z.object({
+  ...baseItem,
+  kind: z.literal("note"),
+  icon: z.enum(NOTE_ICON_IDS),
+  title: z.string().max(80),
+  text: z.string().max(10000),
+});
+
 /** Timbri: elementi di scenario disegnati proceduralmente, con varianti. */
 export const STAMPS = [
   { id: "tree", label: "Albero", size: 2, group: "nature" },
@@ -255,6 +279,7 @@ export const boardItemSchema = z.discriminatedUnion("kind", [
   lightItemSchema,
   stampItemSchema,
   templateItemSchema,
+  noteItemSchema,
 ]);
 
 export type ImageItem = z.infer<typeof imageItemSchema>;
@@ -266,6 +291,7 @@ export type PathItem = z.infer<typeof pathItemSchema>;
 export type LightItem = z.infer<typeof lightItemSchema>;
 export type StampItem = z.infer<typeof stampItemSchema>;
 export type TemplateItem = z.infer<typeof templateItemSchema>;
+export type NoteItem = z.infer<typeof noteItemSchema>;
 export type BoardItem = z.infer<typeof boardItemSchema>;
 export type BoardItemKind = BoardItem["kind"];
 

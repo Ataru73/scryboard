@@ -1093,6 +1093,97 @@ button.danger {
 }
 
 /* In basso a destra, sopra lo zoom: in alto stanno gli altri pannelli (griglia, nebbia…). */
+.note-panel {
+  width: min(20rem, calc(100vw - 24px));
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+.note-panel header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.note-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+.note-tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.note-tabs button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.note-text {
+  width: 100%;
+  min-height: 10rem;
+  resize: vertical;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.note-send {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.note-send-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.note-send-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.bubble-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.note-body {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.note-body > :first-child {
+  margin-top: 0;
+}
+
+.note-body > :last-child {
+  margin-bottom: 0;
+}
+
+.note-body h3,
+.note-body h4,
+.note-body h5 {
+  margin: 0.8em 0 0.3em;
+}
+
+.note-body p,
+.note-body ul,
+.note-body ol {
+  margin: 0.4em 0;
+}
+
+.note-body ul,
+.note-body ol {
+  padding-left: 1.3em;
+}
+
 .initiative-panel {
   top: auto;
   bottom: 64px;
