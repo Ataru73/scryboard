@@ -247,6 +247,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [interaction, setInteraction] = useState<Interaction | null>(null);
   const [notice, setNoticeState] = useState<Notice | null>(null);
+  const weatherHidden = useBoardUi((s) => s.weatherHidden);
   const showHandout = useMemo(
     () => (role === "gm" ? (assetId: string) => store.showHandout(assetId) : null),
     [role, store],
@@ -2237,7 +2238,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
             onClose={() => useBoardUi.getState().setInitiativeOpen(false)}
           />
         )}
-        <WeatherOverlay weather={lighting.weather} width={size.width} height={size.height} />
+        <WeatherOverlay
+          weather={weatherHidden ? "none" : lighting.weather}
+          width={size.width}
+          height={size.height}
+        />
         <HandoutModal store={store} role={role} roomId={roomId} />
         <NotePanel store={store} role={role} roomId={roomId} provider={provider} />
         <TokenList

@@ -47,6 +47,7 @@ const GEMINI_KEY = "scryboard:gemini-key";
 const GEMINI_MODEL_KEY = "scryboard:gemini-model";
 const GEMINI_VISION_MODEL_KEY = "scryboard:gemini-vision-model";
 const DICE_PRESETS_KEY = "scryboard:dice-presets";
+const WEATHER_HIDDEN_KEY = "scryboard:weather-hidden";
 const MAX_GENERATED = 24;
 /** Quante formule si possono salvare: oltre, i pulsanti non starebbero più nel pannello. */
 export const MAX_DICE_PRESETS = 12;
@@ -82,6 +83,9 @@ export const storage = {
   },
   setDicePresets: (formulas: string[]) =>
     write(DICE_PRESETS_KEY, JSON.stringify(formulas.slice(0, MAX_DICE_PRESETS))),
+  /** Chi trova fastidioso il meteo animato lo spegne per sé, in tutte le stanze. */
+  getWeatherHidden: () => read(WEATHER_HIDDEN_KEY) === "1",
+  setWeatherHidden: (hidden: boolean) => write(WEATHER_HIDDEN_KEY, hidden ? "1" : null),
   getLanguage: () => read(LANGUAGE_KEY),
   setLanguage: (language: string) => write(LANGUAGE_KEY, language),
   /** Chiave API di Gemini: resta in questo browser, non si invia mai al server di Scryboard. */

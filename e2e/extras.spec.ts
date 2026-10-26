@@ -49,3 +49,22 @@ test("players cannot show images from the collection", async ({ browser }) => {
   await expect(picker.getByRole("button", { name: "Usa questa immagine" })).toHaveCount(1);
   await expect(picker.getByRole("button", { name: "Mostra ai giocatori" })).toHaveCount(0);
 });
+
+test("each viewer can turn the animated weather off just for themselves", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  const overlay = (page: Page) => page.locator("canvas.weather-overlay");
+  await expect(player.getByRole("button", { name: "Nascondi il meteo" })).toHaveCount(0);
+
+  await gm.keyboard.press("i");
+  await gm.getByLabel("Meteo").selectOption({ label: "Pioggia" });
+  await expect(overlay(player)).toHaveCount(1);
+
+  await player.getByRole("button", { name: "Nascondi il meteo" }).click();
+  await expect(overlay(player)).toHaveCount(0);
+  await expect(overlay(gm)).toHaveCount(1);
+  // La scelta resta anche ricaricando la pagina.
+  await player.reload();
+  await expect(board(player)).toHaveAttribute("data-synced", "true");
+  await expect(player.getByRole("button", { name: "Mostra il meteo" })).toBeVisible();
+  await expect(overlay(player)).toHaveCount(0);
+});

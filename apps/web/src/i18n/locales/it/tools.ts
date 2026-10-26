@@ -77,6 +77,11 @@ export const tools = {
     },
     zoom: {
       label: "Zoom",
+      weather: {
+        show: "Mostra il meteo",
+        hide: "Nascondi il meteo",
+        title: "Meteo animato: spegnilo o riaccendilo solo per te",
+      },
       summon: {
         label: "Porta qui i giocatori",
         title:

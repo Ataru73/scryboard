@@ -13,6 +13,7 @@ import {
   type WallKind,
 } from "@scryboard/shared";
 import { create } from "zustand";
+import { storage } from "../lib/storage";
 import type { Viewport } from "./viewport";
 
 export type Tool =
@@ -160,6 +161,8 @@ interface BoardUiState {
   lightPreset: (typeof LIGHT_PRESETS)[number]["id"];
   /** Solo GM: vede la lavagna come la vede questo giocatore (id del profilo). */
   visionPreview: string | null;
+  /** Meteo animato spento solo per chi guarda (ricordato nel browser). */
+  weatherHidden: boolean;
   /** Nota che il giocatore sta leggendo (il GM legge e modifica quella selezionata). */
   openNoteId: string | null;
   stampId: StampId;
@@ -191,6 +194,7 @@ interface BoardUiState {
   selectWall: (id: string | null) => void;
   setLightPreset: (preset: BoardUiState["lightPreset"]) => void;
   setVisionPreview: (viewerId: string | null) => void;
+  setWeatherHidden: (hidden: boolean) => void;
   setOpenNote: (id: string | null) => void;
   setStamp: (patch: Partial<Pick<BoardUiState, "stampId" | "stampRandom">>) => void;
   setRoofStyle: (style: RoofStyle) => void;
@@ -268,6 +272,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   selectedWallId: null,
   lightPreset: "torch",
   visionPreview: null,
+  weatherHidden: storage.getWeatherHidden(),
   openNoteId: null,
   stampId: "tree",
   stampRandom: true,
@@ -311,6 +316,10 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   selectWall: (selectedWallId) => set({ selectedWallId, selectedIds: [], pathPoint: null }),
   setLightPreset: (lightPreset) => set({ lightPreset }),
   setVisionPreview: (visionPreview) => set({ visionPreview }),
+  setWeatherHidden: (weatherHidden) => {
+    storage.setWeatherHidden(weatherHidden);
+    set({ weatherHidden });
+  },
   setOpenNote: (openNoteId) => set({ openNoteId }),
   setStamp: (patch) => set(patch),
   setRoofStyle: (roofStyle) => set({ roofStyle }),

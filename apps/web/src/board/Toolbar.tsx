@@ -26,6 +26,7 @@ import {
   TrashIcon,
   TurnsIcon,
   UndoIcon,
+  WeatherIcon,
 } from "./icons";
 import { LightPanel } from "./LightPanel";
 import { MapGenerator } from "./MapGenerator";
@@ -92,6 +93,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     createHidden,
     rulerShape,
     initiativeOpen,
+    weatherHidden,
   } = useBoardUi();
   const {
     setTool,
@@ -104,10 +106,12 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     setCreateHidden,
     setRulerShape,
     setInitiativeOpen,
+    setWeatherHidden,
     select,
     setEditingText,
   } = useBoardUi.getState();
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
+  const lighting = useSyncExternalStore(store.subscribe, store.getLighting);
   const attachFrom = useBoardUi((s) => s.attachFrom);
   const canUndo = useSyncExternalStore(store.subscribe, () => store.canUndo());
   const canRedo = useSyncExternalStore(store.subscribe, () => store.canRedo());
@@ -459,6 +463,22 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         >
           {TurnsIcon}
         </button>
+        {lighting.weather !== "none" && (
+          <button
+            type="button"
+            className="icon-button"
+            aria-pressed={!weatherHidden}
+            aria-label={
+              weatherHidden
+                ? t("tools.toolbar.zoom.weather.show")
+                : t("tools.toolbar.zoom.weather.hide")
+            }
+            title={t("tools.toolbar.zoom.weather.title")}
+            onClick={() => setWeatherHidden(!weatherHidden)}
+          >
+            {WeatherIcon}
+          </button>
+        )}
         <span className="toolbar-separator" />
         <button
           type="button"

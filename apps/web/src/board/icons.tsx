@@ -220,6 +220,13 @@ export const HandoutIcon = (
   </Icon>
 );
 
+export const WeatherIcon = (
+  <Icon>
+    <path d="M7 15a4 4 0 01-.5-8A5.5 5.5 0 0117 7.5a3.75 3.75 0 01.5 7.5z" />
+    <path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2" />
+  </Icon>
+);
+
 export const CopyIcon = (
   <Icon>
     <rect x="8" y="8" width="12" height="12" rx="2" />
