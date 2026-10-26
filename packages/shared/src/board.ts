@@ -116,7 +116,33 @@ export const tokenItemSchema = z.object({
     .object({ radius: z.number().positive().max(100), color })
     .nullable()
     .optional(),
+  /**
+   * Incognito: i giocatori vedono una sagoma con «?». Nome e aspetto veri stanno nel documento
+   * del GM (vedi `MASKS_MAP`), così non arrivano ai giocatori nemmeno nei dati.
+   */
+  obscured: z.boolean().optional(),
 });
+
+/** Campi che identificano un token: per un token in incognito li conosce solo il GM. */
+export const TOKEN_IDENTITY_KEYS = ["name", "color", "assetId", "portrait"] as const;
+export const tokenIdentitySchema = tokenItemSchema.pick({
+  name: true,
+  color: true,
+  assetId: true,
+  portrait: true,
+});
+export type TokenIdentity = z.infer<typeof tokenIdentitySchema>;
+
+/** Come un token in incognito appare nei dati che ricevono i giocatori. */
+export const OBSCURED_IDENTITY: TokenIdentity = {
+  name: "",
+  color: "#3a3542",
+  assetId: null,
+  portrait: null,
+};
+
+/** Nome della Y.Map, nel documento del GM, con l'identità vera dei token in incognito (per id). */
+export const MASKS_MAP = "masks";
 
 /** Sorgente di luce fissa piazzata dal GM (sul livello mappa, quindi solo il GM la modifica). */
 export const lightItemSchema = z.object({

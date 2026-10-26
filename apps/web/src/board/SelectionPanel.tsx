@@ -34,19 +34,26 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
   const single = selected.length === 1 ? selected[0] : undefined;
   const allLocked = selected.every((i) => i.locked);
   const allHidden = selected.every((i) => store.isHidden(i.id));
+  const tokens = selected.filter((i): i is TokenItem => i.kind === "token");
+  const allObscured = tokens.length > 0 && tokens.every((i) => i.obscured);
   const removable = selected.filter((i) => canModify(i, role));
 
   return (
     <div className="toolbar selection-panel" role="toolbar" aria-label={t("core.selection.label")}>
       {single?.kind === "token" && canModify(single, role) && (
         <>
-          <TokenStyleFields
-            key={single.id}
-            value={single}
-            roomId={roomId}
-            onChange={(patch) => store.update({ [single.id]: patch })}
-          />
-          <span className="toolbar-separator" />
+          {/* Nome e aspetto di un token in incognito li conosce solo il GM. */}
+          {(role === "gm" || !single.obscured) && (
+            <>
+              <TokenStyleFields
+                key={single.id}
+                value={single}
+                roomId={roomId}
+                onChange={(patch) => store.update({ [single.id]: patch })}
+              />
+              <span className="toolbar-separator" />
+            </>
+          )}
           <AuraFields token={single} store={store} />
           <AttachButton token={single} store={store} />
         </>
@@ -75,6 +82,23 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           }
         >
           {allHidden ? EyeOffIcon : EyeIcon}
+        </button>
+      )}
+      {role === "gm" && store.canHide && tokens.length > 0 && (
+        <button
+          type="button"
+          className="icon-button obscure-button"
+          aria-pressed={allObscured}
+          aria-label={allObscured ? t("core.selection.unmask") : t("core.selection.obscure")}
+          title={allObscured ? t("core.selection.unmaskTitle") : t("core.selection.obscureTitle")}
+          onClick={() =>
+            store.setObscured(
+              tokens.map((i) => i.id),
+              !allObscured,
+            )
+          }
+        >
+          ?
         </button>
       )}
       {role === "gm" && (

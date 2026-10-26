@@ -54,9 +54,15 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
           {order.map((token) => (
             <li key={token.id} aria-current={token.id === turn.activeId ? "step" : undefined}>
               <span className="initiative-name">
-                {token.name || t("effects.initiative.unnamed")}
+                {token.name ||
+                  (token.obscured
+                    ? t("effects.initiative.unknown")
+                    : t("effects.initiative.unnamed"))}
                 {gm && store.isHidden(token.id) && (
                   <span className="muted small"> ({t("effects.initiative.hidden")})</span>
+                )}
+                {gm && token.obscured && (
+                  <span className="muted small"> ({t("effects.initiative.obscured")})</span>
                 )}
               </span>
               <input

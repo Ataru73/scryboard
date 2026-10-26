@@ -5,6 +5,7 @@ import {
   isVideoAsset,
   type LightItem,
   type LightingSettings,
+  OBSCURED_IDENTITY,
   type PathItem,
   type StampItem,
   type TemplateItem,
@@ -44,6 +45,8 @@ interface Props {
   turn?: boolean;
   /** Agganciato a un altro token: mostra il simbolo della catena. */
   attached?: boolean;
+  /** Token in incognito: il GM lo vede com'è, con un «?» nell'angolo; gli altri solo la sagoma. */
+  unmasked?: boolean;
   /** Luce ambientale che tinge le immagini; assente con le luci spente. */
   ambient?: LightingSettings["ambient"];
   onDragStart?: (event: Konva.KonvaEventObject<DragEvent>) => void;
@@ -61,6 +64,7 @@ export const ItemNode = memo(function ItemNode({
   selected,
   turn,
   attached,
+  unmasked,
   ambient,
   onDragStart,
   onDragMove,
@@ -87,6 +91,7 @@ export const ItemNode = memo(function ItemNode({
           selected={selected}
           turn={turn}
           attached={attached}
+          unmasked={unmasked}
         />
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
@@ -293,6 +298,7 @@ function TokenContent({
   selected,
   turn,
   attached,
+  unmasked,
 }: {
   item: TokenItem;
   roomId: string;
@@ -300,7 +306,10 @@ function TokenContent({
   selected: boolean;
   turn?: boolean;
   attached?: boolean;
+  unmasked?: boolean;
 }) {
+  const masked = !!item.obscured && !unmasked;
+  const color = masked ? OBSCURED_IDENTITY.color : item.color;
   const r = (item.size * cellSize) / 2;
   const ring = Math.max(2, r * 0.1);
   const labelSize = Math.max(10, cellSize * 0.22);
@@ -334,20 +343,25 @@ function TokenContent({
       )}
       <Circle
         radius={r}
-        fill={item.color}
+        fill={color}
         shadowColor="#000000"
         shadowOpacity={0.35}
         shadowBlur={6}
         shadowOffsetY={2}
       />
-      {item.assetId ? (
+      {masked ? (
+        <UnknownFace radius={r} />
+      ) : item.assetId ? (
         <TokenImage roomId={roomId} assetId={item.assetId} radius={r - ring / 2} />
       ) : (
         <TokenFace item={item} radius={r} />
       )}
-      <Circle radius={r - ring / 2} stroke={item.color} strokeWidth={ring} />
+      <Circle radius={r - ring / 2} stroke={color} strokeWidth={ring} />
       {attached && <ChainBadge x={r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />}
-      {item.name && (
+      {item.obscured && !masked && (
+        <ObscuredBadge x={-r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />
+      )}
+      {item.name && !masked && (
         <Text
           text={item.name}
           x={-cellSize * 2}
@@ -384,6 +398,56 @@ function ChainBadge({ x, y, size }: { x: number; y: number; size: number }) {
         strokeWidth={2.4}
         lineCap="round"
         lineJoin="round"
+      />
+    </Group>
+  );
+}
+
+/** Token in incognito visto dai giocatori: una sagoma scura con un punto di domanda. */
+function UnknownFace({ radius }: { radius: number }) {
+  const head = radius * 0.34;
+  return (
+    <Group
+      name="obscured-face"
+      listening={false}
+      clipFunc={(ctx) => ctx.arc(0, 0, radius * 0.92, 0, Math.PI * 2)}
+    >
+      <Ellipse y={radius * 0.72} radiusX={radius * 0.62} radiusY={radius * 0.42} fill="#1d1a24" />
+      <Circle y={-radius * 0.18} radius={head} fill="#1d1a24" />
+      <Text
+        text="?"
+        x={-head}
+        y={-radius * 0.18 - head}
+        width={2 * head}
+        height={2 * head}
+        align="center"
+        verticalAlign="middle"
+        fontFamily={FONT_FAMILY}
+        fontStyle="bold"
+        fontSize={head * 1.3}
+        fill="#d8d2e6"
+      />
+    </Group>
+  );
+}
+
+/** «?» in un angolo del token: è in incognito per i giocatori (lo vede solo il GM). */
+function ObscuredBadge({ x, y, size }: { x: number; y: number; size: number }) {
+  return (
+    <Group x={x} y={y} listening={false} name="obscured-badge">
+      <Circle radius={size / 2} fill="#8e4ec6" stroke="#ffffff" strokeWidth={1.5} />
+      <Text
+        text="?"
+        x={-size / 2}
+        y={-size / 2}
+        width={size}
+        height={size}
+        align="center"
+        verticalAlign="middle"
+        fontFamily={FONT_FAMILY}
+        fontStyle="bold"
+        fontSize={size * 0.7}
+        fill="#ffffff"
       />
     </Group>
   );

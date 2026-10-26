@@ -29,7 +29,8 @@ export function TokenList({
         return (
           <li key={token.id}>
             {portrait && <PortraitGlyph id={portrait.id} color={token.color} />}
-            {token.name || t("core.tokenList.unnamed")}
+            {token.name ||
+              (token.obscured ? t("core.tokenList.unknown") : t("core.tokenList.unnamed"))}
             {grid.enabled &&
               t("core.tokenList.position", { column: cell.col + 1, row: cell.row + 1 })}
             {portrait &&
@@ -42,6 +43,7 @@ export function TokenList({
               })}
             {token.locked && t("core.tokenList.locked")}
             {isHidden(token.id) && t("core.tokenList.hidden")}
+            {token.obscured && token.name && t("core.tokenList.obscured")}
           </li>
         );
       })}

@@ -175,6 +175,54 @@ describe("BoardStore", () => {
     expect(publicDoc.getMap("items").size).toBe(0);
   });
 
+  it("obscures tokens keeping their identity only in the GM document", () => {
+    const publicDoc = new Y.Doc();
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, gmDoc, "gm");
+    const player = new BoardStore(publicDoc, null, "player");
+    store.add([{ ...token("lich"), portrait: "skull" }]);
+    store.setObscured(["lich"], true);
+
+    expect(publicDoc.getMap("items").get("lich")).toMatchObject({
+      obscured: true,
+      name: "",
+      portrait: null,
+    });
+    expect(player.get("lich")).toMatchObject({ obscured: true, name: "" });
+    expect(store.get("lich")).toMatchObject({ obscured: true, name: "lich", portrait: "skull" });
+    expect(store.isObscured("lich")).toBe(true);
+
+    // Rinominarlo cambia la maschera, non il documento pubblico; spostarlo invece sì.
+    store.update({ lich: { name: "Lich antico", x: 7 } });
+    expect(store.get("lich")).toMatchObject({ name: "Lich antico", x: 7 });
+    expect(player.get("lich")).toMatchObject({ name: "", x: 7 });
+
+    // Anche nascosto e poi rivelato ai giocatori resta in incognito.
+    store.setHidden(["lich"], true);
+    store.setHidden(["lich"], false);
+    expect(player.get("lich")).toMatchObject({ obscured: true, name: "" });
+
+    store.setObscured(["lich"], false);
+    expect(player.get("lich")).toMatchObject({ name: "Lich antico", portrait: "skull" });
+    expect(player.get("lich")).not.toHaveProperty("obscured");
+    expect(gmDoc.getMap("masks").size).toBe(0);
+
+    store.undo();
+    expect(player.get("lich")).toMatchObject({ obscured: true, name: "" });
+    expect(store.get("lich")).toMatchObject({ name: "Lich antico" });
+  });
+
+  it("drops the identity of a removed obscured token", () => {
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(new Y.Doc(), gmDoc, "gm");
+    store.add([token("a")]);
+    store.setObscured(["a"], true);
+    store.remove(["a"]);
+    expect(gmDoc.getMap("masks").size).toBe(0);
+    store.undo();
+    expect(store.get("a")).toMatchObject({ name: "a", obscured: true });
+  });
+
   it("ignores hiding without a GM document", () => {
     const store = new BoardStore(new Y.Doc(), null, "player");
     store.add([text("a")]);

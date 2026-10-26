@@ -1567,6 +1567,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           !!item.attachedTo &&
           parentOf(store.getSnapshot(), item) !== undefined
         }
+        unmasked={role === "gm" && !visionPreview}
         ambient={lighting.enabled ? lighting.ambient : undefined}
         onDragStart={onItemDragStart}
         onDragMove={onItemDragMove}

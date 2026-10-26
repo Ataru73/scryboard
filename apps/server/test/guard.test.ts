@@ -87,6 +87,23 @@ describe("isAllowedPlayerItemChange", () => {
     expect(isAllowedPlayerItemChange("update", "t", token("t"), token("t", { x: 4 }))).toBe(true);
   });
 
+  it("lets players move an obscured token but not unmask or rename it", () => {
+    const masked = token("t", { obscured: true, name: "" });
+    const moved = token("t", { obscured: true, name: "", x: 9 });
+    expect(isAllowedPlayerItemChange("update", "t", masked, moved)).toBe(true);
+    expect(isAllowedPlayerItemChange("update", "t", masked, token("t", { name: "" }))).toBe(false);
+    expect(
+      isAllowedPlayerItemChange(
+        "update",
+        "t",
+        masked,
+        token("t", { obscured: true, name: "Lich" }),
+      ),
+    ).toBe(false);
+    expect(isAllowedPlayerItemChange("add", "t", undefined, masked)).toBe(false);
+    expect(isAllowedPlayerItemChange("delete", "t", masked, undefined)).toBe(true);
+  });
+
   it("rejects map items, locked items, invalid data and kind changes", () => {
     expect(isAllowedPlayerItemChange("add", "m", undefined, mapImage("m"))).toBe(false);
     const river = {

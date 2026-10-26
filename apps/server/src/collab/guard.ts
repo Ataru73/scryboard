@@ -14,6 +14,7 @@ import {
   SETTINGS_MAP,
   sortFogOps,
   TERRAIN_MAP,
+  TOKEN_IDENTITY_KEYS,
   WALLS_MAP,
   type Wall,
   wallSchema,
@@ -58,6 +59,15 @@ function sameInitiativeMembership(
   return (typeof before?.initiative === "number") === (typeof after.initiative === "number");
 }
 
+/** L'incognito lo decide il GM: un giocatore non lo toglie né cambia nome e aspetto al token. */
+function sameObscured(
+  before: Extract<BoardItem, { kind: "token" }> | null,
+  after: Extract<BoardItem, { kind: "token" }>,
+): boolean {
+  if (!!before?.obscured !== !!after.obscured) return false;
+  return !before?.obscured || TOKEN_IDENTITY_KEYS.every((key) => before[key] === after[key]);
+}
+
 /** Un giocatore può creare, modificare o cancellare solo oggetti che potrebbe toccare dall'interfaccia. */
 export function isAllowedPlayerItemChange(
   action: Action,
@@ -77,7 +87,9 @@ export function isAllowedPlayerItemChange(
   if (after.kind === "token") {
     const previous = before?.kind === "token" ? before : null;
     return (
-      visionFields(previous) === visionFields(after) && sameInitiativeMembership(previous, after)
+      visionFields(previous) === visionFields(after) &&
+      sameInitiativeMembership(previous, after) &&
+      sameObscured(previous, after)
     );
   }
   return true;

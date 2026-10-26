@@ -580,6 +580,10 @@ button.danger {
   color: var(--accent-text);
 }
 
+.obscure-button {
+  font-weight: 700;
+}
+
 .color-button {
   width: 26px;
   height: 26px;

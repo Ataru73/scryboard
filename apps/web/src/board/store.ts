@@ -16,15 +16,20 @@ import {
   type Layer,
   type LightingSettings,
   lightingSettingsSchema,
+  MASKS_MAP,
+  OBSCURED_IDENTITY,
   SETTINGS_MAP,
   type Summon,
   stepTurn,
   summonSchema,
   TERRAIN_MAP,
   type TerrainOp,
+  TOKEN_IDENTITY_KEYS,
+  type TokenIdentity,
   type TokenItem,
   type TurnSettings,
   terrainOpSchema,
+  tokenIdentitySchema,
   turnSettingsSchema,
   WALLS_MAP,
   type Wall,
@@ -61,6 +66,8 @@ interface DocPart {
 export class BoardStore {
   private readonly pub: DocPart;
   private readonly gm: DocPart | null;
+  /** Identità vera dei token in incognito: sta nel documento del GM. */
+  private readonly masks: Y.Map<unknown> | null;
   private readonly settings: Y.Map<unknown>;
   private readonly fogMap: Y.Map<unknown>;
   private readonly terrainMap: Y.Map<unknown>;
@@ -91,7 +98,9 @@ export class BoardStore {
     this.terrainMap = publicDoc.getMap(TERRAIN_MAP);
     this.wallsMap = publicDoc.getMap(WALLS_MAP);
     this.pub = this.part(publicDoc, [this.settings, this.fogMap, this.terrainMap, this.wallsMap]);
-    this.gm = gmDoc ? this.part(gmDoc, []) : null;
+    this.masks = gmDoc ? gmDoc.getMap(MASKS_MAP) : null;
+    this.gm = gmDoc && this.masks ? this.part(gmDoc, [this.masks]) : null;
+    this.masks?.observe(() => this.rebuild());
 
     this.loadSettings();
     this.settings.observe(() => {
@@ -190,6 +199,12 @@ export class BoardStore {
     // Se per un attimo un oggetto è in entrambi i documenti, vince quello pubblico.
     for (const [id, item] of this.gm?.loaded ?? []) this.byId.set(id, item);
     for (const [id, item] of this.pub.loaded) this.byId.set(id, item);
+    // Il GM vede i token in incognito con il loro aspetto vero.
+    for (const [id, item] of this.byId) {
+      if (item.kind !== "token" || !item.obscured) continue;
+      const identity = this.maskOf(id);
+      if (identity) this.byId.set(id, { ...item, ...identity });
+    }
     this.sorted = [...this.byId.values()].sort(compareItems);
     this.emit();
   }
@@ -237,6 +252,17 @@ export class BoardStore {
 
   get canHide(): boolean {
     return this.gm !== null;
+  }
+
+  /** In incognito: i giocatori vedono una sagoma senza nome. */
+  isObscured(id: string): boolean {
+    const item = this.byId.get(id);
+    return item?.kind === "token" && !!item.obscured;
+  }
+
+  private maskOf(id: string): TokenIdentity | null {
+    const parsed = tokenIdentitySchema.safeParse(this.masks?.get(id));
+    return parsed.success ? parsed.data : null;
   }
 
   /** z per mettere un nuovo oggetto in cima al suo livello. */
@@ -291,7 +317,33 @@ export class BoardStore {
   }
 
   update(patches: Record<string, ItemPatch>) {
+    // Nome e aspetto di un token in incognito si cambiano nella sua maschera, non nel documento.
+    const masked = new Map<string, TokenIdentity>();
+    const masks = this.masks;
+    if (masks) {
+      patches = { ...patches };
+      for (const [id, patch] of Object.entries(patches)) {
+        const current = this.byId.get(id);
+        if (current?.kind !== "token" || !current.obscured) continue;
+        const rest: ItemPatch = { ...patch };
+        const identity: Record<string, unknown> = {};
+        for (const key of TOKEN_IDENTITY_KEYS) {
+          if (!(key in rest)) continue;
+          identity[key] = rest[key];
+          delete rest[key];
+        }
+        if (Object.keys(identity).length === 0) continue;
+        const next = tokenIdentitySchema.safeParse({ ...identityOf(current), ...identity });
+        if (next.success) masked.set(id, next.data);
+        patches[id] = rest;
+      }
+    }
     this.action(() => {
+      if (masks && this.gm && masked.size > 0) {
+        this.transact(this.gm, () => {
+          for (const [id, identity] of masked) masks.set(id, identity);
+        });
+      }
       for (const part of [this.pub, this.gm]) {
         if (!part) continue;
         const entries = Object.entries(patches).filter(([id]) => this.partOf(id) === part);
@@ -342,7 +394,14 @@ export class BoardStore {
         i.kind === "token" && !!i.attachedTo && removed.has(i.attachedTo) && !removed.has(i.id),
     );
     const deadWalls = this.walls.filter((w) => !!w.attachedTo && removed.has(w.attachedTo));
+    const masks = this.masks;
+    const deadMasks = list.filter((id) => masks?.has(id));
     this.action(() => {
+      if (masks && this.gm && deadMasks.length > 0) {
+        this.transact(this.gm, () => {
+          for (const id of deadMasks) masks.delete(id);
+        });
+      }
       if (deadWalls.length > 0) {
         this.transact(this.pub, () => {
           for (const w of deadWalls) this.wallsMap.delete(w.id);
@@ -377,6 +436,48 @@ export class BoardStore {
       this.transact(from, () => {
         for (const item of moving) from.items.delete(item.id);
       });
+    });
+  }
+
+  /**
+   * Mette i token in incognito, spostando nome e aspetto nel documento del GM, o li svela
+   * riportandoli sul token.
+   */
+  setObscured(ids: string[], obscured: boolean) {
+    const gm = this.gm;
+    const masks = this.masks;
+    if (!gm || !masks) return;
+    const tokens = ids
+      .map((id) => this.byId.get(id))
+      .filter((i): i is TokenItem => i?.kind === "token" && !!i.obscured !== obscured);
+    if (tokens.length === 0) return;
+    const write = (fn: (part: DocPart, token: TokenItem) => void) => {
+      for (const part of [this.pub, gm]) {
+        const mine = tokens.filter((t) => part.loaded.has(t.id));
+        if (mine.length === 0) continue;
+        this.transact(part, () => {
+          for (const token of mine) fn(part, token);
+        });
+      }
+    };
+    this.action(() => {
+      if (obscured) {
+        // Prima la maschera, poi si cancella l'identità dal token: non si perde nulla.
+        this.transact(gm, () => {
+          for (const token of tokens) masks.set(token.id, identityOf(token));
+        });
+        write((part, token) =>
+          part.items.set(token.id, { ...token, ...OBSCURED_IDENTITY, obscured: true }),
+        );
+      } else {
+        write((part, token) => {
+          const { obscured: _, ...revealed } = token;
+          part.items.set(token.id, revealed);
+        });
+        this.transact(gm, () => {
+          for (const token of tokens) masks.delete(token.id);
+        });
+      }
     });
   }
 
@@ -568,10 +669,12 @@ export class BoardStore {
           for (const key of [...this.fogMap.keys()]) this.fogMap.delete(key);
         });
       }
-      if (this.gm && this.gm.items.size > 0) {
+      const masks = this.masks;
+      if (this.gm && (this.gm.items.size > 0 || (masks?.size ?? 0) > 0)) {
         const gm = this.gm;
         this.transact(gm, () => {
           for (const key of [...gm.items.keys()]) gm.items.delete(key);
+          for (const key of [...(masks?.keys() ?? [])]) masks?.delete(key);
         });
       }
     });
@@ -606,6 +709,15 @@ export class BoardStore {
     this.gm?.undo.destroy();
     this.listeners.clear();
   }
+}
+
+function identityOf(token: TokenItem): TokenIdentity {
+  return {
+    name: token.name,
+    color: token.color,
+    assetId: token.assetId,
+    portrait: token.portrait ?? null,
+  };
 }
 
 /** Id casuale; non usa crypto.randomUUID, disponibile solo in contesti sicuri (HTTPS/localhost). */
