@@ -1728,6 +1728,24 @@ button.danger {
   flex-wrap: wrap;
 }
 
+.uploaded-asset {
+  position: relative;
+}
+
+.uploaded-asset .generated-button {
+  width: 100%;
+}
+
+.asset-show {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+}
+
 .asset-private {
   position: absolute;
   right: 4px;

@@ -26,6 +26,8 @@ export const assets = {
     usePrivate: "Use this image (GM only)",
     privateTitle: "Only the GM can see it until you use it on a visible object",
     fileInput: "Image to add to the collection",
+    show: "Show to players",
+    showTitle: "Show the image full screen to every player",
   },
   cropper: {
     invalidImage: '"{{name}}" does not appear to be a valid image.',

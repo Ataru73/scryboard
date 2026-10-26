@@ -26,6 +26,8 @@ export const assets = {
     usePrivate: "Usa questa immagine (solo GM)",
     privateTitle: "Solo il GM la vede finché non la usi su un oggetto visibile",
     fileInput: "Immagine da aggiungere alla raccolta",
+    show: "Mostra ai giocatori",
+    showTitle: "Mostra l'immagine a tutto schermo a tutti i giocatori",
   },
   cropper: {
     invalidImage: '"{{name}}" non sembra un\'immagine valida.',

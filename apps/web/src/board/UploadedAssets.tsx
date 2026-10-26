@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { api, describeApiError } from "../lib/api";
 import { useAssetAuth } from "./assetAuth";
 import { AssetThumb } from "./GeneratePanel";
+import { useShowHandout } from "./HandoutModal";
+import { HandoutIcon } from "./icons";
 import { TokenCropper } from "./TokenCropper";
 import { isSupportedImage, UploadError, uploadImage } from "./upload";
 
@@ -19,6 +21,7 @@ interface Props {
 export function UploadedAssets({ roomId, onPickAsset }: Props) {
   const { t } = useTranslation();
   const gmToken = useAssetAuth();
+  const showHandout = useShowHandout();
   const [assets, setAssets] = useState<RoomAsset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cropping, setCropping] = useState<File | null>(null);
@@ -82,17 +85,29 @@ export function UploadedAssets({ roomId, onPickAsset }: Props) {
       {assets?.length === 0 && <p className="muted small">{t("assets.uploaded.empty")}</p>}
       <div className="portrait-grid generated-grid">
         {assets?.map((asset) => (
-          <button
-            key={asset.assetId}
-            type="button"
-            className="generated-button"
-            aria-label={asset.public ? t("assets.uploaded.use") : t("assets.uploaded.usePrivate")}
-            title={asset.public ? undefined : t("assets.uploaded.privateTitle")}
-            onClick={() => onPickAsset(asset.assetId)}
-          >
-            <AssetThumb roomId={roomId} assetId={asset.assetId} />
-            {!asset.public && <span className="asset-private">GM</span>}
-          </button>
+          <div key={asset.assetId} className="uploaded-asset">
+            <button
+              type="button"
+              className="generated-button"
+              aria-label={asset.public ? t("assets.uploaded.use") : t("assets.uploaded.usePrivate")}
+              title={asset.public ? undefined : t("assets.uploaded.privateTitle")}
+              onClick={() => onPickAsset(asset.assetId)}
+            >
+              <AssetThumb roomId={roomId} assetId={asset.assetId} />
+              {!asset.public && <span className="asset-private">GM</span>}
+            </button>
+            {showHandout && (
+              <button
+                type="button"
+                className="icon-button asset-show"
+                aria-label={t("assets.uploaded.show")}
+                title={t("assets.uploaded.showTitle")}
+                onClick={() => showHandout(asset.assetId)}
+              >
+                {HandoutIcon}
+              </button>
+            )}
+          </div>
         ))}
       </div>
       {cropping && (

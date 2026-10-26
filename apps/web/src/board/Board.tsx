@@ -74,7 +74,7 @@ import {
   unionBounds,
 } from "./geometry";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
-import { HandoutModal } from "./HandoutModal";
+import { HandoutModal, ShowHandoutContext } from "./HandoutModal";
 import { InitiativePanel } from "./InitiativePanel";
 import { ItemNode, ROOF_FADED, SELECTION_COLOR, StampContent } from "./ItemNode";
 import {
@@ -247,6 +247,10 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [interaction, setInteraction] = useState<Interaction | null>(null);
   const [notice, setNoticeState] = useState<Notice | null>(null);
+  const showHandout = useMemo(
+    () => (role === "gm" ? (assetId: string) => store.showHandout(assetId) : null),
+    [role, store],
+  );
   /** Il suggerimento «Alt attraversa i muri» è già comparso in questo trascinamento. */
   const wallHintShownRef = useRef(false);
   const setNotice = useCallback(
@@ -1850,422 +1854,428 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="board"
-      role="application"
-      aria-label={t("core.board.label")}
-      data-item-count={items.length}
-      data-fog-count={fog.length}
-      data-terrain-count={terrain.length}
-      data-wall-count={walls.length}
-      data-synced={synced}
-      data-ambient={lighting.enabled ? lighting.ambient : undefined}
-      style={{
-        cursor,
-        // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.
-        backgroundImage: grid.enabled ? "none" : undefined,
-        backgroundPosition: `${viewport.x}px ${viewport.y}px`,
-        backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`,
-      }}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={onDrop}
-    >
-      {size.width > 0 && (
-        <Stage
-          ref={stageRef}
-          width={size.width}
-          height={size.height}
-          x={viewport.x}
-          y={viewport.y}
-          scaleX={viewport.scale}
-          scaleY={viewport.scale}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onDblClick={onDoubleClick}
-          onPointerLeave={() => {
-            cancelPress();
-            broadcastCursor(null);
-          }}
-          onWheel={onWheel}
-        >
-          <TerrainLayer ops={terrain} visible={visibleWorld} scale={viewport.scale} />
-          <Layer>
-            {pathItems.map(renderItem)}
-            {mapItems.map(renderItem)}
-            <GridLines grid={grid} visible={visibleWorld} scale={viewport.scale} />
-            <WallLayer
-              walls={drawnWalls}
-              fog={fog}
-              isDoorVisible={(door) => isDoorSeen(door, vision.isVisible)}
-              role={role}
-              scale={viewport.scale}
-              selectedWallId={selectedWallId}
-              interactive={tool === "select" && !panMode}
-              onToggleDoor={toggleDoor}
-            />
-            {tokenItems.map(renderItem)}
-            {roofItems.map(renderItem)}
-          </Layer>
-          {lighting.enabled && (vision.active || role === "gm") && (
-            <VisionLayer
-              mode={vision.active ? "view" : "glow"}
-              translucent={role === "gm"}
-              visions={vision.visions}
-              lights={vision.lights}
-              polygons={vision.polygons}
-              lighting={lighting}
-              explored={explored}
-              exploredVersion={exploredVersion}
-              visible={visibleWorld}
-              size={size}
-            />
-          )}
-          <FogLayer ops={fog} translucent={role === "gm"} />
-          <Layer>{drawItems.map(renderItem)}</Layer>
-          <Layer>
-            {editablePath && (
-              <PathHandles
-                item={editablePath}
+    <ShowHandoutContext.Provider value={showHandout}>
+      <div
+        ref={containerRef}
+        className="board"
+        role="application"
+        aria-label={t("core.board.label")}
+        data-item-count={items.length}
+        data-fog-count={fog.length}
+        data-terrain-count={terrain.length}
+        data-wall-count={walls.length}
+        data-synced={synced}
+        data-ambient={lighting.enabled ? lighting.ambient : undefined}
+        style={{
+          cursor,
+          // La griglia di puntini segue pan e zoom; con la griglia vera attiva sparisce.
+          backgroundImage: grid.enabled ? "none" : undefined,
+          backgroundPosition: `${viewport.x}px ${viewport.y}px`,
+          backgroundSize: `${24 * viewport.scale}px ${24 * viewport.scale}px`,
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+      >
+        {size.width > 0 && (
+          <Stage
+            ref={stageRef}
+            width={size.width}
+            height={size.height}
+            x={viewport.x}
+            y={viewport.y}
+            scaleX={viewport.scale}
+            scaleY={viewport.scale}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onDblClick={onDoubleClick}
+            onPointerLeave={() => {
+              cancelPress();
+              broadcastCursor(null);
+            }}
+            onWheel={onWheel}
+          >
+            <TerrainLayer ops={terrain} visible={visibleWorld} scale={viewport.scale} />
+            <Layer>
+              {pathItems.map(renderItem)}
+              {mapItems.map(renderItem)}
+              <GridLines grid={grid} visible={visibleWorld} scale={viewport.scale} />
+              <WallLayer
+                walls={drawnWalls}
+                fog={fog}
+                isDoorVisible={(door) => isDoorSeen(door, vision.isVisible)}
+                role={role}
                 scale={viewport.scale}
-                selectedPoint={pathPoint}
-                onSelectPoint={(i) => useBoardUi.getState().setPathPoint(i)}
-                onChange={(points, commit) => {
-                  if (commit) {
-                    setPathEdit(null);
-                    store.update({ [editablePath.id]: { points } });
-                  } else {
-                    setPathEdit({ id: editablePath.id, points });
-                  }
-                }}
+                selectedWallId={selectedWallId}
+                interactive={tool === "select" && !panMode}
+                onToggleDoor={toggleDoor}
+              />
+              {tokenItems.map(renderItem)}
+              {roofItems.map(renderItem)}
+            </Layer>
+            {lighting.enabled && (vision.active || role === "gm") && (
+              <VisionLayer
+                mode={vision.active ? "view" : "glow"}
+                translucent={role === "gm"}
+                visions={vision.visions}
+                lights={vision.lights}
+                polygons={vision.polygons}
+                lighting={lighting}
+                explored={explored}
+                exploredVersion={exploredVersion}
+                visible={visibleWorld}
+                size={size}
               />
             )}
-            {editableWall && (
-              <WallHandles
-                wall={editableWall}
-                scale={viewport.scale}
-                snap={snapWallPoint}
-                onChange={(points, commit) => {
-                  if (commit) {
-                    setWallEdit(null);
-                    store.updateWall(editableWall.id, { points });
-                  } else {
-                    setWallEdit({ id: editableWall.id, points });
-                  }
-                }}
-              />
-            )}
-            <Transformer
-              ref={transformerRef}
-              onTransformEnd={onTransformEnd}
-              rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
-              ignoreStroke
-              flipEnabled={false}
-              anchorSize={9}
-              borderStroke="#8e7cf0"
-              anchorStroke="#8e7cf0"
-            />
-          </Layer>
-          <Layer listening={false}>
-            {interaction?.type === "stroke" && (
-              <Line
-                x={interaction.origin.x}
-                y={interaction.origin.y}
-                points={interaction.points}
-                stroke={color}
-                strokeWidth={strokeWidth / viewport.scale}
-                lineCap="round"
-                lineJoin="round"
-                tension={0.4}
-              />
-            )}
-            {interaction?.type === "calibrate" && (
-              <Rect
-                {...normalizeBox(interaction.start, interaction.end)}
-                stroke={SELECTION_COLOR}
-                strokeWidth={2 / viewport.scale}
-                dash={[6 / viewport.scale, 4 / viewport.scale]}
-                fill="rgba(142, 124, 240, 0.15)"
-              />
-            )}
-            {interaction?.type === "fogRect" && (
-              <FogPreview>
-                <FogShape
-                  op={{
-                    mode: "cover",
-                    shape: "rect",
-                    points: (({ x, y, width, height }) => [x, y, width, height])(
-                      normalizeBox(interaction.start, interaction.end),
-                    ),
+            <FogLayer ops={fog} translucent={role === "gm"} />
+            <Layer>{drawItems.map(renderItem)}</Layer>
+            <Layer>
+              {editablePath && (
+                <PathHandles
+                  item={editablePath}
+                  scale={viewport.scale}
+                  selectedPoint={pathPoint}
+                  onSelectPoint={(i) => useBoardUi.getState().setPathPoint(i)}
+                  onChange={(points, commit) => {
+                    if (commit) {
+                      setPathEdit(null);
+                      store.update({ [editablePath.id]: { points } });
+                    } else {
+                      setPathEdit({ id: editablePath.id, points });
+                    }
                   }}
                 />
-              </FogPreview>
-            )}
-            {interaction?.type === "fogBrush" && (
-              <FogPreview>
-                <FogShape
-                  op={{
-                    mode: "cover",
-                    shape: "brush",
-                    points: interaction.points,
-                    width: fogBrush / viewport.scale,
+              )}
+              {editableWall && (
+                <WallHandles
+                  wall={editableWall}
+                  scale={viewport.scale}
+                  snap={snapWallPoint}
+                  onChange={(points, commit) => {
+                    if (commit) {
+                      setWallEdit(null);
+                      store.updateWall(editableWall.id, { points });
+                    } else {
+                      setWallEdit({ id: editableWall.id, points });
+                    }
                   }}
                 />
-              </FogPreview>
-            )}
-            {interaction?.type === "terrainBrush" && (
-              <Line
-                points={
-                  interaction.points.length >= 4
-                    ? interaction.points
-                    : [...interaction.points, ...interaction.points]
-                }
-                stroke={interaction.erase ? "#ffffff" : biomeColor(terrainBiome)}
-                strokeWidth={terrainWidth}
-                opacity={interaction.erase ? 0.4 : 0.7}
-                lineCap="round"
-                lineJoin="round"
+              )}
+              <Transformer
+                ref={transformerRef}
+                onTransformEnd={onTransformEnd}
+                rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
+                ignoreStroke
+                flipEnabled={false}
+                anchorSize={9}
+                borderStroke="#8e7cf0"
+                anchorStroke="#8e7cf0"
               />
-            )}
-            {polygon && (
-              <Line
-                points={[...polygon.points, polygon.cursor.x, polygon.cursor.y]}
-                stroke={SELECTION_COLOR}
-                strokeWidth={2 / viewport.scale}
-                dash={[6 / viewport.scale, 4 / viewport.scale]}
-                fill="rgba(142, 124, 240, 0.2)"
-                closed
-              />
-            )}
-            {interaction?.type === "shape" && (
-              <ShapePreview
-                shape={interaction.shape}
-                start={interaction.start}
-                end={interaction.end}
-                color={color}
-                strokeWidth={strokeWidth / viewport.scale}
-                filled={filled}
-              />
-            )}
-            {interaction?.type === "terrainCopy" && (
-              <Rect
-                {...normalizeBox(interaction.start, interaction.end)}
-                stroke={SELECTION_COLOR}
-                strokeWidth={2 / viewport.scale}
-                dash={[6 / viewport.scale, 4 / viewport.scale]}
-                fill="rgba(142, 124, 240, 0.12)"
-              />
-            )}
-            {tool === "terrain" && terrainMode === "paste" && terrainClipboard && pasteCursor && (
-              <Rect
-                x={pasteCursor.x - terrainClipboard.box.width / 2}
-                y={pasteCursor.y - terrainClipboard.box.height / 2}
-                width={terrainClipboard.box.width}
-                height={terrainClipboard.box.height}
-                stroke={SELECTION_COLOR}
-                strokeWidth={2 / viewport.scale}
-                dash={[6 / viewport.scale, 4 / viewport.scale]}
-              />
-            )}
-            {interaction?.type === "stampScatter" &&
-              interaction.stamps.map((st, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: i timbri in anteprima non hanno id.
-                <Group key={i} x={st.x} y={st.y} rotation={st.rotation} opacity={0.85}>
-                  <StampContent item={st} cellSize={grid.size} />
-                </Group>
-              ))}
-            {interaction?.type === "marquee" && (
-              <Rect
-                {...normalizeBox(interaction.start, interaction.end)}
-                stroke={SELECTION_COLOR}
-                strokeWidth={1 / viewport.scale}
-                fill="rgba(142, 124, 240, 0.12)"
-              />
-            )}
-            {pathDrawing.preview && pathDrawing.preview.length >= 2 && (
-              <Group opacity={0.8}>
-                <PathShape points={toFlat(pathDrawing.preview)} style={pathStyle} />
-              </Group>
-            )}
-            {wallDrawing.preview && (
-              <Line
-                name="wall-draft"
-                points={wallDrawing.preview}
-                stroke={SELECTION_COLOR}
-                strokeWidth={4 / viewport.scale}
-                dash={
-                  wallKind === "invisible" ? [9 / viewport.scale, 6 / viewport.scale] : undefined
-                }
-                lineCap="round"
-                lineJoin="round"
-              />
-            )}
-            {wallDrawing.vertices?.map((point, index) => (
-              <Circle
-                // biome-ignore lint/suspicious/noArrayIndexKey: i vertici della bozza non hanno id.
-                key={index}
-                x={point.x}
-                y={point.y}
-                radius={4 / viewport.scale}
-                fill="#ffffff"
-                stroke={SELECTION_COLOR}
-                strokeWidth={1.5 / viewport.scale}
-              />
-            ))}
-            {pathDrawing.preview?.slice(0, -1).map((pt, i) => (
-              <Circle
-                // biome-ignore lint/suspicious/noArrayIndexKey: i punti della bozza non hanno id.
-                key={i}
-                x={pt.x}
-                y={pt.y}
-                radius={4 / viewport.scale}
-                fill="#ffffff"
-                stroke={SELECTION_COLOR}
-                strokeWidth={1.5 / viewport.scale}
-              />
-            ))}
-            <Presence
-              provider={provider}
-              scale={viewport.scale}
-              grid={grid}
-              tokens={visibleTokens}
-            />
-            {items.map(
-              (item) =>
-                item.kind === "template" && (
-                  <AreaHighlights
-                    key={`area-${item.id}`}
-                    geometry={item}
-                    color={item.color}
-                    grid={grid}
-                    tokens={visibleTokens}
+            </Layer>
+            <Layer listening={false}>
+              {interaction?.type === "stroke" && (
+                <Line
+                  x={interaction.origin.x}
+                  y={interaction.origin.y}
+                  points={interaction.points}
+                  stroke={color}
+                  strokeWidth={strokeWidth / viewport.scale}
+                  lineCap="round"
+                  lineJoin="round"
+                  tension={0.4}
+                />
+              )}
+              {interaction?.type === "calibrate" && (
+                <Rect
+                  {...normalizeBox(interaction.start, interaction.end)}
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={2 / viewport.scale}
+                  dash={[6 / viewport.scale, 4 / viewport.scale]}
+                  fill="rgba(142, 124, 240, 0.15)"
+                />
+              )}
+              {interaction?.type === "fogRect" && (
+                <FogPreview>
+                  <FogShape
+                    op={{
+                      mode: "cover",
+                      shape: "rect",
+                      points: (({ x, y, width, height }) => [x, y, width, height])(
+                        normalizeBox(interaction.start, interaction.end),
+                      ),
+                    }}
                   />
-                ),
-            )}
-            {areaShown && (
-              <AreaPreview
-                geometry={areaShown as TemplateGeometry}
-                color={myColor}
+                </FogPreview>
+              )}
+              {interaction?.type === "fogBrush" && (
+                <FogPreview>
+                  <FogShape
+                    op={{
+                      mode: "cover",
+                      shape: "brush",
+                      points: interaction.points,
+                      width: fogBrush / viewport.scale,
+                    }}
+                  />
+                </FogPreview>
+              )}
+              {interaction?.type === "terrainBrush" && (
+                <Line
+                  points={
+                    interaction.points.length >= 4
+                      ? interaction.points
+                      : [...interaction.points, ...interaction.points]
+                  }
+                  stroke={interaction.erase ? "#ffffff" : biomeColor(terrainBiome)}
+                  strokeWidth={terrainWidth}
+                  opacity={interaction.erase ? 0.4 : 0.7}
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              )}
+              {polygon && (
+                <Line
+                  points={[...polygon.points, polygon.cursor.x, polygon.cursor.y]}
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={2 / viewport.scale}
+                  dash={[6 / viewport.scale, 4 / viewport.scale]}
+                  fill="rgba(142, 124, 240, 0.2)"
+                  closed
+                />
+              )}
+              {interaction?.type === "shape" && (
+                <ShapePreview
+                  shape={interaction.shape}
+                  start={interaction.start}
+                  end={interaction.end}
+                  color={color}
+                  strokeWidth={strokeWidth / viewport.scale}
+                  filled={filled}
+                />
+              )}
+              {interaction?.type === "terrainCopy" && (
+                <Rect
+                  {...normalizeBox(interaction.start, interaction.end)}
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={2 / viewport.scale}
+                  dash={[6 / viewport.scale, 4 / viewport.scale]}
+                  fill="rgba(142, 124, 240, 0.12)"
+                />
+              )}
+              {tool === "terrain" && terrainMode === "paste" && terrainClipboard && pasteCursor && (
+                <Rect
+                  x={pasteCursor.x - terrainClipboard.box.width / 2}
+                  y={pasteCursor.y - terrainClipboard.box.height / 2}
+                  width={terrainClipboard.box.width}
+                  height={terrainClipboard.box.height}
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={2 / viewport.scale}
+                  dash={[6 / viewport.scale, 4 / viewport.scale]}
+                />
+              )}
+              {interaction?.type === "stampScatter" &&
+                interaction.stamps.map((st, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: i timbri in anteprima non hanno id.
+                  <Group key={i} x={st.x} y={st.y} rotation={st.rotation} opacity={0.85}>
+                    <StampContent item={st} cellSize={grid.size} />
+                  </Group>
+                ))}
+              {interaction?.type === "marquee" && (
+                <Rect
+                  {...normalizeBox(interaction.start, interaction.end)}
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={1 / viewport.scale}
+                  fill="rgba(142, 124, 240, 0.12)"
+                />
+              )}
+              {pathDrawing.preview && pathDrawing.preview.length >= 2 && (
+                <Group opacity={0.8}>
+                  <PathShape points={toFlat(pathDrawing.preview)} style={pathStyle} />
+                </Group>
+              )}
+              {wallDrawing.preview && (
+                <Line
+                  name="wall-draft"
+                  points={wallDrawing.preview}
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={4 / viewport.scale}
+                  dash={
+                    wallKind === "invisible" ? [9 / viewport.scale, 6 / viewport.scale] : undefined
+                  }
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              )}
+              {wallDrawing.vertices?.map((point, index) => (
+                <Circle
+                  // biome-ignore lint/suspicious/noArrayIndexKey: i vertici della bozza non hanno id.
+                  key={index}
+                  x={point.x}
+                  y={point.y}
+                  radius={4 / viewport.scale}
+                  fill="#ffffff"
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={1.5 / viewport.scale}
+                />
+              ))}
+              {pathDrawing.preview?.slice(0, -1).map((pt, i) => (
+                <Circle
+                  // biome-ignore lint/suspicious/noArrayIndexKey: i punti della bozza non hanno id.
+                  key={i}
+                  x={pt.x}
+                  y={pt.y}
+                  radius={4 / viewport.scale}
+                  fill="#ffffff"
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={1.5 / viewport.scale}
+                />
+              ))}
+              <Presence
+                provider={provider}
+                scale={viewport.scale}
                 grid={grid}
                 tokens={visibleTokens}
-                scale={viewport.scale}
               />
-            )}
-            {interaction?.type === "connect" && store.get(interaction.from) && (
-              <ConnectorPreview
-                from={itemBounds(store.get(interaction.from) as BoardItem, grid.size)}
-                to={interaction.cursor}
-                color={color}
-                width={strokeWidth / viewport.scale}
-                scale={viewport.scale}
-              />
-            )}
-            {interaction?.type === "ruler" && (
-              <RulerShape
-                points={flattenPoints([...interaction.points, interaction.cursor])}
-                rise={rulerRise}
-                color={myColor}
-                grid={grid}
-                scale={viewport.scale}
-              />
-            )}
-            {dragMeasure &&
-              (dragMeasure.cursor.x !== (dragMeasure.points.at(-1) as Point).x ||
-                dragMeasure.cursor.y !== (dragMeasure.points.at(-1) as Point).y) && (
+              {items.map(
+                (item) =>
+                  item.kind === "template" && (
+                    <AreaHighlights
+                      key={`area-${item.id}`}
+                      geometry={item}
+                      color={item.color}
+                      grid={grid}
+                      tokens={visibleTokens}
+                    />
+                  ),
+              )}
+              {areaShown && (
+                <AreaPreview
+                  geometry={areaShown as TemplateGeometry}
+                  color={myColor}
+                  grid={grid}
+                  tokens={visibleTokens}
+                  scale={viewport.scale}
+                />
+              )}
+              {interaction?.type === "connect" && store.get(interaction.from) && (
+                <ConnectorPreview
+                  from={itemBounds(store.get(interaction.from) as BoardItem, grid.size)}
+                  to={interaction.cursor}
+                  color={color}
+                  width={strokeWidth / viewport.scale}
+                  scale={viewport.scale}
+                />
+              )}
+              {interaction?.type === "ruler" && (
                 <RulerShape
-                  points={flattenPoints([...dragMeasure.points, dragMeasure.cursor])}
+                  points={flattenPoints([...interaction.points, interaction.cursor])}
+                  rise={rulerRise}
                   color={myColor}
                   grid={grid}
                   scale={viewport.scale}
                 />
               )}
-          </Layer>
-        </Stage>
-      )}
-      {draftText && (
-        <TextEditor
-          key={draftText.id}
-          item={draftText}
+              {dragMeasure &&
+                (dragMeasure.cursor.x !== (dragMeasure.points.at(-1) as Point).x ||
+                  dragMeasure.cursor.y !== (dragMeasure.points.at(-1) as Point).y) && (
+                  <RulerShape
+                    points={flattenPoints([...dragMeasure.points, dragMeasure.cursor])}
+                    color={myColor}
+                    grid={grid}
+                    scale={viewport.scale}
+                  />
+                )}
+            </Layer>
+          </Stage>
+        )}
+        {draftText && (
+          <TextEditor
+            key={draftText.id}
+            item={draftText}
+            viewport={viewport}
+            onCommit={(text) => {
+              if (text.trim() !== "") addItems([{ ...draftText, text }]);
+              setDraftText(null);
+            }}
+          />
+        )}
+        {editingItem?.kind === "text" && (
+          <TextEditor
+            key={editingItem.id}
+            item={editingItem}
+            viewport={viewport}
+            onCommit={(text) => {
+              if (text.trim() === "") store.remove([editingItem.id]);
+              else if (text !== editingItem.text) store.update({ [editingItem.id]: { text } });
+              setEditingText(null);
+            }}
+          />
+        )}
+        {tool === "select" && selectedIds.length > 0 && (
+          <SelectionPanel store={store} role={role} roomId={roomId} provider={provider} />
+        )}
+        {tool === "select" && selectedWallId && <WallSelectionPanel store={store} />}
+        <div
+          className="visually-hidden"
+          role="status"
+          aria-label={t("core.board.measuredDistance")}
+        >
+          {measureText}
+        </div>
+        <RollToasts provider={provider} />
+        <PingArrows
+          provider={provider}
           viewport={viewport}
-          onCommit={(text) => {
-            if (text.trim() !== "") addItems([{ ...draftText, text }]);
-            setDraftText(null);
-          }}
+          size={size}
+          onFocus={(point) => setViewport(centerOn(point, viewport.scale, size))}
         />
-      )}
-      {editingItem?.kind === "text" && (
-        <TextEditor
-          key={editingItem.id}
-          item={editingItem}
-          viewport={viewport}
-          onCommit={(text) => {
-            if (text.trim() === "") store.remove([editingItem.id]);
-            else if (text !== editingItem.text) store.update({ [editingItem.id]: { text } });
-            setEditingText(null);
-          }}
+        {initiativeOpen && (
+          <InitiativePanel
+            store={store}
+            role={role}
+            tokens={visibleTokens}
+            onClose={() => useBoardUi.getState().setInitiativeOpen(false)}
+          />
+        )}
+        <WeatherOverlay weather={lighting.weather} width={size.width} height={size.height} />
+        <HandoutModal store={store} role={role} roomId={roomId} />
+        <NotePanel store={store} role={role} roomId={roomId} provider={provider} />
+        <TokenList
+          // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
+          items={
+            vision.active ? items.filter((i) => i.kind !== "token" || vision.isVisible(i)) : items
+          }
+          grid={grid}
+          isHidden={(id) => store.isHidden(id)}
         />
-      )}
-      {tool === "select" && selectedIds.length > 0 && (
-        <SelectionPanel store={store} role={role} roomId={roomId} provider={provider} />
-      )}
-      {tool === "select" && selectedWallId && <WallSelectionPanel store={store} />}
-      <div className="visually-hidden" role="status" aria-label={t("core.board.measuredDistance")}>
-        {measureText}
-      </div>
-      <RollToasts provider={provider} />
-      <PingArrows
-        provider={provider}
-        viewport={viewport}
-        size={size}
-        onFocus={(point) => setViewport(centerOn(point, viewport.scale, size))}
-      />
-      {initiativeOpen && (
-        <InitiativePanel
+        <Toolbar
+          provider={provider}
           store={store}
           role={role}
-          tokens={visibleTokens}
-          onClose={() => useBoardUi.getState().setInitiativeOpen(false)}
+          roomId={roomId}
+          onUpload={(files) => void addImages(files, viewportCenter())}
+          onFit={fitView}
+          viewportSize={size}
         />
-      )}
-      <WeatherOverlay weather={lighting.weather} width={size.width} height={size.height} />
-      <HandoutModal store={store} role={role} roomId={roomId} />
-      <NotePanel store={store} role={role} roomId={roomId} provider={provider} />
-      <TokenList
-        // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
-        items={
-          vision.active ? items.filter((i) => i.kind !== "token" || vision.isVisible(i)) : items
-        }
-        grid={grid}
-        isHidden={(id) => store.isHidden(id)}
-      />
-      <Toolbar
-        provider={provider}
-        store={store}
-        role={role}
-        roomId={roomId}
-        onUpload={(files) => void addImages(files, viewportCenter())}
-        onFit={fitView}
-        viewportSize={size}
-      />
-      {notice && (
-        <div className="board-notice" role="status">
-          {notice.text}
-          {notice.action && (
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                notice.action?.run();
-                setNotice(null);
-              }}
-            >
-              {notice.action.label}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+        {notice && (
+          <div className="board-notice" role="status">
+            {notice.text}
+            {notice.action && (
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  notice.action?.run();
+                  setNotice(null);
+                }}
+              >
+                {notice.action.label}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </ShowHandoutContext.Provider>
   );
 }
 

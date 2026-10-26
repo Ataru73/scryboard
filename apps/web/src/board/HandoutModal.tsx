@@ -1,8 +1,16 @@
 import { assetUrl, type Handout, type Role } from "@scryboard/shared";
-import { useId, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useId, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import type { BoardStore } from "./store";
 import { useImage } from "./useImage";
+
+/**
+ * Mostra un'immagine a tutto schermo ai giocatori: c'è solo per il GM. Serve ai pannelli lontani
+ * dallo store, come la scheda «Caricati».
+ */
+export const ShowHandoutContext = createContext<((assetId: string) => void) | null>(null);
+
+export const useShowHandout = () => useContext(ShowHandoutContext);
 
 interface Props {
   store: BoardStore;
