@@ -117,6 +117,11 @@ export const tokenItemSchema = z.object({
     .nullable()
     .optional(),
   /**
+   * Quota rispetto al terreno (volo, balconate, fosse), nell'unità del righello: con 5 ft a
+   * casella, 15 è tre caselle più in alto. Il righello ne tiene conto.
+   */
+  elevation: z.number().min(-100000).max(100000).optional(),
+  /**
    * Incognito: i giocatori vedono una sagoma con «?». Nome e aspetto veri stanno nel documento
    * del GM (vedi `MASKS_MAP`), così non arrivano ai giocatori nemmeno nei dati.
    */

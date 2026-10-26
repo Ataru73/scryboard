@@ -171,6 +171,7 @@ export function Presence({
             <RulerShape
               key={`ruler-${clientId}`}
               points={ruler.points}
+              rise={typeof ruler.rise === "number" ? ruler.rise : 0}
               color={user.color}
               grid={grid}
               scale={scale}

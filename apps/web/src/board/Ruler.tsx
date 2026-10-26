@@ -1,11 +1,13 @@
 import type { GridSettings } from "@scryboard/shared";
 import { Circle, Group, Label, Line, Tag, Text } from "react-konva";
-import { formatDistance, pathCells } from "./measure";
+import { formatDistance, pathCells, withRise } from "./measure";
 import type { Point } from "./viewport";
 
 /** Misura condivisa tramite l'awareness: tappe fisse più il punto sotto il cursore. */
 export interface RulerState {
   points: number[];
+  /** Dislivello in caselle tra i due estremi (quote dei token). */
+  rise?: number;
 }
 
 export const flattenPoints = (points: Point[]): number[] => points.flatMap((p) => [p.x, p.y]);
@@ -19,11 +21,13 @@ export function RulerShape({
   color,
   grid,
   scale,
+  rise = 0,
 }: {
   points: number[];
   color: string;
   grid: GridSettings;
   scale: number;
+  rise?: number;
 }) {
   const pts: Point[] = [];
   for (let i = 0; i + 1 < points.length; i += 2) {
@@ -31,7 +35,8 @@ export function RulerShape({
   }
   const last = pts[pts.length - 1];
   if (!last || pts.length < 2) return null;
-  const cells = pathCells(pts, grid);
+  // Lo stato degli altri arriva dall'awareness: un dislivello non valido si ignora.
+  const cells = withRise(pathCells(pts, grid), Number.isFinite(rise) ? rise : 0, grid);
   return (
     <Group name="ruler" listening={false}>
       <Line

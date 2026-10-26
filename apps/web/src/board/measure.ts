@@ -1,4 +1,4 @@
-import type { DiagonalRule, GridSettings } from "@scryboard/shared";
+import type { DiagonalRule, GridSettings, TokenItem } from "@scryboard/shared";
 import { i18n } from "../i18n";
 import { snapTokenCenter } from "./grid";
 import { isHex, pixelToHex } from "./hex";
@@ -38,6 +38,41 @@ export function pathCells(points: Point[], grid: GridSettings): number {
     total += segmentCells(points[i - 1] as Point, points[i] as Point, grid);
   }
   return total;
+}
+
+/**
+ * Distanza con un dislivello di `rise` caselle: sulla griglia quadrata la verticale si conta come
+ * un'altra direzione (con la stessa regola delle diagonali), altrimenti in linea retta.
+ */
+export function withRise(cells: number, rise: number, grid: GridSettings): number {
+  if (rise === 0) return cells;
+  if (grid.enabled && !isHex(grid)) return squareDistance(cells, rise, grid.diagonals);
+  return Math.hypot(cells, rise);
+}
+
+/** Quota del punto: quella del token più in alto che lo copre, altrimenti il terreno (0). */
+export function elevationAt(p: Point, tokens: TokenItem[], grid: GridSettings): number {
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const token = tokens[i] as TokenItem;
+    const r = (token.size * grid.size) / 2;
+    if (Math.hypot(p.x - token.x, p.y - token.y) <= r) return token.elevation ?? 0;
+  }
+  return 0;
+}
+
+/** Dislivello in caselle tra il primo e l'ultimo punto di una misura. */
+export function measureRise(points: Point[], tokens: TokenItem[], grid: GridSettings): number {
+  const first = points[0];
+  const last = points.at(-1);
+  if (!first || !last || points.length < 2) return 0;
+  const rise = elevationAt(last, tokens, grid) - elevationAt(first, tokens, grid);
+  return rise / grid.scale.amount;
+}
+
+/** Quota da mostrare sul token: «+15 ft», «-5 m». */
+export function formatElevation(elevation: number, grid: GridSettings): string {
+  const unit = grid.scale.unit ? ` ${grid.scale.unit}` : "";
+  return `${elevation > 0 ? "+" : ""}${round1(elevation)}${unit}`;
 }
 
 /** Con la griglia attiva i punti del righello vanno al centro delle caselle (Alt: liberi). */

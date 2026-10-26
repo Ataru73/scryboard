@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { AuraFields } from "./AuraFields";
 import { parentOf } from "./attach";
+import { ElevationField } from "./ElevationField";
 import { CopyIcon, EyeIcon, EyeOffIcon, LockIcon, TrashIcon, UnlockIcon } from "./icons";
 import { LightFields, VisionFields } from "./LightFields";
 import { PathFields } from "./PathFields";
@@ -55,6 +56,7 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
             </>
           )}
           <AuraFields token={single} store={store} />
+          <ElevationField token={single} store={store} />
           <AttachButton token={single} store={store} />
         </>
       )}

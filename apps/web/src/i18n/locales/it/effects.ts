@@ -26,6 +26,11 @@ export const effects = {
     noPlayer: "Nessun giocatore",
     disconnectedPlayer: "Giocatore non connesso",
   },
+  elevation: {
+    label: "Quota",
+    labelWithUnit: "Quota ({{unit}})",
+    title: "Altezza dal terreno: il righello ne tiene conto tra due token a quote diverse",
+  },
   aura: {
     radiusLabel: "Aura (caselle)",
     colorLabel: "Colore dell'aura",

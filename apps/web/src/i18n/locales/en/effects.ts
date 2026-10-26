@@ -26,6 +26,11 @@ export const effects = {
     noPlayer: "No player",
     disconnectedPlayer: "Disconnected player",
   },
+  elevation: {
+    label: "Elevation",
+    labelWithUnit: "Elevation ({{unit}})",
+    title: "Height above the ground: the ruler accounts for it between tokens at different heights",
+  },
   aura: {
     radiusLabel: "Aura (squares)",
     colorLabel: "Aura color",

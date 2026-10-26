@@ -67,7 +67,14 @@ import { bakeScale, boxesIntersect, itemBounds, normalizeBox, unionBounds } from
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
 import { InitiativePanel } from "./InitiativePanel";
 import { ItemNode, SELECTION_COLOR, StampContent } from "./ItemNode";
-import { formatDistance, pathCells, snapRulerPoint } from "./measure";
+import {
+  formatDistance,
+  formatElevation,
+  measureRise,
+  pathCells,
+  snapRulerPoint,
+  withRise,
+} from "./measure";
 import { PingArrows } from "./PingArrows";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
 import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
@@ -407,8 +414,13 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           interaction.free,
         )
       : lingering;
+  // Il righello tiene conto della quota dei token agli estremi; il trascinamento no (stessa quota).
+  const rulerRise =
+    interaction?.type === "ruler" && measurePoints
+      ? measureRise(measurePoints, visibleTokens, grid)
+      : 0;
   const measureText = measurePoints
-    ? formatDistance(pathCells(measurePoints, grid), grid)
+    ? formatDistance(withRise(pathCells(measurePoints, grid), rulerRise, grid), grid)
     : areaShown
       ? t("core.templates.summary", {
           label: templateLabel(areaShown, grid),
@@ -1077,7 +1089,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
       case "ruler": {
         const cursor = snapRulerPoint(p.world, grid, e.evt.altKey);
         setInteraction({ ...interaction, cursor });
-        broadcastRuler({ points: flattenPoints([...interaction.points, cursor]) });
+        const points = [...interaction.points, cursor];
+        broadcastRuler({
+          points: flattenPoints(points),
+          rise: measureRise(points, visibleTokens, grid),
+        });
         return;
       }
       case "template": {
@@ -1568,6 +1584,11 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           parentOf(store.getSnapshot(), item) !== undefined
         }
         unmasked={role === "gm" && !visionPreview}
+        elevationLabel={
+          item.kind === "token" && item.elevation
+            ? formatElevation(item.elevation, grid)
+            : undefined
+        }
         ambient={lighting.enabled ? lighting.ambient : undefined}
         onDragStart={onItemDragStart}
         onDragMove={onItemDragMove}
@@ -1911,6 +1932,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
             {interaction?.type === "ruler" && (
               <RulerShape
                 points={flattenPoints([...interaction.points, interaction.cursor])}
+                rise={rulerRise}
                 color={myColor}
                 grid={grid}
                 scale={viewport.scale}

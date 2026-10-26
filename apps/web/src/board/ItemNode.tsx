@@ -47,6 +47,8 @@ interface Props {
   attached?: boolean;
   /** Token in incognito: il GM lo vede com'è, con un «?» nell'angolo; gli altri solo la sagoma. */
   unmasked?: boolean;
+  /** Quota del token già formattata («+15 ft»): assente se è a terra. */
+  elevationLabel?: string;
   /** Luce ambientale che tinge le immagini; assente con le luci spente. */
   ambient?: LightingSettings["ambient"];
   onDragStart?: (event: Konva.KonvaEventObject<DragEvent>) => void;
@@ -65,6 +67,7 @@ export const ItemNode = memo(function ItemNode({
   turn,
   attached,
   unmasked,
+  elevationLabel,
   ambient,
   onDragStart,
   onDragMove,
@@ -92,6 +95,7 @@ export const ItemNode = memo(function ItemNode({
           turn={turn}
           attached={attached}
           unmasked={unmasked}
+          elevationLabel={elevationLabel}
         />
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
@@ -299,6 +303,7 @@ function TokenContent({
   turn,
   attached,
   unmasked,
+  elevationLabel,
 }: {
   item: TokenItem;
   roomId: string;
@@ -307,6 +312,7 @@ function TokenContent({
   turn?: boolean;
   attached?: boolean;
   unmasked?: boolean;
+  elevationLabel?: string;
 }) {
   const masked = !!item.obscured && !unmasked;
   const color = masked ? OBSCURED_IDENTITY.color : item.color;
@@ -361,6 +367,9 @@ function TokenContent({
       {item.obscured && !masked && (
         <ObscuredBadge x={-r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />
       )}
+      {elevationLabel && (
+        <ElevationPill text={elevationLabel} y={-r - ring} size={labelSize * 0.9} />
+      )}
       {item.name && !masked && (
         <Text
           text={item.name}
@@ -398,6 +407,39 @@ function ChainBadge({ x, y, size }: { x: number; y: number; size: number }) {
         strokeWidth={2.4}
         lineCap="round"
         lineJoin="round"
+      />
+    </Group>
+  );
+}
+
+/** Pillola con la quota, centrata sopra il token. */
+function ElevationPill({ text, y, size }: { text: string; y: number; size: number }) {
+  const width = text.length * size * 0.62 + size;
+  const height = size * 1.5;
+  return (
+    <Group y={y - height / 2} listening={false} name="elevation-badge">
+      <Rect
+        x={-width / 2}
+        y={-height / 2}
+        width={width}
+        height={height}
+        cornerRadius={height / 2}
+        fill="#1d1a24"
+        stroke="#ffffff"
+        strokeWidth={1.5}
+      />
+      <Text
+        text={text}
+        x={-width / 2}
+        y={-height / 2}
+        width={width}
+        height={height}
+        align="center"
+        verticalAlign="middle"
+        fontFamily={FONT_FAMILY}
+        fontStyle="bold"
+        fontSize={size}
+        fill="#ffffff"
       />
     </Group>
   );
