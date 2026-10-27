@@ -10,8 +10,8 @@ export const ARCHIVE_FORMAT = "scryboard-room";
 export const ARCHIVE_VERSION = 1;
 export const ARCHIVE_EXTENSION = ".scryboard";
 /** Dimensione massima dell'archivio compresso (in lettura e in scrittura). */
-export const MAX_ARCHIVE_BYTES = 200 * 1024 * 1024;
-export const MAX_ARCHIVE_SCENES = 50;
+export const MAX_ARCHIVE_BYTES = 50 * 1024 * 1024;
+export const MAX_ARCHIVE_SCENES = 30;
 
 export const archiveManifestSchema = z.object({
   format: z.literal(ARCHIVE_FORMAT),

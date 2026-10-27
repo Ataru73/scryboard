@@ -35,10 +35,10 @@ import type { RoomService } from "./service";
 export class ArchiveError extends Error {}
 
 /** Limiti all'estrazione: lo zip dichiara le dimensioni, qui si rifiutano gli eccessi. */
-const MAX_DOC_BYTES = 50 * 1024 * 1024;
+const MAX_DOC_BYTES = 10 * 1024 * 1024;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
-const MAX_UNZIPPED_BYTES = 600 * 1024 * 1024;
-const MAX_FILES = 2000;
+const MAX_UNZIPPED_BYTES = 150 * 1024 * 1024;
+const MAX_FILES = 500;
 
 const ENTRY_PATH =
   /^(?:manifest\.json|scenes\/\d{1,2}\/(?:public|gm)\.ydoc|assets\/[0-9a-f]{64}\.(?:png|jpg|webp|gif|webm|mp4))$/;
@@ -95,7 +95,7 @@ export class ArchiveService {
       const data = new Uint8Array(await new Response(asset.body).arrayBuffer());
       size += data.length;
       if (size > MAX_ARCHIVE_BYTES) {
-        throw new ArchiveError("La stanza è troppo grande per essere esportata (oltre 200 MB).");
+        throw new ArchiveError("La stanza è troppo grande per essere esportata (oltre 50 MB).");
       }
       files[archiveAssetPath(assetId)] = [data, { level: 0 }]; // Le immagini sono già compresse.
     }
@@ -113,7 +113,7 @@ export class ArchiveService {
     files["manifest.json"] = strToU8(JSON.stringify(manifest, null, 2));
     const data = zipSync(files);
     if (data.length > MAX_ARCHIVE_BYTES) {
-      throw new ArchiveError("La stanza è troppo grande per essere esportata (oltre 200 MB).");
+      throw new ArchiveError("La stanza è troppo grande per essere esportata (oltre 50 MB).");
     }
     return { name: room.name, data };
   }
@@ -123,8 +123,11 @@ export class ArchiveService {
     let count = 0;
     let total = 0;
     try {
-      return unzipSync(data, {
+      const files = unzipSync(data, {
         filter: (file) => {
+          if (++count > MAX_FILES) {
+            throw new ArchiveError("L'archivio contiene file troppo grandi o troppi file.");
+          }
           if (!ENTRY_PATH.test(file.name)) return false;
           const limit =
             file.name === "manifest.json"
@@ -133,12 +136,28 @@ export class ArchiveService {
                 ? MAX_VIDEO_BYTES
                 : MAX_DOC_BYTES;
           total += file.originalSize;
-          if (++count > MAX_FILES || file.originalSize > limit || total > MAX_UNZIPPED_BYTES) {
+          if (file.originalSize > limit || total > MAX_UNZIPPED_BYTES) {
             throw new ArchiveError("L'archivio contiene file troppo grandi o troppi file.");
           }
           return true;
         },
       });
+
+      let actualTotal = 0;
+      for (const [name, content] of Object.entries(files)) {
+        actualTotal += content.length;
+        const limit =
+          name === "manifest.json"
+            ? MAX_MANIFEST_BYTES
+            : name.startsWith("assets/")
+              ? MAX_VIDEO_BYTES
+              : MAX_DOC_BYTES;
+        if (content.length > limit || actualTotal > MAX_UNZIPPED_BYTES) {
+          throw new ArchiveError("L'archivio contiene file troppo grandi o troppi file.");
+        }
+      }
+
+      return files;
     } catch (error) {
       if (error instanceof ArchiveError) throw error;
       throw new ArchiveError("Il file non è un archivio di Scryboard valido.");

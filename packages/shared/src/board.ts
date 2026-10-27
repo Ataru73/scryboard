@@ -22,49 +22,57 @@ const baseItem = {
 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
-export const imageItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("image"),
-  assetId: z.string(),
-  width: z.number().positive(),
-  height: z.number().positive(),
-  /**
-   * Tetto o chioma: si disegna sopra i token e diventa quasi trasparente quando un token visibile
-   * ci passa sotto, svelando l'interno.
-   */
-  overhead: z.boolean().optional(),
-});
+export const imageItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("image"),
+    assetId: z.string(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    /**
+     * Tetto o chioma: si disegna sopra i token e diventa quasi trasparente quando un token visibile
+     * ci passa sotto, svelando l'interno.
+     */
+    overhead: z.boolean().optional(),
+  })
+  .strict();
 
-export const strokeItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("stroke"),
-  /** Coordinate relative a (x, y): [x0, y0, x1, y1, ...]. */
-  points: z.array(z.number()).min(2),
-  color,
-  strokeWidth: z.number().positive(),
-});
+export const strokeItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("stroke"),
+    /** Coordinate relative a (x, y): [x0, y0, x1, y1, ...]. */
+    points: z.array(z.number()).min(2).max(20000),
+    color,
+    strokeWidth: z.number().positive(),
+  })
+  .strict();
 
-export const shapeItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("shape"),
-  shape: z.enum(["rect", "ellipse", "line"]),
-  /** Per le linee: vettore dal punto iniziale (x, y) a quello finale; può essere negativo. */
-  width: z.number(),
-  height: z.number(),
-  color,
-  strokeWidth: z.number().positive(),
-  fill: color.nullable(),
-});
+export const shapeItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("shape"),
+    shape: z.enum(["rect", "ellipse", "line"]),
+    /** Per le linee: vettore dal punto iniziale (x, y) a quello finale; può essere negativo. */
+    width: z.number(),
+    height: z.number(),
+    color,
+    strokeWidth: z.number().positive(),
+    fill: color.nullable(),
+  })
+  .strict();
 
-export const textItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("text"),
-  text: z.string().max(5000),
-  fontSize: z.number().positive(),
-  color,
-  /** Larghezza del box di testo; null = si adatta al contenuto. */
-  width: z.number().positive().nullable(),
-});
+export const textItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("text"),
+    text: z.string().max(5000),
+    fontSize: z.number().positive(),
+    color,
+    /** Larghezza del box di testo; null = si adatta al contenuto. */
+    width: z.number().positive().nullable(),
+  })
+  .strict();
 
 /**
  * Pedina su griglia. A differenza degli altri oggetti, (x, y) è il centro; il diametro è
@@ -87,63 +95,66 @@ export type VisionSpec = z.infer<typeof visionSpecSchema>;
 
 export const DEFAULT_VISION: VisionSpec = { range: 0, darkvision: 0 };
 
-export const tokenItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("token"),
-  name: z.string().max(40),
-  color,
-  /** Immagine del token; null = cerchio colorato con le iniziali. */
-  assetId: z.string().nullable(),
-  size: z.number().positive().max(10),
-  /** Immagine della libreria (id del catalogo); usata se non c'è un'immagine caricata. */
-  portrait: z
-    .string()
-    .regex(/^[a-z0-9-]{1,40}$/)
-    .nullable()
-    .optional(),
-  // Campi della F4, facoltativi: i token creati prima restano validi.
-  vision: visionSpecSchema.optional(),
-  /** Luce portata dal token (torcia, lanterna…). */
-  light: lightSpecSchema.nullable().optional(),
-  /** Utenti (id del profilo) che vedono attraverso il token, oltre a chi l'ha creato. */
-  owners: z.array(z.string().max(64)).max(20).optional(),
-  /**
-   * Valore di iniziativa: se c'è, il token è nell'ordine dei turni (assente o null = fuori). Sta
-   * sul token, così i token nascosti restano nel documento del GM insieme al loro valore.
-   */
-  initiative: z.number().min(-1000).max(1000).nullable().optional(),
-  /**
-   * Token a cui questo è agganciato (cavalcatura, veicolo): muovendo quello si muove anche questo.
-   * Solo un livello: chi ha agganciati non può essere agganciato a sua volta.
-   */
-  attachedTo: z.string().max(64).nullable().optional(),
-  /** Aura attorno al token (raggio in caselle dal bordo), visibile a tutti. */
-  aura: z
-    .object({ radius: z.number().positive().max(100), color })
-    .nullable()
-    .optional(),
-  /**
-   * Quota rispetto al terreno (volo, balconate, fosse), nell'unità del righello: con 5 ft a
-   * casella, 15 è tre caselle più in alto. Il righello ne tiene conto.
-   */
-  elevation: z.number().min(-100000).max(100000).optional(),
-  /**
-   * Incognito: i giocatori vedono una sagoma con «?». Nome e aspetto veri stanno nel documento
-   * del GM (vedi `MASKS_MAP`), così non arrivano ai giocatori nemmeno nei dati.
-   */
-  obscured: z.boolean().optional(),
-  /**
-   * Punti ferita (assente o null = il token non ne ha). Se sono segreti (`hpVisibility` «band» o
-   * «gm») qui non ci sono: stanno nel documento del GM (vedi `VITALS_MAP`).
-   */
-  hp: hitPointsSchema.nullable().optional(),
-  /** Chi vede i punti ferita; assente = tutti. */
-  hpVisibility: z.enum(HP_VISIBILITIES).optional(),
-  /** Fascia dei PF segreti con visibilità «band», scritta dal GM insieme ai PF veri. */
-  hpBand: z.enum(HP_BANDS).optional(),
-  /** Condizioni (avvelenato, prono…): etichette, senza effetti sul gioco. */
-  conditions: tokenConditionsSchema.optional(),
-});
+export const tokenItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("token"),
+    layer: z.literal("token"),
+    name: z.string().max(40),
+    color,
+    /** Immagine del token; null = cerchio colorato con le iniziali. */
+    assetId: z.string().nullable(),
+    size: z.number().positive().max(10),
+    /** Immagine della libreria (id del catalogo); usata se non c'è un'immagine caricata. */
+    portrait: z
+      .string()
+      .regex(/^[a-z0-9-]{1,40}$/)
+      .nullable()
+      .optional(),
+    // Campi della F4, facoltativi: i token creati prima restano validi.
+    vision: visionSpecSchema.optional(),
+    /** Luce portata dal token (torcia, lanterna…). */
+    light: lightSpecSchema.nullable().optional(),
+    /** Utenti (id del profilo) che vedono attraverso il token, oltre a chi l'ha creato. */
+    owners: z.array(z.string().max(64)).max(20).optional(),
+    /**
+     * Valore di iniziativa: se c'è, il token è nell'ordine dei turni (assente o null = fuori). Sta
+     * sul token, così i token nascosti restano nel documento del GM insieme al loro valore.
+     */
+    initiative: z.number().min(-1000).max(1000).nullable().optional(),
+    /**
+     * Token a cui questo è agganciato (cavalcatura, veicolo): muovendo quello si muove anche questo.
+     * Solo un livello: chi ha agganciati non può essere agganciato a sua volta.
+     */
+    attachedTo: z.string().max(64).nullable().optional(),
+    /** Aura attorno al token (raggio in caselle dal bordo), visibile a tutti. */
+    aura: z
+      .object({ radius: z.number().positive().max(100), color })
+      .nullable()
+      .optional(),
+    /**
+     * Quota rispetto al terreno (volo, balconate, fosse), nell'unità del righello: con 5 ft a
+     * casella, 15 è tre caselle più in alto. Il righello ne tiene conto.
+     */
+    elevation: z.number().min(-100000).max(100000).optional(),
+    /**
+     * Incognito: i giocatori vedono una sagoma con «?». Nome e aspetto veri stanno nel documento
+     * del GM (vedi `MASKS_MAP`), così non arrivano ai giocatori nemmeno nei dati.
+     */
+    obscured: z.boolean().optional(),
+    /**
+     * Punti ferita (assente o null = il token non ne ha). Se sono segreti (`hpVisibility` «band» o
+     * «gm») qui non ci sono: stanno nel documento del GM (vedi `VITALS_MAP`).
+     */
+    hp: hitPointsSchema.nullable().optional(),
+    /** Chi vede i punti ferita; assente = tutti. */
+    hpVisibility: z.enum(HP_VISIBILITIES).optional(),
+    /** Fascia dei PF segreti con visibilità «band», scritta dal GM insieme ai PF veri. */
+    hpBand: z.enum(HP_BANDS).optional(),
+    /** Condizioni (avvelenato, prono…): etichette, senza effetti sul gioco. */
+    conditions: tokenConditionsSchema.optional(),
+  })
+  .strict();
 
 /** Campi che identificano un token: per un token in incognito li conosce solo il GM. */
 export const TOKEN_IDENTITY_KEYS = ["name", "color", "assetId", "portrait"] as const;
@@ -167,11 +178,14 @@ export const OBSCURED_IDENTITY: TokenIdentity = {
 export const MASKS_MAP = "masks";
 
 /** Sorgente di luce fissa piazzata dal GM (sul livello mappa, quindi solo il GM la modifica). */
-export const lightItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("light"),
-  ...lightSpecSchema.shape,
-});
+export const lightItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("light"),
+    layer: z.literal("map"),
+    ...lightSpecSchema.shape,
+  })
+  .strict();
 
 /**
  * Connettore tra due oggetti (freccia di una bacheca investigativa, legame tra fazioni): i suoi
@@ -179,18 +193,20 @@ export const lightItemSchema = z.object({
  * nascosto a chi guarda) il connettore non si disegna; cancellando un oggetto spariscono anche i
  * suoi connettori.
  */
-export const connectorItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("connector"),
-  from: z.string().min(1).max(64),
-  to: z.string().min(1).max(64),
-  color,
-  strokeWidth: z.number().positive().max(64),
-  /** Punta di freccia sull'oggetto di arrivo. */
-  arrow: z.boolean(),
-  /** Scritta a metà del connettore («fratello di», «gli deve 100 mo»). */
-  label: z.string().max(80),
-});
+export const connectorItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("connector"),
+    from: z.string().min(1).max(64),
+    to: z.string().min(1).max(64),
+    color,
+    strokeWidth: z.number().positive().max(64),
+    /** Punta di freccia sull'oggetto di arrivo. */
+    arrow: z.boolean(),
+    /** Scritta a metà del connettore («fratello di», «gli deve 100 mo»). */
+    label: z.string().max(80),
+  })
+  .strict();
 
 /** Stili dei tetti procedurali. */
 export const ROOF_STYLES = ["shingles", "thatch", "slate"] as const;
@@ -201,17 +217,20 @@ export type RoofStyle = (typeof ROOF_STYLES)[number];
  * Diventa quasi trasparente quando un token visibile ci entra, svelando l'interno. Sta sul
  * livello mappa: lo modifica solo il GM.
  */
-export const roofItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("roof"),
-  style: z.enum(ROOF_STYLES),
-  /** Vertici relativi a (x, y): [x0, y0, x1, y1, ...], almeno tre. */
-  points: z
-    .array(z.number())
-    .min(6)
-    .max(2000)
-    .refine((points) => points.length % 2 === 0, "I punti vanno a coppie (x, y)"),
-});
+export const roofItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("roof"),
+    layer: z.literal("map"),
+    style: z.enum(ROOF_STYLES),
+    /** Vertici relativi a (x, y): [x0, y0, x1, y1, ...], almeno tre. */
+    points: z
+      .array(z.number())
+      .min(6)
+      .max(2000)
+      .refine((points) => points.length % 2 === 0, "I punti vanno a coppie (x, y)"),
+  })
+  .strict();
 
 /** Icone dei pin con le note del GM, con il loro colore. */
 export const NOTE_ICONS = [
@@ -229,13 +248,16 @@ const NOTE_ICON_IDS = NOTE_ICONS.map((i) => i.id) as [NoteIcon, ...NoteIcon[]];
  * al clic apre il testo, in Markdown. Sta sul livello mappa, quindi la modifica solo il GM; di
  * solito nasce nascosta e il GM la rivela quando vuole farla leggere ai giocatori.
  */
-export const noteItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("note"),
-  icon: z.enum(NOTE_ICON_IDS),
-  title: z.string().max(80),
-  text: z.string().max(10000),
-});
+export const noteItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("note"),
+    layer: z.literal("map"),
+    icon: z.enum(NOTE_ICON_IDS),
+    title: z.string().max(80),
+    text: z.string().max(10000),
+  })
+  .strict();
 
 /** Timbri: elementi di scenario disegnati proceduralmente, con varianti. */
 export const STAMPS = [
@@ -257,13 +279,16 @@ const STAMP_IDS = STAMPS.map((s) => s.id) as [StampId, ...StampId[]];
  * Timbro sul livello mappa (lo modifica solo il GM): (x, y) è il centro, `size` il lato in
  * caselle, `variant` il seme che ne varia la forma.
  */
-export const stampItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("stamp"),
-  stamp: z.enum(STAMP_IDS),
-  size: z.number().positive().max(20),
-  variant: z.number().int().min(0).max(1_000_000),
-});
+export const stampItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("stamp"),
+    layer: z.literal("map"),
+    stamp: z.enum(STAMP_IDS),
+    size: z.number().positive().max(20),
+    variant: z.number().int().min(0).max(1_000_000),
+  })
+  .strict();
 
 /** Sagome d'area: cerchio, cono (largo quanto è lungo), cubo e linea larga `width` caselle. */
 export const TEMPLATE_SHAPES = [
@@ -279,15 +304,18 @@ export type TemplateShape = (typeof TEMPLATE_SHAPES)[number]["id"];
  * il punto d'origine (centro del cerchio, vertice del cono, lato del cubo o della linea) e
  * `rotation` la direzione in gradi; `size` e `width` sono in caselle.
  */
-export const templateItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("template"),
-  shape: z.enum(["circle", "cone", "cube", "line"]),
-  size: z.number().positive().max(200),
-  /** Larghezza della linea; ignorata dalle altre forme. */
-  width: z.number().positive().max(50).optional(),
-  color,
-});
+export const templateItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("template"),
+    layer: z.literal("draw"),
+    shape: z.enum(["circle", "cone", "cube", "line"]),
+    size: z.number().positive().max(200),
+    /** Larghezza della linea; ignorata dalle altre forme. */
+    width: z.number().positive().max(50).optional(),
+    color,
+  })
+  .strict();
 
 /** Luci tipiche, con raggi in caselle (come in D&D: 1 casella = 1,5 m). */
 export const LIGHT_PRESETS = [
@@ -313,18 +341,24 @@ const PATH_STYLE_IDS = PATH_STYLES.map((s) => s.id) as [PathStyleId, ...PathStyl
  * Strada o fiume: punti di controllo relativi a (x, y), ognuno con la sua larghezza. La curva
  * passa per tutti i punti (spline di Catmull–Rom).
  */
-export const pathItemSchema = z.object({
-  ...baseItem,
-  kind: z.literal("path"),
-  style: z.enum(PATH_STYLE_IDS),
-  /** [x0, y0, w0, x1, y1, w1, ...]: almeno due punti. */
-  points: z
-    .array(z.number())
-    .min(6)
-    .max(30000)
-    .refine((p) => p.length % 3 === 0, "I punti vanno a terne (x, y, larghezza)")
-    .refine((p) => p.every((v, i) => i % 3 !== 2 || v > 0), "Le larghezze devono essere positive"),
-});
+export const pathItemSchema = z
+  .object({
+    ...baseItem,
+    kind: z.literal("path"),
+    layer: z.literal("paths"),
+    style: z.enum(PATH_STYLE_IDS),
+    /** [x0, y0, w0, x1, y1, w1, ...]: almeno due punti. */
+    points: z
+      .array(z.number())
+      .min(6)
+      .max(30000)
+      .refine((p) => p.length % 3 === 0, "I punti vanno a terne (x, y, larghezza)")
+      .refine(
+        (p) => p.every((v, i) => i % 3 !== 2 || v > 0),
+        "Le larghezze devono essere positive",
+      ),
+  })
+  .strict();
 
 export const boardItemSchema = z.discriminatedUnion("kind", [
   imageItemSchema,

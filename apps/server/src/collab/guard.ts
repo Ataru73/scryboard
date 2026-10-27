@@ -9,6 +9,7 @@ import {
   fogOpSchema,
   ITEMS_MAP,
   isDoorFogged,
+  isVideoAsset,
   ROLLS_MAP,
   type Role,
   SETTINGS_MAP,
@@ -23,6 +24,17 @@ import type * as Y from "yjs";
 
 /** Origine delle transazioni con cui il server annulla le modifiche non autorizzate. */
 export const GUARD_ORIGIN = { source: "local" as const, guard: true };
+
+const ALLOWED_PUBLIC_MAPS = new Set([
+  ITEMS_MAP,
+  WALLS_MAP,
+  ROLLS_MAP,
+  SETTINGS_MAP,
+  FOG_MAP,
+  TERRAIN_MAP,
+]);
+
+type TargetState = { action: "delete" } | { action: "set"; value: unknown };
 
 function roleOf(origin: unknown): Role | null {
   if (!isTransactionOrigin(origin) || origin.source !== "connection") return null;
@@ -100,6 +112,10 @@ export function isAllowedPlayerItemChange(
   if (action === "delete") return true;
   if (!after || !canModify(after, "player")) return false;
   if (before && before.kind !== after.kind) return false;
+  // Non si può cambiare il creatore di un oggetto per rubarne o cederne la proprietà.
+  if (before && before.createdBy !== after.createdBy) return false;
+  // I tetti overhead e i file video possono essere inseriti o modificati solo dal GM.
+  if (after.kind === "image" && (after.overhead || isVideoAsset(after.assetId))) return false;
   // Visione, luce portata, assegnazione e punti ferita massimi dei token li decide il GM: un
   // giocatore non può darsi scurovisione, prendersi il token di un altro o curare un mostro.
   if (after.kind === "token") {
@@ -146,6 +162,20 @@ export function isAllowedPlayerWallChange(
   );
 }
 
+function clearSharedType(doc: Y.Doc, name: string): void {
+  const type = doc.share.get(name) as { _start?: unknown } | undefined;
+  if (!type) return;
+  if (type._start !== null && type._start !== undefined) {
+    const arr = doc.getArray(name);
+    if (arr.length > 0) arr.delete(0, arr.length);
+  } else {
+    const map = doc.getMap(name);
+    for (const k of [...map.keys()]) {
+      map.delete(k);
+    }
+  }
+}
+
 /**
  * Controlla le modifiche dei giocatori al documento pubblico. Gli aggiornamenti Yjs non si
  * possono rifiutare senza chiudere la connessione (e il client li rimanderebbe a ogni
@@ -153,7 +183,31 @@ export function isAllowedPlayerWallChange(
  * una propria transazione: tutti i client convergono allo stato corretto.
  */
 export function guardPublicDocument(doc: Y.Doc): void {
-  const reverts: Array<() => void> = [];
+  const pendingTargets = new Map<Y.Map<unknown>, Map<string, TargetState>>();
+  let microtaskScheduled = false;
+
+  const recordPendingTarget = (map: Y.Map<unknown>, key: string, target: TargetState) => {
+    let mapTargets = pendingTargets.get(map);
+    if (!mapTargets) {
+      mapTargets = new Map();
+      pendingTargets.set(map, mapTargets);
+    }
+    // Only record the revert target if one is not already pending for this key.
+    // This prevents subsequent unauthorized mutations within the same tick from
+    // overwriting the true original value.
+    if (!mapTargets.has(key)) {
+      mapTargets.set(key, target);
+    }
+  };
+
+  const getBaseline = (map: Y.Map<unknown>, key: string, changeOldValue: unknown) => {
+    const mapTargets = pendingTargets.get(map);
+    const target = mapTargets?.get(key);
+    if (target) {
+      return target.action === "set" ? target.value : undefined;
+    }
+    return changeOldValue;
+  };
 
   const watch = (
     map: Y.Map<unknown>,
@@ -162,12 +216,16 @@ export function guardPublicDocument(doc: Y.Doc): void {
     map.observe((event, transaction) => {
       if (roleOf(transaction.origin) !== "player") return;
       event.changes.keys.forEach((change, key) => {
-        if (allowed(change.action, key, change.oldValue)) return;
-        const { action, oldValue } = change;
-        reverts.push(() => {
-          if (action === "add") map.delete(key);
-          else map.set(key, oldValue);
-        });
+        const baseline = getBaseline(map, key, change.oldValue);
+        const mapTargets = pendingTargets.get(map);
+        const alreadyPending = mapTargets?.has(key) ?? false;
+        if (!alreadyPending && allowed(change.action, key, baseline)) return;
+
+        const target: TargetState =
+          change.action === "add" && !alreadyPending
+            ? { action: "delete" }
+            : { action: "set", value: baseline };
+        recordPendingTarget(map, key, target);
       });
     });
   };
@@ -195,14 +253,46 @@ export function guardPublicDocument(doc: Y.Doc): void {
   watch(fogMap, () => false);
   watch(doc.getMap(TERRAIN_MAP), () => false);
 
-  doc.on("afterTransaction", () => {
-    if (reverts.length === 0) return;
-    const pending = reverts.splice(0);
-    // Fuori dalla transazione corrente, che Yjs sta ancora chiudendo.
-    queueMicrotask(() =>
+  const scheduleReverts = () => {
+    if (microtaskScheduled) return;
+    microtaskScheduled = true;
+    queueMicrotask(() => {
+      microtaskScheduled = false;
       doc.transact(() => {
-        for (const revert of pending) revert();
-      }, GUARD_ORIGIN),
-    );
+        for (const [map, targets] of pendingTargets.entries()) {
+          for (const [key, target] of targets.entries()) {
+            if (target.action === "delete") {
+              map.delete(key);
+            } else {
+              map.set(key, target.value);
+            }
+          }
+        }
+        pendingTargets.clear();
+
+        // Rimuove mappe o collezioni radice non autorizzate introdotte dai giocatori.
+        for (const name of doc.share.keys()) {
+          if (!ALLOWED_PUBLIC_MAPS.has(name)) {
+            clearSharedType(doc, name);
+          }
+        }
+      }, GUARD_ORIGIN);
+    });
+  };
+
+  doc.on("afterTransaction", (transaction) => {
+    if (roleOf(transaction.origin) !== "player") return;
+
+    let hasUnauthorizedRoots = false;
+    for (const name of doc.share.keys()) {
+      if (!ALLOWED_PUBLIC_MAPS.has(name)) {
+        hasUnauthorizedRoots = true;
+        break;
+      }
+    }
+
+    if (pendingTargets.size > 0 || hasUnauthorizedRoots) {
+      scheduleReverts();
+    }
   });
 }

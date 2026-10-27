@@ -142,6 +142,86 @@ describe("isAllowedPlayerItemChange", () => {
       }),
     ).toBe(false);
   });
+
+  it("prevents players from spoofing item ownership, overhead tiles, and video assets", () => {
+    // Cannot change createdBy on an item
+    const hero = token("t", { createdBy: "gm" });
+    expect(
+      isAllowedPlayerItemChange("update", "t", hero, token("t", { createdBy: "player" })),
+    ).toBe(false);
+
+    // Cannot add or update an image with overhead: true
+    const normalImage = {
+      ...base,
+      id: "img1",
+      kind: "image",
+      layer: "draw",
+      locked: false,
+      assetId: "hash.png",
+      width: 100,
+      height: 100,
+    };
+    expect(isAllowedPlayerItemChange("add", "img1", undefined, normalImage)).toBe(true);
+    expect(
+      isAllowedPlayerItemChange("add", "img1", undefined, { ...normalImage, overhead: true }),
+    ).toBe(false);
+    expect(
+      isAllowedPlayerItemChange("update", "img1", normalImage, { ...normalImage, overhead: true }),
+    ).toBe(false);
+
+    // Cannot add or update an image with video assets
+    const videoImage = { ...normalImage, assetId: "hash.webm" };
+    expect(isAllowedPlayerItemChange("add", "img1", undefined, videoImage)).toBe(false);
+    expect(isAllowedPlayerItemChange("update", "img1", normalImage, videoImage)).toBe(false);
+
+    // Cannot add or modify GM-only items
+    const roof = {
+      ...base,
+      id: "r1",
+      kind: "roof",
+      layer: "map",
+      locked: false,
+      style: "slate",
+      points: [0, 0, 10, 0, 10, 10],
+    };
+    expect(isAllowedPlayerItemChange("add", "r1", undefined, roof)).toBe(false);
+
+    const note = {
+      ...base,
+      id: "n1",
+      kind: "note",
+      layer: "map",
+      locked: false,
+      icon: "book",
+      title: "Secret",
+      text: "Secret text",
+    };
+    expect(isAllowedPlayerItemChange("add", "n1", undefined, note)).toBe(false);
+
+    const stamp = {
+      ...base,
+      id: "s1",
+      kind: "stamp",
+      layer: "map",
+      locked: false,
+      stamp: "crate",
+      size: 1,
+      variant: 0,
+    };
+    expect(isAllowedPlayerItemChange("add", "s1", undefined, stamp)).toBe(false);
+
+    const light = {
+      ...base,
+      id: "l1",
+      kind: "light",
+      layer: "map",
+      locked: false,
+      bright: 20,
+      dim: 40,
+      color: "#ffaa00",
+    };
+    expect(isAllowedPlayerItemChange("add", "l1", undefined, light)).toBe(false);
+  });
 });
 
 describe("token hit points and conditions", () => {
@@ -566,5 +646,40 @@ describe("public document guard", () => {
     await settle();
     expect(player.getMap("settings").get("summon")).toEqual(summon);
     close();
+  });
+
+  it("reverts rapid back-to-back unauthorized changes without locking into unauthorized state", async () => {
+    const { gm, player, close } = await table();
+    const original = token("t1", { name: "Original", locked: true });
+    items(gm).set("t1", original);
+    await settle();
+
+    // Player sends two unauthorized transactions rapidly in succession before microtasks fire
+    player.transact(() => {
+      items(player).set("t1", token("t1", { name: "Bad1", locked: false }));
+    });
+    player.transact(() => {
+      items(player).set("t1", token("t1", { name: "Bad2", locked: false }));
+    });
+
+    await settle();
+    expect(items(gm).get("t1")).toEqual(original);
+    expect(items(player).get("t1")).toEqual(original);
+    close();
+  });
+
+  it("removes unauthorized root collections injected by players", async () => {
+    const { gm, player, close } = await table();
+    try {
+      player.transact(() => {
+        player.getMap("maliciousRoot").set("payload", "evil");
+      });
+
+      await settle();
+      expect(gm.getMap("maliciousRoot").has("payload")).toBe(false);
+      expect(player.getMap("maliciousRoot").has("payload")).toBe(false);
+    } finally {
+      close();
+    }
   });
 });

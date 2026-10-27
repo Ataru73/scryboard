@@ -156,7 +156,7 @@ export function createApi(
     limitRooms,
     bodyLimit({
       maxSize: MAX_ARCHIVE_BYTES,
-      onError: (c) => c.json({ error: "Archivio troppo grande (max 200 MB)" }, 413),
+      onError: (c) => c.json({ error: "Archivio troppo grande (max 50 MB)" }, 413),
     }),
     async (c) => {
       const data = new Uint8Array(await c.req.arrayBuffer());

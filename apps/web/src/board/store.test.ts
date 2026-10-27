@@ -3,17 +3,23 @@ import { describe, expect, it } from "vitest";
 import * as Y from "yjs";
 import { BoardStore } from "./store";
 
-function text(id: string, z = 0, layer: BoardItem["layer"] = "draw"): TextItem {
+function base<L extends BoardItem["layer"] = "draw">(id: string, layer: L = "draw" as L, z = 0) {
   return {
     id,
     layer,
     z,
-    kind: "text",
     x: 0,
     y: 0,
     rotation: 0,
     locked: false,
     createdBy: "u1",
+  };
+}
+
+function text(id: string, z = 0, layer: BoardItem["layer"] = "draw"): TextItem {
+  return {
+    ...base(id, layer, z),
+    kind: "text",
     text: id,
     fontSize: 20,
     color: "#000000",
@@ -411,8 +417,7 @@ describe("BoardStore", () => {
     const gm = new BoardStore(publicDoc, new Y.Doc(), "gm");
     const player = new BoardStore(publicDoc, null, "p1");
     const note: NoteItem = {
-      ...text("pin"),
-      layer: "map",
+      ...base("pin", "map"),
       kind: "note",
       icon: "trap",
       title: "Botola",
@@ -428,7 +433,7 @@ describe("BoardStore", () => {
   it("removes the connectors of a removed item in the same undo step", () => {
     const store = new BoardStore(new Y.Doc(), null, "gm");
     const link: ConnectorItem = {
-      ...text("link"),
+      ...base("link", "draw"),
       kind: "connector",
       from: "a",
       to: "b",

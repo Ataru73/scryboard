@@ -174,6 +174,27 @@ describe("room archive", () => {
     expect((await importBytes(new Uint8Array([1, 2, 3, 4]))).status).toBe(400);
     expect((await importBytes(zipSync({ "manifest.json": strToU8("{}") }))).status).toBe(400);
     expect((await importBytes(zipSync({ "other.txt": strToU8("x") }))).status).toBe(400);
+
+    // Rejects archives with too many files even if they don't match ENTRY_PATH
+    const junkFiles: Record<string, Uint8Array> = {
+      "manifest.json": strToU8(
+        JSON.stringify({
+          format: "scryboard-room",
+          version: 1,
+          name: "Junk",
+          exportedAt: new Date().toISOString(),
+          activeScene: 0,
+          scenes: [{ name: "A" }],
+        }),
+      ),
+    };
+    for (let i = 0; i < 505; i++) {
+      junkFiles[`junk_${i}.txt`] = strToU8("junk");
+    }
+    const junkArchive = zipSync(junkFiles);
+    const junkRes = await importBytes(junkArchive);
+    expect(junkRes.status).toBe(400);
+
     const manifest = {
       format: "scryboard-room",
       version: 1,

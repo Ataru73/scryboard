@@ -753,7 +753,7 @@ export function Board({
     if (wallId) store.removeWalls([wallId]);
   }
 
-  function base(layer: BoardItem["layer"], at: Point) {
+  function base<L extends BoardItem["layer"]>(layer: L, at: Point) {
     return {
       id: newItemId(),
       layer,
