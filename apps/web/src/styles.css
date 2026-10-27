@@ -1003,6 +1003,7 @@ button.danger {
   }
 
   .room-header {
+    order: 1;
     gap: 0.5rem;
     padding-right: 7.5rem;
   }
@@ -1016,12 +1017,15 @@ button.danger {
   }
 
   .board-area {
+    order: 2;
     flex: 1;
   }
 
   .sidebar {
+    order: 3;
     border-right: 0;
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border);
+    border-bottom: 0;
   }
 
   .selection-panel {
@@ -1084,12 +1088,14 @@ button.danger {
   }
 
   html body .room .room-header {
+    order: 1;
     flex: none;
     padding: max(0.4rem, env(safe-area-inset-top)) max(6rem, env(safe-area-inset-right)) 0.4rem
       max(1rem, env(safe-area-inset-left));
   }
 
   html body .room .board-area {
+    order: 2;
     flex: 1 1 50%;
     height: env(viewport-segment-height 0 0, 50vh);
     min-height: 200px;
@@ -1097,6 +1103,7 @@ button.danger {
   }
 
   html body .room .sidebar {
+    order: 3;
     display: flex;
     flex-direction: column;
     flex: 1 1 50%;
@@ -1119,12 +1126,14 @@ button.danger {
 }
 
 .room[data-fold-type="tabletop"] .room-header {
+  order: 1;
   flex: none;
   padding: max(0.4rem, env(safe-area-inset-top)) max(6rem, env(safe-area-inset-right)) 0.4rem
     max(1rem, env(safe-area-inset-left));
 }
 
 .room[data-fold-type="tabletop"] .board-area {
+  order: 2;
   flex: 1 1 50%;
   height: env(viewport-segment-height 0 0, 50vh);
   min-height: 200px;
@@ -1132,6 +1141,7 @@ button.danger {
 }
 
 .room[data-fold-type="tabletop"] .sidebar {
+  order: 3;
   display: flex;
   flex-direction: column;
   flex: 1 1 50%;

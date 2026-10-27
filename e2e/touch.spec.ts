@@ -201,6 +201,13 @@ test.describe("Touch and Foldable controls", () => {
     const sidebar = page.locator("aside.sidebar");
     await expect(sidebar).toBeVisible();
 
+    // Verifica che in Flex Mode la lavagna sia nella metà SUPERIORE e la console nella metà INFERIORE
+    const boardBox = await page.locator(".board-area").boundingBox();
+    const sidebarBox = await sidebar.boundingBox();
+    expect(boardBox).not.toBeNull();
+    expect(sidebarBox).not.toBeNull();
+    expect(boardBox?.y).toBeLessThan(sidebarBox?.y ?? Infinity);
+
     // Disattiva Flex Mode
     await flexBtn.click();
     await expect(flexBtn).toHaveAttribute("aria-pressed", "false");
