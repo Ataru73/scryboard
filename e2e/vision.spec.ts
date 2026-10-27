@@ -115,3 +115,48 @@ test("players cannot open doors they cannot see in the dark", async ({ browser }
   });
   expect(states).toEqual(["door-icon door-closed"]);
 });
+
+test("the GM can look through a single token's eyes", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await enableGrid(gm);
+  // L'eroe del giocatore da una parte del muro, il mostro dall'altra.
+  await placeToken(player, "Eroe", 105, 315);
+  await placeToken(gm, "Mostro", 455, 315);
+  await gm.keyboard.press("w");
+  await click(gm, 280, 140);
+  await click(gm, 280, 700);
+  await gm.keyboard.press("Enter");
+  await gm.keyboard.press("i");
+  await gm.getByRole("toolbar", { name: "Luci" }).getByLabel("Visione dinamica").check();
+  await expect.poll(() => names(gm)).toEqual(["Eroe", "Mostro"]);
+
+  // Dalla selezione: con gli occhi del mostro, l'eroe dietro il muro sparisce.
+  await gm.keyboard.press("v");
+  await click(gm, 455, 315);
+  const lookFrom = gm.getByRole("button", { name: "Guarda da qui" });
+  await lookFrom.click();
+  await expect(lookFrom).toHaveAttribute("aria-pressed", "true");
+  const banner = gm.getByRole("status").filter({ hasText: "occhi di Mostro" });
+  await expect(banner).toBeVisible();
+  await expect.poll(() => names(gm)).toEqual(["Mostro"]);
+  // Il giocatore non si accorge di niente.
+  await expect.poll(() => names(player)).toEqual(["Eroe"]);
+  await gm.waitForTimeout(300);
+  await gm.screenshot({ path: "e2e/.data/vision-token-preview.png" });
+
+  // L'avviso resta con qualunque strumento e riporta alla vista completa.
+  await gm.keyboard.press("Escape");
+  await gm.keyboard.press("h");
+  await banner.getByRole("button", { name: "Torna alla vista GM" }).click();
+  await expect(banner).toBeHidden();
+  await expect.poll(() => names(gm)).toEqual(["Eroe", "Mostro"]);
+
+  // Dal pannello Luci: il menu Vista elenca anche i token.
+  await gm.keyboard.press("i");
+  await gm
+    .getByRole("toolbar", { name: "Luci" })
+    .getByLabel("Vista")
+    .selectOption({ label: "Eroe" });
+  await expect.poll(() => names(gm)).toEqual(["Eroe"]);
+  await expect(gm.getByRole("status").filter({ hasText: "occhi di Eroe" })).toBeVisible();
+});

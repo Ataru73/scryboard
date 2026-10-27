@@ -1,6 +1,13 @@
 import type { BoardItem, Door, TokenItem, Wall } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
-import { isDoorSeen, isPointVisible, lightSources, viewerTokens, visionSources } from "./sources";
+import {
+  isDoorSeen,
+  isPointVisible,
+  lightSources,
+  viewerTokens,
+  viewpointTokens,
+  visionSources,
+} from "./sources";
 import { pointInPolygon, sightGeometry, sightSegments, visibilityPolygon } from "./visibility";
 
 const wall = (points: number[], extra: Partial<Wall> = {}) =>
@@ -107,6 +114,14 @@ describe("vision sources and visibility", () => {
       token("monster"),
     ];
     expect(viewerTokens(items, "p1").map((t) => t.id)).toEqual(["mine", "assigned"]);
+  });
+
+  it("lets the GM look through a single token, even one nobody controls", () => {
+    const items: BoardItem[] = [token("mine", { createdBy: "p1" }), token("monster")];
+    expect(viewpointTokens(items, { kind: "token", id: "monster" }).map((t) => t.id)).toEqual([
+      "monster",
+    ]);
+    expect(viewpointTokens(items, { kind: "player", id: "p1" }).map((t) => t.id)).toEqual(["mine"]);
   });
 
   it("collects fixed lights and lights carried by tokens, in world pixels", () => {

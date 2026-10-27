@@ -52,7 +52,7 @@ import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
 import { ExploredMap } from "../vision/explored";
 import { drawVisibleArea } from "../vision/render";
-import { isDoorSeen } from "../vision/sources";
+import { isDoorSeen, type Viewpoint } from "../vision/sources";
 import { useVision } from "../vision/useVision";
 import { VisionLayer } from "../vision/VisionLayer";
 import { movementFraction, wallSegments } from "../walls/geometry";
@@ -107,6 +107,7 @@ import {
 } from "./upload";
 import { useBoardShortcuts } from "./useBoardShortcuts";
 import { isUvttFile, parseUvtt, UvttError, uvttToBoard } from "./uvtt";
+import { VisionPreviewBanner } from "./VisionPreviewBanner";
 import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
 import { WallSelectionPanel } from "./WallPanel";
 import { WeatherOverlay } from "./WeatherOverlay";
@@ -420,15 +421,23 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   });
   const gmToken = useAssetAuth();
 
-  // Visione: il giocatore guarda dai suoi token; il GM vede tutto o, in anteprima, come un giocatore.
+  // Visione: il giocatore guarda dai suoi token; il GM vede tutto o, in anteprima, come un
+  // giocatore o con gli occhi di un singolo token.
   const visionPreview = useBoardUi((s) => s.visionPreview);
-  const viewerId = role === "player" ? store.userId : visionPreview;
-  // L'anteprima del GM ignora ciò che i giocatori non ricevono (oggetti nascosti).
+  const viewpoint = useMemo<Viewpoint | null>(
+    () => (role === "player" ? { kind: "player", id: store.userId } : visionPreview),
+    [role, store.userId, visionPreview],
+  );
+  // L'anteprima di un giocatore ignora ciò che i giocatori non ricevono (oggetti nascosti); quella
+  // di un token no: un mostro nascosto vede comunque, e le luci nascoste illuminano lo stesso.
   const viewerItems = useMemo(
-    () => (role === "gm" && visionPreview ? items.filter((i) => !store.isHidden(i.id)) : items),
+    () =>
+      role === "gm" && visionPreview?.kind === "player"
+        ? items.filter((i) => !store.isHidden(i.id))
+        : items,
     [items, role, visionPreview, store],
   );
-  const vision = useVision({ items: viewerItems, walls, grid, lighting, viewerId });
+  const vision = useVision({ items: viewerItems, walls, grid, lighting, viewpoint });
   const visibleTokens = items.filter(
     (i): i is TokenItem => i.kind === "token" && (!vision.active || vision.isVisible(i)),
   );
@@ -2244,6 +2253,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           height={size.height}
         />
         <HandoutModal store={store} role={role} roomId={roomId} />
+        {role === "gm" && <VisionPreviewBanner store={store} provider={provider} />}
         <NotePanel store={store} role={role} roomId={roomId} provider={provider} />
         <TokenList
           // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.

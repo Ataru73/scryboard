@@ -1083,6 +1083,16 @@ button.danger {
   gap: 0.75rem;
 }
 
+/* In basso a sinistra, accanto agli strumenti: in alto lo coprirebbe il pannello della selezione. */
+.vision-preview-banner {
+  left: 72px;
+  max-width: calc(100% - 88px);
+  transform: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .handout-modal {
   width: auto;
   max-width: calc(100vw - 2rem);

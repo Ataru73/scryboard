@@ -36,6 +36,14 @@ export function viewerTokens(items: BoardItem[], viewerId: string): TokenItem[] 
   );
 }
 
+/** Da dove si guarda: tutti i token di un utente, o un solo token (anteprima del GM). */
+export type Viewpoint = { kind: "player" | "token"; id: string };
+
+export function viewpointTokens(items: BoardItem[], viewpoint: Viewpoint): TokenItem[] {
+  if (viewpoint.kind === "player") return viewerTokens(items, viewpoint.id);
+  return items.filter((i): i is TokenItem => i.kind === "token" && i.id === viewpoint.id);
+}
+
 export function visionSources(tokens: TokenItem[], cellSize: number): VisionSource[] {
   return tokens.map((t) => {
     const vision = t.vision ?? DEFAULT_VISION;

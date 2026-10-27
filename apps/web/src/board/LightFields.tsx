@@ -4,6 +4,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { catalogLabel } from "../i18n/catalog";
 import type { BoardStore } from "./store";
+import { useBoardUi } from "./tools";
 import { usePlayers } from "./usePlayers";
 
 function NumberField({
@@ -80,7 +81,7 @@ export function LightFields({ light, store }: { light: LightItem; store: BoardSt
   );
 }
 
-/** Solo GM: visione, luce portata e giocatore che controlla il token. */
+/** Solo GM: visione, luce portata, giocatore che controlla il token e anteprima di ciò che vede. */
 export function VisionFields({
   token,
   store,
@@ -96,6 +97,8 @@ export function VisionFields({
   const lightId = useId();
   const ownerId = useId();
   const owner = token.owners?.[0] ?? "";
+  const { visionPreview, setVisionPreview } = useBoardUi();
+  const looking = visionPreview?.kind === "token" && visionPreview.id === token.id;
   const carried = token.light
     ? LIGHT_PRESETS.find(
         (p) =>
@@ -165,6 +168,15 @@ export function VisionFields({
           <option value={owner}>{t("effects.lighting.disconnectedPlayer")}</option>
         )}
       </select>
+      <button
+        type="button"
+        className="text-button"
+        aria-pressed={looking}
+        title={t("effects.lighting.lookFromTitle")}
+        onClick={() => setVisionPreview(looking ? null : { kind: "token", id: token.id })}
+      >
+        {t("effects.lighting.lookFrom")}
+      </button>
       <span className="toolbar-separator" />
     </>
   );

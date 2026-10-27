@@ -16,6 +16,7 @@ import {
 } from "@scryboard/shared";
 import { create } from "zustand";
 import { storage } from "../lib/storage";
+import type { Viewpoint } from "../vision/sources";
 import type { Viewport } from "./viewport";
 
 export type Tool =
@@ -163,8 +164,8 @@ interface BoardUiState {
   selectedWallId: string | null;
   /** Luce che lo strumento Luce piazza. */
   lightPreset: (typeof LIGHT_PRESETS)[number]["id"];
-  /** Solo GM: vede la lavagna come la vede questo giocatore (id del profilo). */
-  visionPreview: string | null;
+  /** Solo GM: vede la lavagna come un giocatore (tutti i suoi token) o come un singolo token. */
+  visionPreview: Viewpoint | null;
   /** Meteo animato spento solo per chi guarda (ricordato nel browser). */
   weatherHidden: boolean;
   /** Nota che il giocatore sta leggendo (il GM legge e modifica quella selezionata). */
@@ -198,7 +199,7 @@ interface BoardUiState {
   setWall: (patch: Partial<Pick<BoardUiState, "wallKind" | "wallBiome">>) => void;
   selectWall: (id: string | null) => void;
   setLightPreset: (preset: BoardUiState["lightPreset"]) => void;
-  setVisionPreview: (viewerId: string | null) => void;
+  setVisionPreview: (viewpoint: Viewpoint | null) => void;
   setWeatherHidden: (hidden: boolean) => void;
   setOpenNote: (id: string | null) => void;
   setStamp: (patch: Partial<Pick<BoardUiState, "stampId" | "stampRandom">>) => void;

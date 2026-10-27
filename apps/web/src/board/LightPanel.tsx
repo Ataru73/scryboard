@@ -1,5 +1,5 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { LIGHT_PRESETS, type LightingSettings, WEATHERS } from "@scryboard/shared";
+import { LIGHT_PRESETS, type LightingSettings, type TokenItem, WEATHERS } from "@scryboard/shared";
 import { useId, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { catalogLabel } from "../i18n/catalog";
@@ -21,6 +21,8 @@ export function LightPanel({
   const lighting = useSyncExternalStore(store.subscribe, store.getLighting);
   const { lightPreset, setLightPreset, visionPreview, setVisionPreview } = useBoardUi();
   const players = usePlayers(provider);
+  const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const tokens = items.filter((i): i is TokenItem => i.kind === "token");
   const enabledId = useId();
   const previewId = useId();
   const weatherId = useId();
@@ -103,15 +105,29 @@ export function LightPanel({
       </label>
       <select
         id={previewId}
-        value={visionPreview ?? ""}
-        onChange={(e) => setVisionPreview(e.target.value || null)}
+        value={visionPreview ? `${visionPreview.kind}:${visionPreview.id}` : ""}
+        onChange={(e) => {
+          const [kind, id] = e.target.value.split(/:(.*)/);
+          setVisionPreview((kind === "player" || kind === "token") && id ? { kind, id } : null);
+        }}
       >
         <option value="">{t("effects.lighting.gmView")}</option>
-        {players.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
+        <optgroup label={t("effects.lighting.players")}>
+          {players.map((p) => (
+            <option key={p.id} value={`player:${p.id}`}>
+              {p.name}
+            </option>
+          ))}
+        </optgroup>
+        {tokens.length > 0 && (
+          <optgroup label={t("effects.lighting.tokens")}>
+            {tokens.map((token) => (
+              <option key={token.id} value={`token:${token.id}`}>
+                {token.name || t("core.tokenList.unnamed")}
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
     </div>
   );
