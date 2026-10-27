@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { tokenItemSchema } from "./board";
-import { applyDamage, hpBandOf, parseDamage, toggleCondition } from "./vitals";
+import {
+  addCustomCondition,
+  applyDamage,
+  hpBandOf,
+  parseDamage,
+  removeCondition,
+  setConditionRounds,
+  tickConditions,
+  toggleCondition,
+  tokenConditionsSchema,
+} from "./vitals";
 
 const hp = (value: number, max = 20, temp = 0) => ({ value, max, temp });
 
@@ -51,6 +61,63 @@ describe("toggleCondition", () => {
     expect(on.map((c) => c.id)).toEqual(["blinded", "prone"]);
     expect(toggleCondition(on, "prone", true).map((c) => c.id)).toEqual(["blinded", "prone"]);
     expect(toggleCondition(on, "blinded", false).map((c) => c.id)).toEqual(["prone"]);
+  });
+});
+
+describe("custom conditions", () => {
+  it("need a short label and a color, and stay unique by label", () => {
+    const blessed = { id: "custom", label: "Benedetto", color: "#ffc53d" };
+    expect(tokenConditionsSchema.safeParse([blessed]).success).toBe(true);
+    expect(tokenConditionsSchema.safeParse([{ id: "custom", color: "#ffc53d" }]).success).toBe(
+      false,
+    );
+    expect(tokenConditionsSchema.safeParse([{ ...blessed, label: "x".repeat(25) }]).success).toBe(
+      false,
+    );
+    expect(
+      tokenConditionsSchema.safeParse([blessed, { ...blessed, label: "BENEDETTO" }]).success,
+    ).toBe(false);
+    // Le condizioni del catalogo non hanno etichetta né colore.
+    expect(tokenConditionsSchema.safeParse([{ id: "prone", label: "x" }]).success).toBe(false);
+  });
+
+  it("are added after catalog ones, up to eight", () => {
+    const list = addCustomCondition([{ id: "prone" }], " Benedetto ", "#ffc53d") ?? [];
+    expect(list).toEqual([{ id: "prone" }, { id: "custom", label: "Benedetto", color: "#ffc53d" }]);
+    expect(toggleCondition(list, "blinded", true).map((c) => c.id)).toEqual([
+      "blinded",
+      "prone",
+      "custom",
+    ]);
+    expect(addCustomCondition(list, "benedetto", "#ffc53d")).toBeNull();
+    expect(addCustomCondition(list, "  ", "#ffc53d")).toBeNull();
+    let many = list;
+    for (let i = 1; i < 8; i++) many = addCustomCondition(many, `C${i}`, "#46a758") ?? [];
+    expect(many.filter((c) => c.id === "custom")).toHaveLength(8);
+    expect(addCustomCondition(many, "Nona", "#46a758")).toBeNull();
+    expect(removeCondition(many, "custom:benedetto")).toHaveLength(8);
+  });
+});
+
+describe("condition durations", () => {
+  it("are set and cleared by key, and survive toggling on again", () => {
+    const list = setConditionRounds([{ id: "prone" }], "prone", 3);
+    expect(list).toEqual([{ id: "prone", rounds: 3 }]);
+    expect(toggleCondition(list, "prone", true)).toEqual([{ id: "prone", rounds: 3 }]);
+    expect(setConditionRounds(list, "prone", null)).toEqual([{ id: "prone" }]);
+  });
+
+  it("go down by one and end at zero", () => {
+    const { next, expired } = tickConditions([
+      { id: "prone", rounds: 1 },
+      { id: "poisoned", rounds: 3 },
+      { id: "custom", label: "Benedetto", color: "#ffc53d" },
+    ]);
+    expect(next).toEqual([
+      { id: "poisoned", rounds: 2 },
+      { id: "custom", label: "Benedetto", color: "#ffc53d" },
+    ]);
+    expect(expired).toEqual([{ id: "prone", rounds: 1 }]);
   });
 });
 

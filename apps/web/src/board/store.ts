@@ -31,10 +31,12 @@ import {
   TERRAIN_MAP,
   type TerrainOp,
   TOKEN_IDENTITY_KEYS,
+  type TokenCondition,
   type TokenIdentity,
   type TokenItem,
   type TurnSettings,
   terrainOpSchema,
+  tickConditions,
   tokenIdentitySchema,
   turnSettingsSchema,
   VITALS_MAP,
@@ -706,8 +708,31 @@ export class BoardStore {
   }
 
   /** Passa al token successivo (o precedente) dell'ordine. */
-  advanceTurn(direction: 1 | -1 = 1) {
-    this.setTurn(stepTurn(this.getInitiativeOrder(), this.turn, direction));
+  /**
+   * Passa al turno successivo o precedente. Andando avanti, all'inizio del turno di un token le
+   * durate delle sue condizioni scendono di uno e quelle a zero spariscono, nello stesso passo di
+   * annulla. Restituisce il token e le condizioni finite, se ce ne sono.
+   */
+  advanceTurn(direction: 1 | -1 = 1): { token: TokenItem; expired: TokenCondition[] } | null {
+    const next = stepTurn(this.getInitiativeOrder(), this.turn, direction);
+    if (!turnSettingsSchema.safeParse(next).success) return null;
+    const starts =
+      direction === 1 &&
+      next.activeId !== null &&
+      (next.activeId !== this.turn.activeId || next.round !== this.turn.round);
+    const part = starts && next.activeId ? this.partOf(next.activeId) : null;
+    // Dal documento, non dallo snapshot: per il GM lo snapshot ha anche i PF segreti.
+    const raw = part && next.activeId ? part.loaded.get(next.activeId) : undefined;
+    const token = raw?.kind === "token" && raw.conditions?.some((c) => c.rounds) ? raw : null;
+    const ticked = token ? tickConditions(token.conditions) : null;
+    this.action(() => {
+      this.transact(this.pub, () => this.settings.set("turn", next));
+      if (part && token && ticked) {
+        this.transact(part, () => part.items.set(token.id, { ...token, conditions: ticked.next }));
+      }
+    });
+    if (!token || !ticked || ticked.expired.length === 0) return null;
+    return { token: this.byId.get(token.id) as TokenItem, expired: ticked.expired };
   }
 
   /** Riporta i turni all'inizio, lasciando l'ordine com'è. */

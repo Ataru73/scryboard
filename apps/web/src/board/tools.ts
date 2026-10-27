@@ -10,6 +10,8 @@ import {
   type StampId,
   type TemplateShape,
   type TerrainOp,
+  type TokenCondition,
+  type TokenItem,
   type WallKind,
 } from "@scryboard/shared";
 import { create } from "zustand";
@@ -130,6 +132,8 @@ interface BoardUiState {
   initiativeOpen: boolean;
   /** Token che si sta agganciando: il prossimo clic su un altro token è quello principale. */
   attachFrom: string | null;
+  /** Condizioni finite all'inizio dell'ultimo turno (le mostra il pannello dei turni al GM). */
+  expiredConditions: { token: TokenItem; expired: TokenCondition[] } | null;
   tokenDraft: TokenDraft;
   gridPanelOpen: boolean;
   fogMode: FogMode;
@@ -183,6 +187,7 @@ interface BoardUiState {
   setRulerShape: (shape: BoardUiState["rulerShape"]) => void;
   setInitiativeOpen: (open: boolean) => void;
   setAttachFrom: (id: string | null) => void;
+  setExpiredConditions: (value: BoardUiState["expiredConditions"]) => void;
   setTokenDraft: (patch: Partial<TokenDraft>) => void;
   setGridPanelOpen: (open: boolean) => void;
   setFog: (patch: Partial<Pick<BoardUiState, "fogMode" | "fogShape" | "fogBrush">>) => void;
@@ -252,6 +257,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   rulerShape: "ruler",
   initiativeOpen: false,
   attachFrom: null,
+  expiredConditions: null,
   tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null, portrait: null },
   gridPanelOpen: false,
   fogMode: "cover",
@@ -298,6 +304,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setRulerShape: (rulerShape) => set({ rulerShape }),
   setInitiativeOpen: (initiativeOpen) => set({ initiativeOpen }),
   setAttachFrom: (attachFrom) => set({ attachFrom }),
+  setExpiredConditions: (expiredConditions) => set({ expiredConditions }),
   setTokenDraft: (patch) => set((s) => ({ tokenDraft: { ...s.tokenDraft, ...patch } })),
   setGridPanelOpen: (gridPanelOpen) => set({ gridPanelOpen }),
   setFog: (patch) => set(patch),

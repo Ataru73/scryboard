@@ -110,6 +110,17 @@ export const effects = {
     button: "Conditions",
     buttonCount: "Conditions ({{count}})",
     label: "Token conditions",
+    detailsLabel: "Durations and custom conditions",
+    roundsFor: "Rounds of {{label}}",
+    roundsTitle:
+      "Duration in rounds: it goes down when the token's turn starts and the condition ends at zero (empty = no limit)",
+    remove: "Remove {{label}}",
+    customLabel: "New custom condition",
+    customPlaceholder: "New condition",
+    customColor: "Condition color",
+    add: "Add",
+    withRounds_one: "{{label}}, {{count}} round",
+    withRounds_other: "{{label}}, {{count}} rounds",
   },
   aura: {
     radiusLabel: "Aura (squares)",
@@ -168,6 +179,8 @@ export const effects = {
     },
   },
   initiative: {
+    expired_one: "Ended on {{name}}: {{list}}",
+    expired_other: "Ended on {{name}}: {{list}}",
     title: "Initiative",
     round: "Round {{round}}",
     close: "Close",

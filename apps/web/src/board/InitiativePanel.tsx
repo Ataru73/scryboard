@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import type { BoardStore } from "./store";
 import { useBoardUi } from "./tools";
-import { VitalsSummary } from "./VitalsSummary";
+import { conditionName, VitalsSummary } from "./VitalsSummary";
 
 interface Props {
   store: BoardStore;
@@ -24,6 +24,7 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   const turn: TurnSettings = useSyncExternalStore(store.subscribe, store.getTurn);
   const selectedIds = useBoardUi((s) => s.selectedIds);
+  const expired = useBoardUi((s) => s.expiredConditions);
   const order = initiativeOrder(tokens);
   const gm = role === "gm";
   const activeShown = order.some((t) => t.id === turn.activeId);
@@ -105,6 +106,15 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
           {t("effects.initiative.hiddenActiveTurn")}
         </p>
       )}
+      {gm && expired && (
+        <p className="small" role="status">
+          {t("effects.initiative.expired", {
+            count: expired.expired.length,
+            name: expired.token.name || t("effects.initiative.token"),
+            list: expired.expired.map((c) => conditionName(t, c)).join(", "),
+          })}
+        </p>
+      )}
       {gm && (
         <div className="initiative-actions">
           <button
@@ -118,7 +128,10 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
             type="button"
             title={t("effects.initiative.previousTurnTitle")}
             disabled={order.length === 0}
-            onClick={() => store.advanceTurn(-1)}
+            onClick={() => {
+              store.advanceTurn(-1);
+              useBoardUi.getState().setExpiredConditions(null);
+            }}
           >
             {t("effects.initiative.previousTurn")}
           </button>
@@ -127,7 +140,7 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
             className="primary"
             title={t("effects.initiative.nextTurnTitle")}
             disabled={order.length === 0}
-            onClick={() => store.advanceTurn(1)}
+            onClick={() => useBoardUi.getState().setExpiredConditions(store.advanceTurn(1))}
           >
             {t("effects.initiative.nextTurn")}
           </button>
@@ -141,6 +154,7 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
                 null,
               );
               store.resetTurn();
+              useBoardUi.getState().setExpiredConditions(null);
             }}
           >
             {t("effects.initiative.endCombat")}

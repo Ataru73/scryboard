@@ -1,4 +1,6 @@
-import type { ConditionId } from "@scryboard/shared";
+import { CONDITIONS, type ConditionId, type TokenCondition } from "@scryboard/shared";
+import type { TFunction } from "i18next";
+import { catalogLabel } from "../i18n/catalog";
 
 /**
  * Icone delle condizioni: tracciati SVG su una griglia 24×24, da disegnare a tratto. Le usa sia il
@@ -41,3 +43,27 @@ export const CONDITION_ICONS: Record<ConditionId, { path: string; dash?: boolean
   },
   marked: { path: "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" },
 };
+
+const CATALOG = new Map<string, (typeof CONDITIONS)[number]>(CONDITIONS.map((c) => [c.id, c]));
+
+/** Nome della condizione nella lingua dell'interfaccia; le personalizzate hanno la loro etichetta. */
+export function conditionLabel(t: TFunction, condition: TokenCondition): string {
+  if (condition.id === "custom") return condition.label;
+  return catalogLabel(
+    t,
+    "conditions",
+    condition.id,
+    CATALOG.get(condition.id)?.label ?? condition.id,
+  );
+}
+
+export function conditionColor(condition: TokenCondition): string {
+  return condition.id === "custom"
+    ? condition.color
+    : (CATALOG.get(condition.id)?.color ?? "#ffffff");
+}
+
+/** Iniziale di una condizione personalizzata, al posto dell'icona. */
+export function conditionInitial(label: string): string {
+  return (Array.from(label.trim())[0] ?? "?").toUpperCase();
+}

@@ -87,28 +87,117 @@ export const CONDITIONS = [
 export type ConditionId = (typeof CONDITIONS)[number]["id"];
 export const CONDITION_IDS = CONDITIONS.map((c) => c.id) as [ConditionId, ...ConditionId[]];
 
-/** Una condizione sul token; `rounds` (facoltativo) è la durata residua in round. */
-export const tokenConditionSchema = z.object({
-  id: z.enum(CONDITION_IDS),
-  rounds: z.number().int().min(1).max(999).optional(),
-});
+/** Condizioni personalizzate per token («Benedetto», «Marchio del cacciatore»), oltre al catalogo. */
+export const MAX_CUSTOM_CONDITIONS = 8;
+export const MAX_CONDITION_LABEL = 24;
+
+/** Durata residua in round: scende quando inizia il turno del token e a zero la condizione sparisce. */
+const rounds = z.number().int().min(1).max(999).optional();
+
+const catalogConditionSchema = z.object({ id: z.enum(CONDITION_IDS), rounds }).strict();
+
+const customConditionSchema = z
+  .object({
+    id: z.literal("custom"),
+    label: z.string().trim().min(1).max(MAX_CONDITION_LABEL),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    rounds,
+  })
+  .strict();
+
+/** Una condizione sul token: dal catalogo o personalizzata, con una durata facoltativa. */
+export const tokenConditionSchema = z.union([catalogConditionSchema, customConditionSchema]);
 export type TokenCondition = z.infer<typeof tokenConditionSchema>;
+export type CustomCondition = z.infer<typeof customConditionSchema>;
+
+/** Identifica una condizione sul token: l'id del catalogo, o l'etichetta per le personalizzate. */
+export function conditionKey(condition: TokenCondition): string {
+  return condition.id === "custom" ? `custom:${condition.label.toLowerCase()}` : condition.id;
+}
 
 export const tokenConditionsSchema = z
   .array(tokenConditionSchema)
-  .max(CONDITIONS.length)
+  .max(CONDITIONS.length + MAX_CUSTOM_CONDITIONS)
   .refine(
-    (list) => new Set(list.map((c) => c.id)).size === list.length,
+    (list) => new Set(list.map(conditionKey)).size === list.length,
     "Una condizione compare una volta sola",
+  )
+  .refine(
+    (list) => list.filter((c) => c.id === "custom").length <= MAX_CUSTOM_CONDITIONS,
+    "Troppe condizioni personalizzate",
   );
 
-/** Accende o spegne una condizione, tenendo l'ordine del catalogo. */
+/** Prima quelle del catalogo, nel suo ordine, poi le personalizzate nell'ordine in cui sono state aggiunte. */
+function sortConditions(list: TokenCondition[]): TokenCondition[] {
+  const rank = (c: TokenCondition) =>
+    c.id === "custom" ? CONDITION_IDS.length : CONDITION_IDS.indexOf(c.id);
+  return list
+    .map((condition, index) => ({ condition, index }))
+    .sort((a, b) => rank(a.condition) - rank(b.condition) || a.index - b.index)
+    .map(({ condition }) => condition);
+}
+
+/** Accende o spegne una condizione del catalogo; accendendola di nuovo non cambia la durata. */
 export function toggleCondition(
   list: readonly TokenCondition[] | undefined,
   id: ConditionId,
   on: boolean,
 ): TokenCondition[] {
-  const rest = (list ?? []).filter((c) => c.id !== id);
-  const next = on ? [...rest, { id }] : rest;
-  return next.sort((a, b) => CONDITION_IDS.indexOf(a.id) - CONDITION_IDS.indexOf(b.id));
+  const current = list ?? [];
+  if (on && current.some((c) => c.id === id)) return [...current];
+  const rest = current.filter((c) => c.id !== id);
+  return sortConditions(on ? [...rest, { id }] : rest);
+}
+
+/**
+ * Aggiunge una condizione personalizzata; restituisce null se l'etichetta è vuota, troppo lunga,
+ * già presente o se le personalizzate sono già al massimo.
+ */
+export function addCustomCondition(
+  list: readonly TokenCondition[] | undefined,
+  label: string,
+  color: string,
+): TokenCondition[] | null {
+  const next = [...(list ?? []), { id: "custom" as const, label: label.trim(), color }];
+  const parsed = tokenConditionsSchema.safeParse(next);
+  return parsed.success ? sortConditions(parsed.data) : null;
+}
+
+/** Toglie la condizione con quella chiave (vedi `conditionKey`). */
+export function removeCondition(
+  list: readonly TokenCondition[] | undefined,
+  key: string,
+): TokenCondition[] {
+  return (list ?? []).filter((c) => conditionKey(c) !== key);
+}
+
+/** Imposta o toglie (null) la durata in round della condizione con quella chiave. */
+export function setConditionRounds(
+  list: readonly TokenCondition[] | undefined,
+  key: string,
+  value: number | null,
+): TokenCondition[] {
+  return (list ?? []).map((c) => {
+    if (conditionKey(c) !== key) return c;
+    const { rounds: _, ...rest } = c;
+    return value === null ? rest : { ...rest, rounds: value };
+  });
+}
+
+/**
+ * Inizio del turno del token: le durate scendono di uno e le condizioni a zero spariscono.
+ * Restituisce l'elenco aggiornato e quelle finite.
+ */
+export function tickConditions(list: readonly TokenCondition[] | undefined): {
+  next: TokenCondition[];
+  expired: TokenCondition[];
+} {
+  const next: TokenCondition[] = [];
+  const expired: TokenCondition[] = [];
+  for (const condition of list ?? []) {
+    if (condition.rounds === undefined) next.push(condition);
+    else if (condition.rounds <= 1) expired.push(condition);
+    else next.push({ ...condition, rounds: condition.rounds - 1 });
+  }
+  return { next, expired };
 }

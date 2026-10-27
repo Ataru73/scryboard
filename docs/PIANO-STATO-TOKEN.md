@@ -187,6 +187,18 @@ intero del documento del GM, `vitals` compresa). Note rispetto al piano:
 
 ### S4 — Rifiniture (≈ 2 giorni, facoltativa)
 
+**Stato**: completata. Note rispetto al piano:
+- Le personalizzate sono `{ id: "custom", label, color, rounds? }` (etichetta di massimo 24
+  caratteri, unica senza distinguere maiuscole, al massimo 8 per token); sul token hanno
+  l'iniziale nel loro colore al posto dell'icona. Il colore si sceglie tra quelli dei disegni,
+  tranne il nero.
+- Durate e personalizzate si gestiscono sotto la fila delle icone, solo con un token selezionato:
+  per ogni condizione attiva un campo «round» (vuoto = senza limite) e una ×.
+- `advanceTurn(1)` scala le durate del token il cui turno inizia (anche se è l'unico nell'ordine
+  e ricomincia il round) nello stesso passo di annulla e restituisce le condizioni finite, che il
+  pannello dei turni mostra al GM. «Indietro» non restituisce i round: per quello c'è Ctrl+Z.
+- La scorciatoia è **D** («danno»), non H: H è già lo strumento per spostare la vista.
+
 **Cosa vede l'utente**
 - **Condizioni personalizzate**: un'etichetta breve con colore («Benedetto», «Marchio del
   cacciatore»), oltre al catalogo.

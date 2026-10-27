@@ -90,3 +90,32 @@ test("damage applies to every selected token in one step", async ({ browser }) =
     "Coboldo, 10 punti ferita su 10",
   ]);
 });
+
+test("conditions with a duration end when the token's turn starts", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await placeToken(gm, "Aldo", 175, 405);
+  await gm.keyboard.press("v");
+  await click(gm, 175, 405);
+  await gm.getByRole("button", { name: "Condizioni" }).click();
+  await gm.getByRole("button", { name: "Prono" }).click();
+  await gm.getByLabel("Round di Prono").fill("1");
+  await gm.getByLabel("Nuova condizione personalizzata").fill("Benedetto");
+  await gm.getByLabel("Nuova condizione personalizzata").press("Enter");
+  await expect(tokenList(player).getByRole("listitem")).toHaveText([
+    "Aldo, prono, 1 round, Benedetto",
+  ]);
+
+  await gm.getByRole("button", { name: "Turni" }).click();
+  const panel = gm.getByRole("region", { name: "Turni" });
+  await panel.getByRole("button", { name: "Aggiungi selezione" }).click();
+  await panel.getByRole("button", { name: "Avanti" }).click();
+  await expect(panel.getByRole("status")).toHaveText("Finita su Aldo: prono");
+  await expect(tokenList(player).getByRole("listitem")).toHaveText(["Aldo, Benedetto"]);
+
+  // D porta il fuoco sul campo di danno e cura del token selezionato.
+  await click(gm, 600, 600);
+  await click(gm, 175, 405);
+  await gm.getByRole("button", { name: "Aggiungi PF" }).click();
+  await gm.keyboard.press("d");
+  await expect(gm.getByLabel("Danno o cura")).toBeFocused();
+});

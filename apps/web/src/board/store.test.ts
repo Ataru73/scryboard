@@ -297,6 +297,49 @@ describe("BoardStore", () => {
     expect(player.get(copy)).not.toHaveProperty("hp");
   });
 
+  it("counts condition durations down when a token's turn starts", () => {
+    const publicDoc = new Y.Doc();
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, gmDoc, "gm");
+    store.add([
+      {
+        ...token("a"),
+        initiative: 20,
+        conditions: [
+          { id: "prone", rounds: 1 },
+          { id: "poisoned", rounds: 2 },
+        ],
+      },
+      { ...token("b"), initiative: 10 },
+    ]);
+    // I PF segreti del token non devono finire nel documento pubblico riscrivendo il token.
+    store.update({ a: { hp: { value: 5, max: 9, temp: 0 }, hpVisibility: "gm" } });
+
+    const first = store.advanceTurn(1);
+    expect(first?.token.id).toBe("a");
+    expect(first?.expired).toEqual([{ id: "prone", rounds: 1 }]);
+    expect(store.get("a")).toMatchObject({ conditions: [{ id: "poisoned", rounds: 1 }] });
+    expect(publicDoc.getMap("items").get("a")).not.toHaveProperty("hp");
+
+    // Il turno di b non tocca a; tornare indietro non conta.
+    expect(store.advanceTurn(1)).toBeNull();
+    expect(store.get("a")).toMatchObject({ conditions: [{ id: "poisoned", rounds: 1 }] });
+    store.advanceTurn(-1);
+    expect(store.get("a")).toMatchObject({ conditions: [{ id: "poisoned", rounds: 1 }] });
+
+    // Ctrl+Z annulla insieme il turno e il conteggio.
+    store.undo();
+    store.undo();
+    store.undo();
+    expect(store.getTurn().activeId).toBeNull();
+    expect(store.get("a")).toMatchObject({
+      conditions: [
+        { id: "prone", rounds: 1 },
+        { id: "poisoned", rounds: 2 },
+      ],
+    });
+  });
+
   it("duplicates items one cell away, numbering token copies", () => {
     const store = new BoardStore(new Y.Doc(), null, "gm");
     store.add([

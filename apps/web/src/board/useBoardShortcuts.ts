@@ -108,7 +108,18 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
         case "n":
         case "N":
           // Turno successivo: solo il GM, e solo se c'è un ordine.
-          if (role === "gm") store.advanceTurn(1);
+          if (role === "gm") ui.setExpiredConditions(store.advanceTurn(1));
+          return;
+        case "d":
+        case "D":
+          // Danno o cura sul token (o sui token) selezionati: porta il fuoco sul campo.
+          if (ui.selectedIds.length > 0) {
+            const field = document.querySelector<HTMLInputElement>(".damage-field");
+            if (field) {
+              e.preventDefault();
+              field.focus();
+            }
+          }
           return;
         case "]":
           store.bringToFront(editable);

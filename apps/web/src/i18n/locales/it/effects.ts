@@ -110,6 +110,17 @@ export const effects = {
     button: "Condizioni",
     buttonCount: "Condizioni ({{count}})",
     label: "Condizioni del token",
+    detailsLabel: "Durate e condizioni personalizzate",
+    roundsFor: "Round di {{label}}",
+    roundsTitle:
+      "Durata in round: scende all'inizio del turno del token e a zero la condizione sparisce (vuoto = senza limite)",
+    remove: "Togli {{label}}",
+    customLabel: "Nuova condizione personalizzata",
+    customPlaceholder: "Nuova condizione",
+    customColor: "Colore della condizione",
+    add: "Aggiungi",
+    withRounds_one: "{{label}}, {{count}} round",
+    withRounds_other: "{{label}}, {{count}} round",
   },
   aura: {
     radiusLabel: "Aura (caselle)",
@@ -168,6 +179,8 @@ export const effects = {
     },
   },
   initiative: {
+    expired_one: "Finita su {{name}}: {{list}}",
+    expired_other: "Finite su {{name}}: {{list}}",
     title: "Turni",
     round: "Round {{round}}",
     close: "Chiudi",

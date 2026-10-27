@@ -1272,6 +1272,22 @@ button.danger {
   gap: 3px;
 }
 
+.condition-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.condition-rounds {
+  font-size: 0.65rem;
+  vertical-align: sub;
+}
+
+.selection-panel .custom-condition {
+  width: 11rem;
+}
+
 .vitals-dot {
   display: inline-block;
   width: 8px;

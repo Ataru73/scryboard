@@ -1,13 +1,22 @@
-import { CONDITIONS, hpBandOf, type TokenItem } from "@scryboard/shared";
+import { conditionKey, hpBandOf, type TokenCondition, type TokenItem } from "@scryboard/shared";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { catalogLabel } from "../i18n/catalog";
-import { CONDITION_ICONS } from "./conditionIcons";
+import { CONDITION_ICONS, conditionInitial, conditionLabel } from "./conditionIcons";
 import { HP_BAND_COLORS } from "./Vitals";
 
-const CONDITION_INFO = new Map<string, (typeof CONDITIONS)[number]>(
-  CONDITIONS.map((c) => [c.id, c]),
-);
+/** Nome della condizione dentro una frase: minuscolo, tranne le personalizzate. */
+export function conditionName(t: TFunction, condition: TokenCondition): string {
+  return condition.id === "custom" ? condition.label : conditionLabel(t, condition).toLowerCase();
+}
+
+/** «prono», o «prono, 3 round» se ha una durata. */
+export function conditionText(t: TFunction, condition: TokenCondition): string {
+  const label = conditionName(t, condition);
+  return condition.rounds
+    ? t("effects.conditions.withRounds", { label, count: condition.rounds })
+    : label;
+}
 
 /** Punti ferita (se chi guarda li conosce) o fascia, e condizioni, a parole. */
 export function vitalsText(t: TFunction, token: TokenItem): string {
@@ -21,9 +30,7 @@ export function vitalsText(t: TFunction, token: TokenItem): string {
     });
   }
   if (token.conditions?.length) {
-    const list = token.conditions.map((c) =>
-      catalogLabel(t, "conditions", c.id, CONDITION_INFO.get(c.id)?.label ?? c.id).toLowerCase(),
-    );
+    const list = token.conditions.map((c) => conditionText(t, c));
     text += t("core.tokenList.conditions", { list: list.join(", ") });
   }
   return text;
@@ -42,28 +49,31 @@ export function VitalsSummary({ token }: { token: TokenItem }) {
           {token.hp ? `${token.hp.value}/${token.hp.max}` : catalogLabel(t, "hpBands", band, band)}
         </span>
       )}
-      {token.conditions?.map((c) => {
-        const info = CONDITION_INFO.get(c.id);
-        const icon = CONDITION_ICONS[c.id];
-        return (
-          <svg
-            key={c.id}
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="none"
-            // Nei pannelli il colore del testo: i gialli del token non si leggono sul chiaro.
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray={icon.dash ? "3 2.5" : undefined}
-          >
-            <title>{catalogLabel(t, "conditions", c.id, info?.label ?? c.id)}</title>
-            <path d={icon.path} />
-          </svg>
-        );
-      })}
+      {token.conditions?.map((c) => (
+        <span key={conditionKey(c)} className="condition-chip" title={conditionText(t, c)}>
+          {c.id === "custom" ? (
+            <span aria-hidden="true">{conditionInitial(c.label)}</span>
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              // Nei pannelli il colore del testo: i gialli del token non si leggono sul chiaro.
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray={CONDITION_ICONS[c.id].dash ? "3 2.5" : undefined}
+              aria-hidden="true"
+            >
+              <path d={CONDITION_ICONS[c.id].path} />
+            </svg>
+          )}
+          {c.rounds && <span className="condition-rounds">{c.rounds}</span>}
+          <span className="visually-hidden">{conditionText(t, c)}</span>
+        </span>
+      ))}
     </span>
   );
 }

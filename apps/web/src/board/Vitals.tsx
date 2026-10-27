@@ -1,12 +1,12 @@
 import {
-  CONDITIONS,
+  conditionKey,
   type HitPoints,
   type HpBand,
   hpBandOf,
   type TokenCondition,
 } from "@scryboard/shared";
 import { Circle, Group, Line, Path, Rect, Text } from "react-konva";
-import { CONDITION_ICONS } from "./conditionIcons";
+import { CONDITION_ICONS, conditionColor, conditionInitial } from "./conditionIcons";
 import { FONT_FAMILY } from "./ItemNode";
 
 /** Colore della barra per ogni fascia. */
@@ -19,8 +19,6 @@ export const HP_BAND_COLORS: Record<HpBand, string> = {
 
 /** Riempimento della barra a scatti, per chi vede solo la fascia. */
 const BAND_FILL: Record<HpBand, number> = { healthy: 1, wounded: 0.75, bloodied: 0.4, down: 0 };
-
-const CONDITION_COLORS = new Map<string, string>(CONDITIONS.map((c) => [c.id, c.color]));
 
 /** Fascia mostrata sul token: dai numeri se chi guarda li conosce, altrimenti quella pubblica. */
 export function visibleBand(hp: HitPoints | null | undefined, band: HpBand | undefined) {
@@ -130,26 +128,45 @@ export function ConditionBadges({
   };
   return (
     <>
-      {shown.map((condition, index) => {
-        const icon = CONDITION_ICONS[condition.id];
-        return (
-          <Group key={condition.id} {...at(index)} listening={false} name="condition-badge">
-            <Circle radius={size / 2} fill="#1d1a24" stroke="#ffffff" strokeWidth={1.5} />
+      {shown.map((condition, index) => (
+        <Group
+          key={conditionKey(condition)}
+          {...at(index)}
+          listening={false}
+          name="condition-badge"
+        >
+          <Circle radius={size / 2} fill="#1d1a24" stroke="#ffffff" strokeWidth={1.5} />
+          {condition.id === "custom" ? (
+            // Le personalizzate non hanno un'icona: l'iniziale nel loro colore.
+            <Text
+              text={conditionInitial(condition.label)}
+              x={-size / 2}
+              y={-size / 2}
+              width={size}
+              height={size}
+              align="center"
+              verticalAlign="middle"
+              fontFamily={FONT_FAMILY}
+              fontStyle="bold"
+              fontSize={size * 0.55}
+              fill={condition.color}
+            />
+          ) : (
             <Path
-              data={icon.path}
+              data={CONDITION_ICONS[condition.id].path}
               x={-12 * scale}
               y={-12 * scale}
               scaleX={scale}
               scaleY={scale}
-              stroke={CONDITION_COLORS.get(condition.id) ?? "#ffffff"}
+              stroke={conditionColor(condition)}
               strokeWidth={2.6}
-              dash={icon.dash ? [3, 2.5] : undefined}
+              dash={CONDITION_ICONS[condition.id].dash ? [3, 2.5] : undefined}
               lineCap="round"
               lineJoin="round"
             />
-          </Group>
-        );
-      })}
+          )}
+        </Group>
+      ))}
       {overflow && (
         <Group {...at(BADGE_ANGLES.length - 1)} listening={false} name="condition-badge">
           <Circle radius={size / 2} fill="#1d1a24" stroke="#ffffff" strokeWidth={1.5} />

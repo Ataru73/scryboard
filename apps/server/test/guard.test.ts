@@ -192,6 +192,10 @@ describe("token hit points and conditions", () => {
     expect(isAllowedPlayerItemChange("update", "t", token("t"), token("t", { conditions }))).toBe(
       true,
     );
+    const custom = [{ id: "custom", label: "Benedetto", color: "#ffc53d", rounds: 3 }];
+    expect(
+      isAllowedPlayerItemChange("update", "t", token("t"), token("t", { conditions: custom })),
+    ).toBe(true);
     const locked = token("t", { locked: true });
     expect(
       isAllowedPlayerItemChange("update", "t", locked, token("t", { locked: true, conditions })),
