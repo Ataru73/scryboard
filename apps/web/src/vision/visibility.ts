@@ -1,5 +1,6 @@
 import { blocksSight, sideOfSegment, type Wall } from "@scryboard/shared";
 import type { Point } from "../board/viewport";
+import { type WallSegment, wallPieces } from "../walls/geometry";
 
 /**
  * Segmenti che influenzano la vista, come array piatti [ax, ay, bx, by, ...] (trasferibili al
@@ -12,28 +13,20 @@ export interface SightGeometry {
   terrain: Float64Array;
 }
 
-/** Spezza le polilinee in segmenti piatti. */
-function flatten(walls: Wall[]): Float64Array {
+/** Appiattisce i segmenti in [ax, ay, bx, by, ...]. */
+function flatten(segments: WallSegment[]): Float64Array {
   const out: number[] = [];
-  for (const wall of walls) {
-    for (let i = 0; i + 3 < wall.points.length; i += 2) {
-      out.push(
-        wall.points[i] as number,
-        wall.points[i + 1] as number,
-        wall.points[i + 2] as number,
-        wall.points[i + 3] as number,
-      );
-    }
-  }
+  for (const { a, b } of segments) out.push(a.x, a.y, b.x, b.y);
   return Float64Array.from(out);
 }
 
+/** Una porta aperta posata su un muro vi apre un varco anche per la vista e la luce. */
 export function sightGeometry(walls: Iterable<Wall>): SightGeometry {
   const all = [...walls];
   return {
-    blocking: flatten(all.filter(blocksSight)),
-    oneWay: flatten(all.filter((w) => w.kind === "one-way")),
-    terrain: flatten(all.filter((w) => w.kind === "terrain")),
+    blocking: flatten(wallPieces(all, blocksSight)),
+    oneWay: flatten(wallPieces(all, (w) => w.kind === "one-way")),
+    terrain: flatten(wallPieces(all, (w) => w.kind === "terrain")),
   };
 }
 

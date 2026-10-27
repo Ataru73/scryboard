@@ -1,4 +1,4 @@
-import { blocksMovement, type Wall } from "@scryboard/shared";
+import { blocksMovement, type Door, type Wall } from "@scryboard/shared";
 import type { Point } from "../board/viewport";
 
 export interface WallSegment {
@@ -19,6 +19,11 @@ export interface SegmentIntersection {
 const PARAMETER_EPSILON = 1e-9;
 const DISTANCE_EPSILON = 1e-9;
 const MOVEMENT_CLEARANCE = 0.5;
+/**
+ * Distanza massima (px) dalla retta di un muro entro cui una porta aperta si considera posata su di
+ * esso: i contorni ricavati dal terreno non coincidono al pixel con una porta allineata alla griglia.
+ */
+const DOOR_ON_WALL_TOLERANCE = 12;
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 const cross = (a: Point, b: Point) => a.x * b.y - a.y * b.x;
@@ -28,18 +33,64 @@ const finitePoint = (p: Point) => Number.isFinite(p.x) && Number.isFinite(p.y);
 
 /** Espande le polilinee dei soli muri che bloccano il movimento. */
 export function wallSegments(walls: Iterable<Wall>): WallSegment[] {
+  return wallPieces(walls, blocksMovement);
+}
+
+/**
+ * Espande le polilinee dei muri scelti da `keep`, togliendo dai muri (non dalle porte) i tratti su
+ * cui è posata una porta aperta: una porta disegnata sopra un muro, ad esempio sul contorno di una
+ * stanza, quando è aperta deve lasciar passare.
+ */
+export function wallPieces(walls: Iterable<Wall>, keep: (wall: Wall) => boolean): WallSegment[] {
+  const all = [...walls];
+  const openDoors = all.filter((w): w is Door => w.kind === "door" && w.door === "open");
   const segments: WallSegment[] = [];
-  for (const wall of walls) {
-    if (!blocksMovement(wall)) continue;
+  for (const wall of all) {
+    if (!keep(wall)) continue;
     for (let i = 0; i + 3 < wall.points.length; i += 2) {
-      segments.push({
-        a: { x: wall.points[i] as number, y: wall.points[i + 1] as number },
-        b: { x: wall.points[i + 2] as number, y: wall.points[i + 3] as number },
-        wall,
-      });
+      const a = { x: wall.points[i] as number, y: wall.points[i + 1] as number };
+      const b = { x: wall.points[i + 2] as number, y: wall.points[i + 3] as number };
+      if (wall.kind === "door") {
+        segments.push({ a, b, wall });
+        continue;
+      }
+      for (const [from, to] of withoutOpenings(a, b, openDoors)) {
+        segments.push({ a: from, b: to, wall });
+      }
     }
   }
   return segments;
+}
+
+/** I pezzi di `a → b` (nello stesso verso) che restano togliendo i tratti coperti da `doors`. */
+function withoutOpenings(a: Point, b: Point, doors: Door[]): [Point, Point][] {
+  const r = subtract(b, a);
+  const length = Math.hypot(r.x, r.y);
+  if (doors.length === 0 || !Number.isFinite(length) || length === 0) return [[a, b]];
+  const dir = { x: r.x / length, y: r.y / length };
+
+  const cuts: [number, number][] = [];
+  for (const door of doors) {
+    const c = subtract({ x: door.points[0] as number, y: door.points[1] as number }, a);
+    const d = subtract({ x: door.points[2] as number, y: door.points[3] as number }, a);
+    if (Math.abs(cross(dir, c)) > DOOR_ON_WALL_TOLERANCE) continue;
+    if (Math.abs(cross(dir, d)) > DOOR_ON_WALL_TOLERANCE) continue;
+    const low = Math.max(0, Math.min(dot(c, dir), dot(d, dir)));
+    const high = Math.min(length, Math.max(dot(c, dir), dot(d, dir)));
+    if (high - low > DISTANCE_EPSILON) cuts.push([low, high]);
+  }
+  if (cuts.length === 0) return [[a, b]];
+
+  cuts.sort((x, y) => x[0] - y[0]);
+  const at = (s: number): Point => ({ x: a.x + dir.x * s, y: a.y + dir.y * s });
+  const pieces: [Point, Point][] = [];
+  let from = 0;
+  for (const [low, high] of cuts) {
+    if (low - from > DISTANCE_EPSILON) pieces.push([from === 0 ? a : at(from), at(low)]);
+    from = Math.max(from, high);
+  }
+  if (length - from > DISTANCE_EPSILON) pieces.push([from === 0 ? a : at(from), b]);
+  return pieces;
 }
 
 function pointIntersection(p: Point, c: Point, s: Point, ss: number) {

@@ -58,6 +58,26 @@ describe("wallSegments", () => {
     expect(wallSegments([door("open")])).toEqual([]);
     expect(constrainMovement(p(0, 0), p(10, 0), wallSegments([door("open")]))).toEqual(p(10, 0));
   });
+
+  it("opens a gap in a wall under an open door", () => {
+    const wall = barrier([0, 0, 0, 70, 0, 140]);
+    const onWall: Wall = { id: "d", kind: "door", door: "open", points: [3, 50, 3, 90] };
+    const segments = wallSegments([wall, onWall]);
+    expect(segments.map(({ a, b }) => [a, b])).toEqual([
+      [p(0, 0), p(0, 50)],
+      [p(0, 90), p(0, 140)],
+    ]);
+    expect(constrainMovement(p(-20, 70), p(20, 70), segments)).toEqual(p(20, 70));
+    expect(constrainMovement(p(-20, 20), p(20, 20), segments).x).toBeLessThan(0);
+  });
+
+  it("keeps the wall under a closed door or under an open door far from it", () => {
+    const wall = barrier([0, 0, 0, 140]);
+    const closed: Wall = { id: "c", kind: "door", door: "closed", points: [0, 50, 0, 90] };
+    const far: Wall = { id: "f", kind: "door", door: "open", points: [30, 50, 30, 90] };
+    expect(wallSegments([wall, closed, far]).map((s) => s.wall.id)).toEqual(["wall", "c"]);
+    expect(wallSegments([wall, far])[0]).toEqual({ a: p(0, 0), b: p(0, 140), wall });
+  });
 });
 
 describe("segmentIntersection", () => {
