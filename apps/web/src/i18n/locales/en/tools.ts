@@ -12,6 +12,7 @@ export const tools = {
     tools: {
       select: "Select",
       hand: "Pan",
+      laser: "Laser pointer",
       pen: "Pencil",
       line: "Line",
       rect: "Rectangle",

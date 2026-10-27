@@ -12,6 +12,7 @@ export const tools = {
     tools: {
       select: "Seleziona",
       hand: "Sposta la vista",
+      laser: "Puntatore laser",
       pen: "Matita",
       line: "Linea",
       rect: "Rettangolo",

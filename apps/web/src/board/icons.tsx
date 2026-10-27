@@ -68,6 +68,12 @@ export const TOOL_ICONS: Record<Tool, ReactNode> = {
       <path d="M6 20h12" />
     </Icon>
   ),
+  laser: (
+    <Icon>
+      <path d="M4 20c3-1 5-3 7-6s4-5 7-6" strokeDasharray="2 3" />
+      <circle cx="19" cy="7.5" r="2.5" />
+    </Icon>
+  ),
   ruler: (
     <Icon>
       <path d="M3 16.5L16.5 3 21 7.5 7.5 21z" />

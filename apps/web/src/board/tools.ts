@@ -22,6 +22,8 @@ import type { Viewport } from "./viewport";
 export type Tool =
   | "select"
   | "hand"
+  /** Puntatore con scia: indica un punto a tutti senza lasciare niente sulla lavagna. */
+  | "laser"
   | "pen"
   | "line"
   | "rect"
@@ -55,6 +57,7 @@ export type Tool =
 export const TOOL_SHORTCUTS: Record<string, Tool> = {
   v: "select",
   h: "hand",
+  q: "laser",
   p: "pen",
   l: "line",
   r: "rect",

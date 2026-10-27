@@ -174,6 +174,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       <div className="toolbar toolbar-tools" role="toolbar" aria-label={t("tools.toolbar.label")}>
         {toolButton(item("select", "V"))}
         {toolButton(item("hand", "H"))}
+        {toolButton(item("laser", "Q"))}
         <ToolGroup
           label={t("tools.toolbar.groups.draw")}
           items={DRAW_GROUP}

@@ -34,7 +34,7 @@ costa poco, poi il lavoro architetturale (scene), infine le rifiniture.
 ```
 T1 Righello  →  T2 Aree e aure  →  T3 Turni  →  T4 Dadi  →  T5 Ping+  →  T6 Scene
 →  T7 Esporta/importa  →  T8 Raccolta asset  →  T9 Cavalcature  →  T10 Muri speciali  →  T11 Video
-→  T12 Schermo al tavolo
+→  T12 Schermo al tavolo  →  T13 Puntatore laser
 ```
 
 T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta **dopo** T6
@@ -409,6 +409,19 @@ perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
   dopo l'ultimo movimento. Un richiamo del GM vince finché il gruppo non si muove.
 - Non si disconnette per inattività: nessuno tocca lo schermo, e così tiene acceso anche il server
   finché resta aperto.
+
+### T13 — Puntatore laser
+
+**Stato**: completata, senza un piano scritto prima. Note:
+- Strumento «Puntatore laser» (`Q`, per tutti) accanto alla mano. Trascinando si traccia una scia
+  nel proprio colore; niente finisce nel documento né nello storico di annulla.
+- Viaggia nell'awareness (campo `laser`, come righello e ping): gli ultimi 48 punti del tratto con
+  il numero d'ordine del primo (`start`), così chi riceve aggiunge solo i punti nuovi anche con gli
+  invii limitati a uno ogni 50 ms. Lo stato altrui si valida (`parseLaserState`) prima di usarlo.
+- Ogni client fa svanire i punti in 1,2 s dal momento in cui li ha ricevuti (non conta l'orologio
+  di chi traccia). Si disegna in un livello Konva a parte, con un'unica `Shape` ridisegnata a ogni
+  fotogramma solo finché c'è una scia, senza passare da React.
+- La scia si vede anche sullo schermo al tavolo, che invece non mostra i cursori.
 
 ---
 

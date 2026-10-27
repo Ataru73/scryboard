@@ -74,6 +74,7 @@ con un job suo.
 | -------------------------------------- | -------------------------------------------------------------------------------- |
 | V H P L R O T E K                      | Seleziona, mano, matita, linea, rettangolo, ellisse, testo, gomma, token         |
 | M                                      | Righello e sagome d'area (distanza, cerchio, cono, cubo, raggio)                 |
+| Q                                      | Puntatore laser: una scia che tutti vedono e che svanisce da sola                |
 | Alt (trascinando)                      | Muove o disegna senza griglia; solo il GM ignora anche i muri                    |
 | B (solo GM)                            | Terreno: dipinge i biomi a pennello o come regioni, con gomma                    |
 | J (solo GM)                            | Percorso: strade e fiumi a clic o a mano libera; [ e ] cambiano la larghezza     |
@@ -126,6 +127,9 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   freccia sul bordo dello schermo lo indica e un clic centra la vista. Il pulsante _Porta qui i
   giocatori_ del GM (o Shift + clic prolungato) centra la vista di tutti i giocatori sullo stesso
   punto.
+- **Puntatore laser** (`Q`): trascinando si lascia una scia nel proprio colore che tutti vedono in
+  tempo reale (anche lo schermo al tavolo) e che svanisce in poco più di un secondo, senza lasciare
+  niente sulla lavagna.
 - **Aggancio**: _Aggancia a…_ nel pannello di selezione di un token lo lega a un altro (un
   cavaliere a una cavalcatura): muovendo il principale gli agganciati lo seguono con le stesse
   collisioni; muoverne uno da solo lo sgancia.

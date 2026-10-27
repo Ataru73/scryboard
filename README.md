@@ -73,6 +73,7 @@ each in its own job.
 | ------------------------------- | -------------------------------------------------------------------------------- |
 | V H P L R O T E K               | Select, hand, pencil, line, rectangle, ellipse, text, eraser, token              |
 | M                               | Ruler and area templates (distance, circle, cone, cube, ray)                     |
+| Q                               | Laser pointer: a trail everyone sees that fades on its own                       |
 | Alt (while dragging)            | Moves or draws without the grid; only the GM also ignores walls                  |
 | B (GM only)                     | Terrain: paints biomes with a brush or as regions, with an eraser                |
 | J (GM only)                     | Path: roads and rivers by clicking or freehand; [ and ] change the width         |
@@ -123,6 +124,8 @@ for the GM, also walls and doors.
 - **Pings**: a long press pings everyone. If a ping falls outside your view, an arrow on the screen
   edge points to it and a click centers the view. The GM's _Bring players here_ button (or
   Shift + long press) centers every player's view on the same point.
+- **Laser pointer** (`Q`): dragging leaves a trail in your color that everyone sees in real time
+  (the table screen too) and that fades in a little over a second, leaving nothing on the board.
 - **Attachments**: _Attach to…_ in the token's selection panel binds it to another token (a rider
   to a mount): moving the main token moves the attached ones with the same collisions; moving one
   alone detaches it.

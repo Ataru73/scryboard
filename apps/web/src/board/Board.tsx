@@ -78,6 +78,8 @@ import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from
 import { HandoutModal, ShowHandoutContext } from "./HandoutModal";
 import { InitiativePanel } from "./InitiativePanel";
 import { ItemNode, ROOF_FADED, SELECTION_COLOR, StampContent } from "./ItemNode";
+import { LaserTrails } from "./LaserTrails";
+import { addLaserPoint, type LaserState } from "./laser";
 import {
   formatDistance,
   formatElevation,
@@ -132,6 +134,7 @@ interface Props {
 type Interaction =
   | { type: "pan"; start: Point; viewport: Viewport }
   | { type: "stroke"; origin: Point; points: number[] }
+  | { type: "laser"; state: LaserState }
   | { type: "shape"; shape: ShapeItem["shape"]; start: Point; end: Point }
   | { type: "erase" }
   | { type: "calibrate"; start: Point; end: Point }
@@ -367,6 +370,7 @@ export function Board({
   const broadcastDraft = useAwarenessBroadcast<DraftStroke>(provider, "draft");
   const broadcastRuler = useAwarenessBroadcast<RulerState>(provider, "ruler");
   const broadcastTemplate = useAwarenessBroadcast<TemplateGeometry>(provider, "template");
+  const broadcastLaser = useAwarenessBroadcast<LaserState>(provider, "laser");
   /** Sagoma appena rilasciata: resta in vista qualche secondo, a meno che la si fissi con Maiusc. */
   const [lingering, setLingering] = useState<TemplateGeometry | null>(null);
   const lingerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -824,6 +828,12 @@ export function Board({
       case "pen":
         setInteraction({ type: "stroke", origin: p.world, points: [0, 0] });
         return;
+      case "laser": {
+        const state: LaserState = { id: newItemId(), start: 0, points: [p.world.x, p.world.y] };
+        setInteraction({ type: "laser", state });
+        broadcastLaser(state);
+        return;
+      }
       case "line":
       case "rect":
       case "ellipse":
@@ -1205,6 +1215,16 @@ export function Board({
           y: interaction.viewport.y + p.screen.y - interaction.start.y,
         });
         return;
+      case "laser": {
+        const { points } = interaction.state;
+        const lastX = points[points.length - 2] as number;
+        const lastY = points[points.length - 1] as number;
+        if (Math.hypot(p.world.x - lastX, p.world.y - lastY) * viewport.scale < 3) return;
+        const state = addLaserPoint(interaction.state, p.world.x, p.world.y);
+        setInteraction({ type: "laser", state });
+        broadcastLaser(state);
+        return;
+      }
       case "stroke": {
         const { points, origin } = interaction;
         const x = p.world.x - origin.x;
@@ -1290,6 +1310,10 @@ export function Board({
     const current = interaction;
     setInteraction(null);
     if (!current) return;
+    if (current.type === "laser") {
+      broadcastLaser(null);
+      return;
+    }
     if (current.type === "ruler") {
       broadcastRuler(null);
       return;
@@ -1960,6 +1984,11 @@ export function Board({
             onPointerLeave={() => {
               cancelPress();
               broadcastCursor(null);
+              // Fuori dalla lavagna il puntatore si spegne: la scia svanisce da sola.
+              if (interaction?.type === "laser") {
+                setInteraction(null);
+                broadcastLaser(null);
+              }
             }}
             onWheel={onWheel}
             // Lo schermo condiviso si guarda soltanto: nessun clic, cursore o zoom.
@@ -2256,6 +2285,14 @@ export function Board({
                     scale={viewport.scale}
                   />
                 )}
+            </Layer>
+            <Layer listening={false}>
+              <LaserTrails
+                provider={provider}
+                local={interaction?.type === "laser" ? interaction.state : null}
+                localColor={myColor}
+                scale={viewport.scale}
+              />
             </Layer>
           </Stage>
         )}
