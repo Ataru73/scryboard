@@ -1,8 +1,15 @@
-import { assetUrl, STAMPS } from "@scryboard/shared";
-import { useId, useMemo, useState, useSyncExternalStore } from "react";
+import { STAMPS } from "@scryboard/shared";
+import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { catalogLabel } from "../i18n/catalog";
-import { type CustomStamp, storage, subscribeGeminiKey } from "../lib/storage";
+import {
+  deleteGeneratedAsset,
+  ensureAssetInRoom,
+  type GeneratedAsset,
+  saveGeneratedAsset,
+  useGeneratedAssets,
+} from "../lib/generatedAssets";
+import { storage, subscribeGeminiKey } from "../lib/storage";
 import { stampImage } from "../stamps/generate";
 import { useAssetAuth } from "./assetAuth";
 import { StampGenerateIcon } from "./icons";
@@ -18,6 +25,54 @@ interface Props {
   centerWorld?: () => Point;
 }
 
+function CustomStampItem({
+  asset,
+  isSelected,
+  onSelect,
+  onRemove,
+  title,
+  ariaLabel,
+  removeTitle,
+}: {
+  asset: GeneratedAsset;
+  isSelected: boolean;
+  onSelect: () => void;
+  onRemove: (e: React.MouseEvent) => void;
+  title: string;
+  ariaLabel: string;
+  removeTitle: string;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(asset.blob);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [asset.blob]);
+
+  return (
+    <div className="stamp-custom-wrapper">
+      <button
+        type="button"
+        className="biome-button stamp-button"
+        aria-pressed={isSelected}
+        aria-label={ariaLabel}
+        title={title}
+        style={url ? { backgroundImage: `url(${url})` } : undefined}
+        onClick={onSelect}
+      />
+      <button
+        type="button"
+        className="stamp-delete-button"
+        title={removeTitle}
+        aria-label={removeTitle}
+        onClick={onRemove}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 /** Timbri di scenario (solo GM): clic per piazzarne uno, trascina per spargerne tanti. */
 export function StampPanel({ store, roomId, centerWorld }: Props) {
   const { t } = useTranslation();
@@ -26,22 +81,27 @@ export function StampPanel({ store, roomId, centerWorld }: Props) {
   const geminiKey = useSyncExternalStore(subscribeGeminiKey, storage.getGeminiKey);
   const randomId = useId();
   const [modalOpen, setModalOpen] = useState(false);
-  const [customStamps, setCustomStamps] = useState<CustomStamp[]>(() =>
-    roomId ? storage.getCustomStamps(roomId) : [],
-  );
+  const savedStamps = useGeneratedAssets("stamp");
 
   const previews = useMemo(
     () => Object.fromEntries(STAMPS.map((s) => [s.id, stampImage(s.id, 0).toDataURL()])),
     [],
   );
 
-  async function handlePickGenerated(file: File, size: number) {
+  async function handlePickGenerated(file: File, size: number, prompt: string) {
     if (!roomId) return;
     try {
       const { assetId } = await uploadImage(roomId, file, gmToken);
+      await saveGeneratedAsset({
+        id: assetId,
+        kind: "stamp",
+        blob: file,
+        mimeType: file.type,
+        prompt,
+        createdAt: new Date().toISOString(),
+        metadata: { size },
+      });
       storage.addGenerated(roomId, assetId);
-      storage.addCustomStamp(roomId, { assetId, size });
-      setCustomStamps(storage.getCustomStamps(roomId));
       setStamp({ stampAssetId: assetId, stampCustomSize: size });
 
       if (store && centerWorld) {
@@ -68,11 +128,17 @@ export function StampPanel({ store, roomId, centerWorld }: Props) {
     }
   }
 
-  function handleRemoveCustom(assetId: string, e: React.MouseEvent) {
+  function handleSelectCustom(asset: GeneratedAsset) {
+    const size = asset.metadata?.size ?? 1;
+    setStamp({ stampAssetId: asset.id, stampCustomSize: size });
+    if (roomId) {
+      void ensureAssetInRoom(roomId, asset, gmToken).catch(() => {});
+    }
+  }
+
+  async function handleRemoveCustom(assetId: string, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!roomId) return;
-    storage.removeCustomStamp(roomId, assetId);
-    setCustomStamps(storage.getCustomStamps(roomId));
+    await deleteGeneratedAsset(assetId);
     if (stampAssetId === assetId) {
       setStamp({ stampAssetId: null });
     }
@@ -98,30 +164,24 @@ export function StampPanel({ store, roomId, centerWorld }: Props) {
               />
             );
           })}
-          {customStamps.map((cs) => {
-            if (!roomId) return null;
-            const isSelected = stampAssetId === cs.assetId;
+          {savedStamps.map((cs) => {
+            const isSelected = stampAssetId === cs.id;
+            const size = cs.metadata?.size ?? 1;
             return (
-              <div key={cs.assetId} className="stamp-custom-wrapper">
-                <button
-                  type="button"
-                  className="biome-button stamp-button"
-                  aria-pressed={isSelected}
-                  aria-label={t("tools.stamp.customStamp")}
-                  title={t("tools.stamp.customStampTitle", { count: cs.size })}
-                  style={{ backgroundImage: `url(${assetUrl(roomId, cs.assetId)})` }}
-                  onClick={() => setStamp({ stampAssetId: cs.assetId, stampCustomSize: cs.size })}
-                />
-                <button
-                  type="button"
-                  className="stamp-delete-button"
-                  title={t("tools.stamp.removeCustom")}
-                  aria-label={t("tools.stamp.removeCustom")}
-                  onClick={(e) => handleRemoveCustom(cs.assetId, e)}
-                >
-                  ×
-                </button>
-              </div>
+              <CustomStampItem
+                key={cs.id}
+                asset={cs}
+                isSelected={isSelected}
+                ariaLabel={cs.prompt || t("tools.stamp.customStamp")}
+                title={
+                  cs.prompt
+                    ? `${cs.prompt} (${size} ${t("assets.stampGenerator.cells", { count: size })})`
+                    : t("tools.stamp.customStampTitle", { count: size })
+                }
+                removeTitle={t("tools.stamp.removeCustom")}
+                onSelect={() => handleSelectCustom(cs)}
+                onRemove={(e) => void handleRemoveCustom(cs.id, e)}
+              />
             );
           })}
           {geminiKey && roomId && (
@@ -152,7 +212,7 @@ export function StampPanel({ store, roomId, centerWorld }: Props) {
       {modalOpen && geminiKey && (
         <StampGenerator
           apiKey={geminiKey}
-          onPick={(file, size) => void handlePickGenerated(file, size)}
+          onPick={(file, size, prompt) => void handlePickGenerated(file, size, prompt)}
           onClose={() => setModalOpen(false)}
         />
       )}

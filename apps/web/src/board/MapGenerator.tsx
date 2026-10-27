@@ -12,7 +12,13 @@ import {
   type MapStyleId,
 } from "../gemini/api";
 import { toMapImage } from "../gemini/resize";
+import {
+  type GeneratedAsset,
+  saveGeneratedAsset,
+  useGeneratedAssets,
+} from "../lib/generatedAssets";
 import { storage } from "../lib/storage";
+import { GeneratedThumb } from "./GeneratedThumb";
 
 interface Props {
   apiKey: string;
@@ -28,6 +34,13 @@ const FORMAT_KEYS: Record<MapFormatId, string> = {
   "3:4": "portrait34",
 };
 
+async function sha256Hex(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  const hash = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hash}.webp`;
+}
+
 /** Finestra del GM per generare una mappa da una descrizione e sceglierne una variante. */
 export function MapGenerator({ apiKey, onPick, onClose }: Props) {
   const { t } = useTranslation();
@@ -40,6 +53,7 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedImage[]>([]);
+  const savedMaps = useGeneratedAssets("map");
 
   async function generate() {
     setBusy(true);
@@ -60,12 +74,29 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
     setBusy(true);
     setError(null);
     try {
-      onPick(await toMapImage(image));
+      const file = await toMapImage(image);
+      const id = await sha256Hex(file);
+      await saveGeneratedAsset({
+        id,
+        kind: "map",
+        blob: file,
+        mimeType: file.type,
+        prompt: description,
+        createdAt: new Date().toISOString(),
+        metadata: { style, aspectRatio: format },
+      });
+      onPick(file);
       onClose();
     } catch {
       setError(t("assets.mapGenerator.useFailed"));
       setBusy(false);
     }
+  }
+
+  function reuse(asset: GeneratedAsset) {
+    const file = new File([asset.blob], asset.id, { type: asset.mimeType });
+    onPick(file);
+    onClose();
   }
 
   return (
@@ -145,6 +176,26 @@ export function MapGenerator({ apiKey, onPick, onClose }: Props) {
             </button>
           ))}
         </div>
+      )}
+      {savedMaps.length > 0 && (
+        <section aria-label={t("assets.mapGenerator.history")}>
+          <h3 className="muted small">{t("assets.mapGenerator.history")}</h3>
+          <div className="map-results">
+            {savedMaps.map((asset) => (
+              <button
+                key={asset.id}
+                type="button"
+                className="generated-button"
+                disabled={busy}
+                aria-label={t("assets.mapGenerator.reuse")}
+                title={asset.prompt}
+                onClick={() => reuse(asset)}
+              >
+                <GeneratedThumb blob={asset.blob} />
+              </button>
+            ))}
+          </div>
+        </section>
       )}
       <div className="modal-actions">
         <button type="button" onClick={onClose}>

@@ -11,8 +11,15 @@ import {
   generateVariants,
 } from "../gemini/api";
 import { toTokenImage } from "../gemini/resize";
+import {
+  ensureAssetInRoom,
+  type GeneratedAsset,
+  saveGeneratedAsset,
+  useGeneratedAssets,
+} from "../lib/generatedAssets";
 import { storage } from "../lib/storage";
 import { useAssetAuth } from "./assetAuth";
+import { GeneratedThumb } from "./GeneratedThumb";
 import { UploadError, uploadImage } from "./upload";
 import { useImage } from "./useImage";
 
@@ -42,7 +49,7 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedImage[]>([]);
-  const [history, setHistory] = useState(() => storage.getGenerated(roomId));
+  const savedTokens = useGeneratedAssets("token");
 
   async function generate() {
     setBusy(true);
@@ -59,17 +66,41 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
     }
   }
 
-  /** Solo la variante scelta si riduce e si carica; le altre vengono scartate. */
+  /** Solo la variante scelta si riduce, si carica e si memorizza per tutte le stanze. */
   async function choose(image: GeneratedImage) {
     setBusy(true);
     setError(null);
     try {
-      const { assetId } = await uploadImage(roomId, await toTokenImage(image), gmToken);
+      const file = await toTokenImage(image);
+      const { assetId } = await uploadImage(roomId, file, gmToken);
+      await saveGeneratedAsset({
+        id: assetId,
+        kind: "token",
+        blob: file,
+        mimeType: file.type,
+        prompt: description,
+        createdAt: new Date().toISOString(),
+        metadata: { style },
+      });
       storage.addGenerated(roomId, assetId);
-      setHistory(storage.getGenerated(roomId));
       onPickAsset(assetId);
     } catch (e) {
       setError(e instanceof UploadError ? e.message : t("assets.generate.uploadFailed"));
+      setBusy(false);
+    }
+  }
+
+  /** Riutilizza un token generato in precedenza in qualunque stanza. */
+  async function reuse(asset: GeneratedAsset) {
+    setBusy(true);
+    setError(null);
+    try {
+      const assetId = await ensureAssetInRoom(roomId, asset, gmToken);
+      storage.addGenerated(roomId, assetId);
+      onPickAsset(assetId);
+    } catch (e) {
+      setError(e instanceof UploadError ? e.message : t("assets.generate.uploadFailed"));
+    } finally {
       setBusy(false);
     }
   }
@@ -137,19 +168,21 @@ export function GeneratePanel({ roomId, apiKey, tokenName, onPickAsset }: Props)
           ))}
         </div>
       )}
-      {history.length > 0 && (
+      {savedTokens.length > 0 && (
         <section aria-label={t("assets.generate.history")}>
           <h3 className="muted small">{t("assets.generate.history")}</h3>
           <div className="portrait-grid generated-grid">
-            {history.map((assetId) => (
+            {savedTokens.map((asset) => (
               <button
-                key={assetId}
+                key={asset.id}
                 type="button"
                 className="generated-button"
                 aria-label={t("assets.generate.reuse")}
-                onClick={() => onPickAsset(assetId)}
+                title={asset.prompt}
+                disabled={busy}
+                onClick={() => void reuse(asset)}
               >
-                <AssetThumb roomId={roomId} assetId={assetId} />
+                <GeneratedThumb blob={asset.blob} />
               </button>
             ))}
           </div>

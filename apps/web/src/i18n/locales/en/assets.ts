@@ -75,6 +75,8 @@ export const assets = {
     close: "Close",
     generate: "Generate",
     generating: "Generating…",
+    history: "Previously generated",
+    reuse: "Reuse a generated map",
     styles: {
       dungeon: "Dungeon or interior",
       outdoor: "Outdoors or nature",
@@ -105,6 +107,8 @@ export const assets = {
     close: "Close",
     generate: "Generate",
     generating: "Generating…",
+    history: "Previously generated",
+    reuse: "Reuse a generated stamp",
     styles: {
       prop: "Prop or furniture",
       nature: "Nature or vegetation",

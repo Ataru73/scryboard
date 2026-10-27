@@ -10,12 +10,14 @@ import {
   type StampStyleId,
 } from "../gemini/api";
 import { toStampImage } from "../gemini/resize";
+import { type GeneratedAsset, useGeneratedAssets } from "../lib/generatedAssets";
 import { storage } from "../lib/storage";
+import { GeneratedThumb } from "./GeneratedThumb";
 
 interface Props {
   apiKey: string;
   /** Riceve il timbro scelto, ridotto e pronto per essere caricato. */
-  onPick: (file: File, size: number) => void;
+  onPick: (file: File, size: number, prompt: string) => void;
   onClose: () => void;
 }
 
@@ -41,6 +43,7 @@ export function StampGenerator({ apiKey, onPick, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GeneratedImage[]>([]);
+  const savedStamps = useGeneratedAssets("stamp");
 
   async function generate() {
     setBusy(true);
@@ -62,12 +65,19 @@ export function StampGenerator({ apiKey, onPick, onClose }: Props) {
     setError(null);
     try {
       const file = await toStampImage(image, { transparent });
-      onPick(file, size);
+      onPick(file, size, description);
       onClose();
     } catch {
       setError(t("assets.stampGenerator.useFailed"));
       setBusy(false);
     }
+  }
+
+  function reuse(asset: GeneratedAsset) {
+    const sz = asset.metadata?.size ?? 1;
+    const file = new File([asset.blob], asset.id, { type: asset.mimeType });
+    onPick(file, sz, asset.prompt);
+    onClose();
   }
 
   return (
@@ -158,6 +168,26 @@ export function StampGenerator({ apiKey, onPick, onClose }: Props) {
             </button>
           ))}
         </div>
+      )}
+      {savedStamps.length > 0 && (
+        <section aria-label={t("assets.stampGenerator.history")}>
+          <h3 className="muted small">{t("assets.stampGenerator.history")}</h3>
+          <div className="grid generated-grid">
+            {savedStamps.map((asset) => (
+              <button
+                key={asset.id}
+                type="button"
+                className="generated-button"
+                disabled={busy}
+                aria-label={t("assets.stampGenerator.reuse")}
+                title={asset.prompt}
+                onClick={() => reuse(asset)}
+              >
+                <GeneratedThumb blob={asset.blob} />
+              </button>
+            ))}
+          </div>
+        </section>
       )}
       <div className="modal-actions">
         <button type="button" onClick={onClose}>

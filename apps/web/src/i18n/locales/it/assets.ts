@@ -74,6 +74,8 @@ export const assets = {
     close: "Chiudi",
     generate: "Genera",
     generating: "Generazione…",
+    history: "Generate in precedenza",
+    reuse: "Riusa una mappa generata",
     styles: {
       dungeon: "Dungeon o interno",
       outdoor: "Esterno o natura",
@@ -104,6 +106,8 @@ export const assets = {
     close: "Chiudi",
     generate: "Genera",
     generating: "Generazione…",
+    history: "Generati in precedenza",
+    reuse: "Riusa un timbro generato",
     styles: {
       prop: "Oggetto o arredo",
       nature: "Natura o vegetazione",
