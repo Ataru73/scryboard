@@ -170,4 +170,42 @@ test.describe("Touch and Foldable controls", () => {
 
     await context.close();
   });
+
+  test("toggles flex mode on foldable/touch devices", async ({ browser }) => {
+    const context = await browser.newContext({
+      hasTouch: true,
+      isMobile: true,
+      viewport: { width: 800, height: 1000 },
+    });
+    const page = await context.newPage();
+    await page.goto("/");
+    await page.getByLabel("Nome della stanza").fill("Stanza Flex");
+    await page.getByRole("button", { name: "Crea stanza come GM" }).click();
+    await joinAs(page, "Master Flex");
+
+    const room = page.locator(".room");
+    await expect(room).toHaveAttribute("data-posture", "continuous");
+
+    // Il pulsante Flex Mode è visibile nell'header e nella barra zoom
+    const flexBtn = page.getByRole("button", { name: "Modalità Flex" }).first();
+    await expect(flexBtn).toBeVisible();
+    await expect(flexBtn).toHaveAttribute("aria-pressed", "false");
+
+    // Attiva Flex Mode
+    await flexBtn.click();
+    await expect(flexBtn).toHaveAttribute("aria-pressed", "true");
+    await expect(room).toHaveAttribute("data-posture", "folded");
+    await expect(room).toHaveAttribute("data-fold-type", "tabletop");
+
+    // In Flex Mode la sidebar è visibile
+    const sidebar = page.locator("aside.sidebar");
+    await expect(sidebar).toBeVisible();
+
+    // Disattiva Flex Mode
+    await flexBtn.click();
+    await expect(flexBtn).toHaveAttribute("aria-pressed", "false");
+    await expect(room).toHaveAttribute("data-posture", "continuous");
+
+    await context.close();
+  });
 });

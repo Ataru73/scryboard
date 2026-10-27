@@ -53,6 +53,10 @@ export const tools = {
       label: "Movimento libero",
       title: "Movimento e righello liberi senza snap griglia (equivale ad Alt)",
     },
+    flexMode: {
+      label: "Modalità Flex",
+      title: "Modalità Flex (schermo piegato a 90° con mappa sopra e console sotto)",
+    },
     grid: "Griglia",
     undo: {
       label: "Annulla",

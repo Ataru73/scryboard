@@ -1074,38 +1074,108 @@ button.danger {
   }
 }
 
-/* Dispositivi Foldable — Postura a libro (cerniera verticale aperta a 2 schermi) */
-/* biome-ignore lint/correctness/noUnknownMediaFeatureName: Foldable CSS draft standard */
-@media (vertical-viewport-segments: 2), (screen-fold-posture: book) {
-  .room:not(.sidebar-collapsed) {
-    grid-template-columns: minmax(18rem, env(viewport-segment-width 0 0, 18rem)) 1fr;
+/* Dispositivi Foldable — Flex Mode / Tabletop (schermo piegato orizzontale appoggiato sul tavolo) */
+@media (device-posture: folded) and (orientation: landscape), (horizontal-viewport-segments: 2) {
+  html body .room {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  html body .room .room-header {
+    flex: none;
+    padding: max(0.4rem, env(safe-area-inset-top)) max(6rem, env(safe-area-inset-right)) 0.4rem
+      max(1rem, env(safe-area-inset-left));
+  }
+
+  html body .room .board-area {
+    flex: 1 1 50%;
+    height: env(viewport-segment-height 0 0, 50vh);
+    min-height: 200px;
+    position: relative;
+  }
+
+  html body .room .sidebar {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 50%;
+    height: env(viewport-segment-height 0 1, 50vh);
+    min-height: 200px;
+    overflow-y: auto;
+    border-top: 3px solid var(--accent);
+    border-left: none;
+    background: var(--surface);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 }
 
-/* Dispositivi Foldable — Flex Mode / Tabletop (schermo piegato orizzontale appoggiato sul tavolo) */
-/* biome-ignore lint/correctness/noUnknownMediaFeatureName: Foldable CSS draft standard */
-@media (horizontal-viewport-segments: 2), (screen-fold-posture: table-top) {
-  .room {
+.room[data-fold-type="tabletop"] {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.room[data-fold-type="tabletop"] .room-header {
+  flex: none;
+  padding: max(0.4rem, env(safe-area-inset-top)) max(6rem, env(safe-area-inset-right)) 0.4rem
+    max(1rem, env(safe-area-inset-left));
+}
+
+.room[data-fold-type="tabletop"] .board-area {
+  flex: 1 1 50%;
+  height: env(viewport-segment-height 0 0, 50vh);
+  min-height: 200px;
+  position: relative;
+}
+
+.room[data-fold-type="tabletop"] .sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 50%;
+  height: env(viewport-segment-height 0 1, 50vh);
+  min-height: 200px;
+  overflow-y: auto;
+  border-top: 3px solid var(--accent);
+  border-left: none;
+  background: var(--surface);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* Dispositivi Foldable — Postura a libro (cerniera verticale aperta a 2 schermi) */
+@media (device-posture: folded) and (orientation: portrait), (vertical-viewport-segments: 2) {
+  html body .room {
+    display: grid;
+    grid-template-columns: minmax(18rem, env(viewport-segment-width 0 0, 50vw)) 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "header header"
+      "sidebar board";
+    height: 100dvh;
+  }
+
+  html body .room .sidebar {
     display: flex;
-    flex-direction: column;
+    border-right: 3px solid var(--accent);
   }
+}
 
-  .board-area {
-    height: env(viewport-segment-height 0 0, 50vh);
-    flex: none;
-  }
+.room[data-fold-type="book"] {
+  display: grid;
+  grid-template-columns: minmax(18rem, env(viewport-segment-width 0 0, 50vw)) 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "header header"
+    "sidebar board";
+  height: 100dvh;
+}
 
-  .sidebar {
-    height: env(viewport-segment-height 0 1, 50vh);
-    flex: none;
-    overflow-y: auto;
-    border-top: 2px solid var(--accent);
-  }
-
-  .sidebar[hidden] {
-    display: block;
-    height: auto;
-  }
+.room[data-fold-type="book"] .sidebar {
+  display: flex;
+  border-right: 3px solid var(--accent);
 }
 
 .portrait-modal {

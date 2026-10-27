@@ -17,6 +17,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   FitIcon,
+  FlexModeIcon,
   GridIcon,
   ImageIcon,
   MagnetIcon,
@@ -41,6 +42,7 @@ import { TokenStyleFields } from "./TokenStyleFields";
 import { ToolGroup } from "./ToolGroup";
 import { type Tool, useBoardUi } from "./tools";
 import { useIsTouchDevice } from "./touchDevice";
+import { useDevicePosture } from "./useDevicePosture";
 import { clampScale, screenToWorld, zoomAt } from "./viewport";
 import { WallPanel } from "./WallPanel";
 
@@ -98,6 +100,7 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     freeGridMode,
   } = useBoardUi();
   const isTouch = useIsTouchDevice();
+  const { isFolded, toggleManualFlexMode } = useDevicePosture();
   const {
     setTool,
     setColor,
@@ -481,6 +484,16 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       >
         {isTouch && (
           <>
+            <button
+              type="button"
+              className="icon-button"
+              aria-pressed={isFolded}
+              aria-label={t("tools.toolbar.flexMode.label")}
+              title={t("tools.toolbar.flexMode.title")}
+              onClick={toggleManualFlexMode}
+            >
+              {FlexModeIcon}
+            </button>
             <button
               type="button"
               className="icon-button"

@@ -298,3 +298,10 @@ export const MultiSelectIcon = (
     <path d="M6.5 8.5l2 2 3.5-3.5" />
   </Icon>
 );
+
+export const FlexModeIcon = (
+  <Icon>
+    <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6H4V5z" />
+    <path d="M4 11l-2 8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2l-2-8H4z" />
+  </Icon>
+);

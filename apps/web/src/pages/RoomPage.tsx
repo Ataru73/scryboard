@@ -3,8 +3,10 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AssetAuthContext } from "../board/assetAuth";
 import { Board } from "../board/Board";
-import { InfoIcon, SettingsIcon, SidebarIcon } from "../board/icons";
+import { FlexModeIcon, InfoIcon, SettingsIcon, SidebarIcon } from "../board/icons";
 import { BoardStore } from "../board/store";
+import { useIsTouchDevice } from "../board/touchDevice";
+import { useDevicePosture } from "../board/useDevicePosture";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
 import { ApiRequestError, api, describeApiError } from "../lib/api";
 import { gmLink, gmTokenFromHash, isProjectorView, playerLink, projectorLink } from "../lib/links";
@@ -144,18 +146,24 @@ function Room({
   );
   useEffect(() => () => store?.destroy(), [store]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { isFolded, foldType, toggleManualFlexMode } = useDevicePosture();
+  const isTouch = useIsTouchDevice();
   const sidebarId = useId();
   const sidebarToggleLabel = t(
     sidebarCollapsed ? "pages.room.expandSidebar" : "pages.room.collapseSidebar",
   );
 
   return (
-    <div className={sidebarCollapsed ? "room sidebar-collapsed" : "room"}>
+    <div
+      className={sidebarCollapsed && !isFolded ? "room sidebar-collapsed" : "room"}
+      data-posture={isFolded ? "folded" : "continuous"}
+      data-fold-type={isFolded ? foldType : "none"}
+    >
       <header className="room-header">
         <button
           type="button"
           className="icon-button"
-          aria-expanded={!sidebarCollapsed}
+          aria-expanded={!sidebarCollapsed || isFolded}
           aria-controls={sidebarId}
           aria-label={sidebarToggleLabel}
           title={sidebarToggleLabel}
@@ -163,6 +171,18 @@ function Room({
         >
           {SidebarIcon}
         </button>
+        {(isTouch || isFolded) && (
+          <button
+            type="button"
+            className="icon-button"
+            aria-pressed={isFolded}
+            aria-label={t("tools.toolbar.flexMode.label")}
+            title={t("tools.toolbar.flexMode.title")}
+            onClick={toggleManualFlexMode}
+          >
+            {FlexModeIcon}
+          </button>
+        )}
         <a href="/" className="brand small">
           Scryboard
         </a>
@@ -171,7 +191,7 @@ function Room({
         <SettingsButton className="icon-button" icon={SettingsIcon} />
         <CreditsButton className="icon-button" icon={InfoIcon} />
       </header>
-      <aside id={sidebarId} className="sidebar" hidden={sidebarCollapsed}>
+      <aside id={sidebarId} className="sidebar" hidden={sidebarCollapsed && !isFolded}>
         {gmToken && <SharePanel roomId={room.id} roomName={room.name} gmToken={gmToken} />}
         {gmToken && (
           <ScenesPanel

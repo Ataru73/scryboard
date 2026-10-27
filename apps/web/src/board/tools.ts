@@ -180,6 +180,8 @@ interface BoardUiState {
   multiSelectMode: boolean;
   /** Modalità movimento e righello liberi su schermi touch senza snap griglia (equivale ad Alt). */
   freeGridMode: boolean;
+  /** Modalità schermo piegato a 90° forzata manualmente (Flex Mode / Tabletop). */
+  manualFlexMode: boolean;
   /** Stile del prossimo tetto. */
   roofStyle: RoofStyle;
   setTool: (tool: Tool) => void;
@@ -215,6 +217,8 @@ interface BoardUiState {
   toggleMultiSelectMode: () => void;
   setFreeGridMode: (on: boolean) => void;
   toggleFreeGridMode: () => void;
+  setManualFlexMode: (on: boolean) => void;
+  toggleManualFlexMode: () => void;
   setTerrain: (
     patch: Partial<
       Pick<
@@ -296,6 +300,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   stampRandom: true,
   multiSelectMode: false,
   freeGridMode: false,
+  manualFlexMode: false,
   roofStyle: "shingles",
   setTool: (tool) =>
     set({
@@ -348,4 +353,6 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   toggleMultiSelectMode: () => set((s) => ({ multiSelectMode: !s.multiSelectMode })),
   setFreeGridMode: (freeGridMode) => set({ freeGridMode }),
   toggleFreeGridMode: () => set((s) => ({ freeGridMode: !s.freeGridMode })),
+  setManualFlexMode: (manualFlexMode) => set({ manualFlexMode }),
+  toggleManualFlexMode: () => set((s) => ({ manualFlexMode: !s.manualFlexMode })),
 }));

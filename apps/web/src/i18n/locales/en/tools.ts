@@ -53,6 +53,10 @@ export const tools = {
       label: "Free movement",
       title: "Free movement and ruler ignoring grid snap (Alt equivalent)",
     },
+    flexMode: {
+      label: "Flex Mode",
+      title: "Flex Mode (90° folded screen with map on top and console below)",
+    },
     grid: "Grid",
     undo: {
       label: "Undo",
