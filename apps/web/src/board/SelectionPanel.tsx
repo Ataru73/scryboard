@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { AuraFields } from "./AuraFields";
 import { parentOf } from "./attach";
+import { ConditionsFields } from "./ConditionsFields";
 import { ConnectorFields } from "./ConnectorFields";
 import { ElevationField } from "./ElevationField";
 import {
@@ -21,6 +22,7 @@ import { PathFields } from "./PathFields";
 import type { BoardStore } from "./store";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { useBoardUi } from "./tools";
+import { DamageField, VitalsFields } from "./VitalsFields";
 
 interface Props {
   store: BoardStore;
@@ -56,6 +58,7 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
       : null;
   const showing = !!showable && handout?.assetId === showable;
   const removable = selected.filter((i) => canModify(i, role));
+  const editableTokens = tokens.filter((i) => canModify(i, role));
 
   return (
     <div className="toolbar selection-panel" role="toolbar" aria-label={t("core.selection.label")}>
@@ -75,7 +78,16 @@ export function SelectionPanel({ store, role, roomId, provider }: Props) {
           )}
           <AuraFields token={single} store={store} />
           <ElevationField token={single} store={store} />
+          <VitalsFields token={single} store={store} role={role} />
+          <ConditionsFields key={single.id} tokens={[single]} store={store} />
           <AttachButton token={single} store={store} />
+        </>
+      )}
+      {/* Con più token: danno o cura e condizioni per tutti insieme. */}
+      {!single && editableTokens.length > 0 && (
+        <>
+          <DamageField tokens={editableTokens} store={store} />
+          <ConditionsFields tokens={editableTokens} store={store} />
         </>
       )}
       {single?.kind === "token" && role === "gm" && canModify(single, role) && (

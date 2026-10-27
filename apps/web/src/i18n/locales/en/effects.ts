@@ -86,6 +86,31 @@ export const effects = {
     labelWithUnit: "Elevation ({{unit}})",
     title: "Height above the ground: the ruler accounts for it between tokens at different heights",
   },
+  vitals: {
+    add: "Add HP",
+    addTitle: "Give the token hit points",
+    valueLabel: "HP",
+    maxLabel: "Max HP",
+    tempLabel: "Temporary HP",
+    tempShort: "Temp",
+    damageLabel: "Damage or healing",
+    damagePlaceholder: "-7 / +5",
+    damageTitle:
+      "Type -7 for damage or +5 for healing and press Enter: temporary HP are spent first",
+    damageMany: "Damage or healing to {{count}} tokens with HP",
+    visibilityLabel: "Who sees the HP",
+    visibility: {
+      all: "Everyone",
+      band: "Players: band only",
+      gm: "GM only",
+    },
+    remove: "Remove HP",
+  },
+  conditions: {
+    button: "Conditions",
+    buttonCount: "Conditions ({{count}})",
+    label: "Token conditions",
+  },
   aura: {
     radiusLabel: "Aura (squares)",
     colorLabel: "Aura color",

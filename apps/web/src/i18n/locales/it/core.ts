@@ -75,6 +75,10 @@ export const core = {
     locked: ", bloccato",
     hidden: ", nascosto",
     obscured: ", in incognito",
+    hitPoints: ", {{value}} punti ferita su {{max}}",
+    tempHitPoints: ", {{count}} temporanei",
+    band: ", {{band}}",
+    conditions: ", {{list}}",
   },
   textEditor: {
     label: "Modifica testo",

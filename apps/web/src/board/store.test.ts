@@ -223,6 +223,80 @@ describe("BoardStore", () => {
     expect(store.get("a")).toMatchObject({ name: "a", obscured: true });
   });
 
+  it("keeps secret hit points in the GM document, leaving only the band to players", () => {
+    const publicDoc = new Y.Doc();
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, gmDoc, "gm");
+    const player = new BoardStore(publicDoc, null, "player");
+    store.add([token("orc")]);
+    store.update({ orc: { hp: { value: 15, max: 15, temp: 0 }, hpVisibility: "band" } });
+
+    expect(publicDoc.getMap("items").get("orc")).not.toHaveProperty("hp");
+    expect(player.get("orc")).toMatchObject({ hpVisibility: "band", hpBand: "healthy" });
+    expect(store.get("orc")).toMatchObject({ hp: { value: 15, max: 15 } });
+    expect(gmDoc.getMap("vitals").get("orc")).toEqual({ value: 15, max: 15, temp: 0 });
+
+    // Un danno cambia i numeri nel documento del GM e la fascia sul token, in un passo.
+    store.update({ orc: { hp: { value: 6, max: 15, temp: 0 }, x: 3 } });
+    expect(player.get("orc")).toMatchObject({ hpBand: "bloodied", x: 3 });
+    expect(player.get("orc")).not.toHaveProperty("hp");
+    expect(store.get("orc")).toMatchObject({ hp: { value: 6 } });
+
+    // «Solo GM»: niente fascia per i giocatori.
+    store.update({ orc: { hpVisibility: "gm" } });
+    expect(player.get("orc")).not.toHaveProperty("hpBand");
+    expect(store.get("orc")).toMatchObject({ hp: { value: 6 }, hpVisibility: "gm" });
+
+    // Visibili a tutti: i numeri tornano sul token e lasciano il documento del GM.
+    store.update({ orc: { hpVisibility: "all" } });
+    expect(player.get("orc")).toMatchObject({ hp: { value: 6, max: 15 } });
+    expect(player.get("orc")).not.toHaveProperty("hpVisibility");
+    expect(gmDoc.getMap("vitals").size).toBe(0);
+
+    store.undo();
+    expect(player.get("orc")).not.toHaveProperty("hp");
+    expect(store.get("orc")).toMatchObject({ hp: { value: 6 }, hpVisibility: "gm" });
+
+    // Togliere i punti ferita li cancella ovunque.
+    store.update({ orc: { hp: null } });
+    expect(gmDoc.getMap("vitals").size).toBe(0);
+    expect(store.get("orc")).not.toHaveProperty("hp");
+  });
+
+  it("drops the secret hit points of removed tokens and restores them on undo", () => {
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(new Y.Doc(), gmDoc, "gm");
+    store.add([token("a")]);
+    store.update({ a: { hp: { value: 3, max: 9, temp: 0 }, hpVisibility: "gm" } });
+    store.remove(["a"]);
+    expect(gmDoc.getMap("vitals").size).toBe(0);
+    store.undo();
+    expect(store.get("a")).toMatchObject({ hp: { value: 3, max: 9 } });
+  });
+
+  it("gives copies full hit points and no conditions, keeping secret ones secret", () => {
+    const publicDoc = new Y.Doc();
+    const gmDoc = new Y.Doc();
+    const store = new BoardStore(publicDoc, gmDoc, "gm");
+    store.add([
+      { ...token("Goblin"), hp: { value: 2, max: 7, temp: 4 }, conditions: [{ id: "prone" }] },
+      token("Orco"),
+    ]);
+    store.update({ Orco: { hp: { value: 1, max: 15, temp: 0 }, hpVisibility: "band" } });
+    const [goblin, orc] = store.duplicate(["Goblin", "Orco"]) as [string, string];
+    expect(store.get(goblin)).toMatchObject({ hp: { value: 7, max: 7, temp: 0 } });
+    expect(store.get(goblin)).not.toHaveProperty("conditions");
+    expect(publicDoc.getMap("items").get(orc)).toMatchObject({ hpBand: "healthy" });
+    expect(publicDoc.getMap("items").get(orc)).not.toHaveProperty("hp");
+    expect(store.get(orc)).toMatchObject({ hp: { value: 15, max: 15 } });
+    store.undo();
+    expect(gmDoc.getMap("vitals").has(orc)).toBe(false);
+
+    const player = new BoardStore(publicDoc, null, "player");
+    const [copy] = player.duplicate(["Goblin"], { asPlayer: true }) as [string];
+    expect(player.get(copy)).not.toHaveProperty("hp");
+  });
+
   it("duplicates items one cell away, numbering token copies", () => {
     const store = new BoardStore(new Y.Doc(), null, "gm");
     store.add([

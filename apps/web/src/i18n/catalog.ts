@@ -5,7 +5,9 @@ export function catalogLabel(
   t: TFunction,
   group:
     | "biomes"
+    | "conditions"
     | "gridTypes"
+    | "hpBands"
     | "diagonalRules"
     | "lights"
     | "paths"

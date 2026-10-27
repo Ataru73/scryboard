@@ -1,8 +1,10 @@
 import {
   BIOMES,
+  CONDITIONS,
   DIAGONAL_RULES,
   DRAW_COLORS,
   GRID_TYPES,
+  HP_BANDS,
   LIGHT_PRESETS,
   PATH_STYLES,
   PORTRAIT_CATEGORIES,
@@ -62,6 +64,8 @@ describe("i18n", () => {
   test("localizes every shared catalog entry", () => {
     const expected = {
       biomes: BIOMES.map(({ id }) => id),
+      conditions: CONDITIONS.map(({ id }) => id),
+      hpBands: [...HP_BANDS],
       gridTypes: GRID_TYPES.map(({ id }) => id),
       diagonalRules: DIAGONAL_RULES.map(({ id }) => id),
       lights: LIGHT_PRESETS.map(({ id }) => id),

@@ -4,10 +4,11 @@ import { catalogLabel } from "../i18n/catalog";
 import { parentOf } from "./attach";
 import { cellAt } from "./grid";
 import { PortraitGlyph } from "./PortraitPicker";
+import { vitalsText } from "./VitalsSummary";
 
 /**
  * Elenco testuale dei token per chi usa uno screen reader (il canvas non è accessibile):
- * nome e casella occupata.
+ * nome, casella occupata, punti ferita e condizioni.
  */
 export function TokenList({
   items,
@@ -41,6 +42,7 @@ export function TokenList({
               t("core.tokenList.attached", {
                 name: parent.name || t("core.tokenList.genericToken"),
               })}
+            {vitalsText(t, token)}
             {token.locked && t("core.tokenList.locked")}
             {isHidden(token.id) && t("core.tokenList.hidden")}
             {token.obscured && token.name && t("core.tokenList.obscured")}

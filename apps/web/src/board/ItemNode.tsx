@@ -39,6 +39,7 @@ import { tokenInitials } from "./grid";
 import { usePortraitPath } from "./portraitPaths";
 import { TemplateBody } from "./Templates";
 import { useImage } from "./useImage";
+import { ConditionBadges, DownMark, VitalsBar, visibleBand } from "./Vitals";
 
 export const FONT_FAMILY = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
 export const LINE_HEIGHT = 1.2;
@@ -365,8 +366,21 @@ function TokenContent({
   const r = (item.size * cellSize) / 2;
   const ring = Math.max(2, r * 0.1);
   const labelSize = Math.max(10, cellSize * 0.22);
+  // I numeri dei punti ferita (se chi guarda li conosce) solo al passaggio o con il token scelto.
+  const [hover, setHover] = useState(false);
+  const band = visibleBand(item.hp, item.hpBand);
+  const barHeight = Math.max(4, cellSize * 0.08);
+  const barY = r + ring / 2 + 3;
+  const hpText =
+    item.hp && (hover || selected)
+      ? `${item.hp.value}/${item.hp.max}${item.hp.temp > 0 ? ` +${item.hp.temp}` : ""}`
+      : null;
+  // La pillola coi numeri è centrata sulla barra: il nome scende sotto di lei.
+  const pillSize = labelSize * 0.85;
+  const pillBottom = barY + barHeight / 2 + pillSize * 0.75;
+  const nameY = hpText ? pillBottom + 2 : band ? barY + barHeight + 2 : r + 4;
   return (
-    <>
+    <Group onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {item.aura && (
         <Circle
           radius={r + item.aura.radius * cellSize}
@@ -409,6 +423,14 @@ function TokenContent({
         <TokenFace item={item} radius={r} />
       )}
       <Circle radius={r - ring / 2} stroke={color} strokeWidth={ring} />
+      {band === "down" && <DownMark radius={r - ring} />}
+      {item.conditions && (
+        <ConditionBadges
+          conditions={item.conditions}
+          radius={r}
+          size={Math.max(16, cellSize * 0.32)}
+        />
+      )}
       {attached && <ChainBadge x={r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />}
       {item.obscured && !masked && (
         <ObscuredBadge x={-r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />
@@ -416,11 +438,20 @@ function TokenContent({
       {elevationLabel && (
         <ElevationPill text={elevationLabel} y={-r - ring} size={labelSize * 0.9} />
       )}
+      {band && (
+        <VitalsBar
+          hp={item.hp}
+          band={item.hpBand}
+          y={barY}
+          width={Math.max(cellSize * 0.6, r * 1.5)}
+          height={barHeight}
+        />
+      )}
       {item.name && !masked && (
         <Text
           text={item.name}
           x={-cellSize * 2}
-          y={r + 4}
+          y={nameY}
           width={cellSize * 4}
           align="center"
           fontFamily={FONT_FAMILY}
@@ -433,7 +464,16 @@ function TokenContent({
           listening={false}
         />
       )}
-    </>
+      {hpText && (
+        <ElevationPill
+          text={hpText}
+          // ElevationPill si mette sopra al punto dato: si passa il fondo della pillola.
+          y={pillBottom}
+          size={pillSize}
+          name="hp-text"
+        />
+      )}
+    </Group>
   );
 }
 
@@ -458,12 +498,22 @@ function ChainBadge({ x, y, size }: { x: number; y: number; size: number }) {
   );
 }
 
-/** Pillola con la quota, centrata sopra il token. */
-function ElevationPill({ text, y, size }: { text: string; y: number; size: number }) {
+/** Pillola con un'etichetta (quota, punti ferita), centrata sopra il punto `y`. */
+function ElevationPill({
+  text,
+  y,
+  size,
+  name = "elevation-badge",
+}: {
+  text: string;
+  y: number;
+  size: number;
+  name?: string;
+}) {
   const width = text.length * size * 0.62 + size;
   const height = size * 1.5;
   return (
-    <Group y={y - height / 2} listening={false} name="elevation-badge">
+    <Group y={y - height / 2} listening={false} name={name}>
       <Rect
         x={-width / 2}
         y={-height / 2}

@@ -11,10 +11,14 @@ import {
   type GridSettings,
   gridSettingsSchema,
   type Handout,
+  type HitPoints,
   handoutSchema,
+  hitPointsSchema,
+  hpBandOf,
   type ImageItem,
   ITEMS_MAP,
   initiativeOrder,
+  isHpSecret,
   type Layer,
   type LightingSettings,
   lightingSettingsSchema,
@@ -33,6 +37,7 @@ import {
   terrainOpSchema,
   tokenIdentitySchema,
   turnSettingsSchema,
+  VITALS_MAP,
   WALLS_MAP,
   type Wall,
   type WallDraft,
@@ -71,6 +76,8 @@ export class BoardStore {
   private readonly gm: DocPart | null;
   /** Identità vera dei token in incognito: sta nel documento del GM. */
   private readonly masks: Y.Map<unknown> | null;
+  /** Punti ferita segreti dei token: stanno nel documento del GM. */
+  private readonly vitals: Y.Map<unknown> | null;
   private readonly settings: Y.Map<unknown>;
   private readonly fogMap: Y.Map<unknown>;
   private readonly terrainMap: Y.Map<unknown>;
@@ -103,8 +110,11 @@ export class BoardStore {
     this.wallsMap = publicDoc.getMap(WALLS_MAP);
     this.pub = this.part(publicDoc, [this.settings, this.fogMap, this.terrainMap, this.wallsMap]);
     this.masks = gmDoc ? gmDoc.getMap(MASKS_MAP) : null;
-    this.gm = gmDoc && this.masks ? this.part(gmDoc, [this.masks]) : null;
+    this.vitals = gmDoc ? gmDoc.getMap(VITALS_MAP) : null;
+    this.gm =
+      gmDoc && this.masks && this.vitals ? this.part(gmDoc, [this.masks, this.vitals]) : null;
     this.masks?.observe(() => this.rebuild());
+    this.vitals?.observe(() => this.rebuild());
 
     this.loadSettings();
     this.settings.observe(() => {
@@ -207,11 +217,12 @@ export class BoardStore {
     // Se per un attimo un oggetto è in entrambi i documenti, vince quello pubblico.
     for (const [id, item] of this.gm?.loaded ?? []) this.byId.set(id, item);
     for (const [id, item] of this.pub.loaded) this.byId.set(id, item);
-    // Il GM vede i token in incognito con il loro aspetto vero.
+    // Il GM vede i token in incognito con il loro aspetto vero e i punti ferita segreti.
     for (const [id, item] of this.byId) {
-      if (item.kind !== "token" || !item.obscured) continue;
-      const identity = this.maskOf(id);
-      if (identity) this.byId.set(id, { ...item, ...identity });
+      if (item.kind !== "token") continue;
+      const identity = item.obscured ? this.maskOf(id) : null;
+      const hp = isHpSecret(item.hpVisibility) ? this.vitalsOf(id) : null;
+      if (identity || hp) this.byId.set(id, { ...item, ...identity, ...(hp && { hp }) });
     }
     this.sorted = [...this.byId.values()].sort(compareItems);
     this.emit();
@@ -282,6 +293,37 @@ export class BoardStore {
   private maskOf(id: string): TokenIdentity | null {
     const parsed = tokenIdentitySchema.safeParse(this.masks?.get(id));
     return parsed.success ? parsed.data : null;
+  }
+
+  private vitalsOf(id: string): HitPoints | null {
+    const parsed = hitPointsSchema.safeParse(this.vitals?.get(id));
+    return parsed.success ? parsed.data : null;
+  }
+
+  /**
+   * Dove vanno i punti ferita di un token che cambia: se sono segreti nel documento del GM (sul
+   * token resta solo la fascia), altrimenti sul token. Restituisce la patch del token e la voce
+   * da scrivere in `vitals` (null = da cancellare, undefined = niente da fare).
+   */
+  private routeVitals(
+    current: TokenItem,
+    patch: ItemPatch,
+  ): { patch: ItemPatch; vitals: HitPoints | null | undefined } {
+    if (!("hp" in patch) && !("hpVisibility" in patch)) return { patch, vitals: undefined };
+    const changes = patch as Partial<TokenItem>;
+    const visibility = "hpVisibility" in patch ? changes.hpVisibility : current.hpVisibility;
+    const hp = "hp" in patch ? (changes.hp ?? null) : (current.hp ?? null);
+    if (isHpSecret(visibility)) {
+      const band = visibility === "band" && hp ? hpBandOf(hp) : undefined;
+      return {
+        patch: { ...patch, hp: undefined, hpBand: band, hpVisibility: visibility },
+        vitals: hp,
+      };
+    }
+    return {
+      patch: { ...patch, hp, hpBand: undefined, hpVisibility: undefined },
+      vitals: this.vitals?.has(current.id) ? null : undefined,
+    };
   }
 
   /** z per mettere un nuovo oggetto in cima al suo livello. */
@@ -357,10 +399,26 @@ export class BoardStore {
         patches[id] = rest;
       }
     }
+    // Il GM tiene i punti ferita segreti nel documento del GM; sul token resta la fascia.
+    const vitalsWrites = new Map<string, HitPoints | null>();
+    if (this.vitals) {
+      for (const [id, patch] of Object.entries(patches)) {
+        const current = this.byId.get(id);
+        if (current?.kind !== "token") continue;
+        const routed = this.routeVitals(current, patch);
+        patches[id] = routed.patch;
+        if (routed.vitals !== undefined) vitalsWrites.set(id, routed.vitals);
+      }
+    }
+    const vitals = this.vitals;
     this.action(() => {
-      if (masks && this.gm && masked.size > 0) {
+      if (this.gm && ((masks && masked.size > 0) || (vitals && vitalsWrites.size > 0))) {
         this.transact(this.gm, () => {
-          for (const [id, identity] of masked) masks.set(id, identity);
+          for (const [id, identity] of masked) masks?.set(id, identity);
+          for (const [id, hp] of vitalsWrites) {
+            if (hp) vitals?.set(id, hp);
+            else vitals?.delete(id);
+          }
         });
       }
       for (const part of [this.pub, this.gm]) {
@@ -371,10 +429,17 @@ export class BoardStore {
           for (const [id, patch] of entries) {
             const current = part.loaded.get(id);
             if (current) {
-              const next = { ...current, ...patch, id, kind: current.kind };
+              const next: Record<string, unknown> = {
+                ...current,
+                ...patch,
+                id,
+                kind: current.kind,
+              };
+              // Un campo messo a undefined si toglie: i campi facoltativi non restano vuoti.
+              for (const key of Object.keys(next)) if (next[key] === undefined) delete next[key];
               part.items.set(id, next);
               if (current.kind === "image") {
-                this.updateAttachedWalls(current, next as ImageItem);
+                this.updateAttachedWalls(current, next as unknown as ImageItem);
               }
             }
           }
@@ -422,11 +487,14 @@ export class BoardStore {
     );
     const deadWalls = this.walls.filter((w) => !!w.attachedTo && removed.has(w.attachedTo));
     const masks = this.masks;
+    const vitals = this.vitals;
     const deadMasks = list.filter((id) => masks?.has(id));
+    const deadVitals = list.filter((id) => vitals?.has(id));
     this.action(() => {
-      if (masks && this.gm && deadMasks.length > 0) {
+      if (this.gm && (deadMasks.length > 0 || deadVitals.length > 0)) {
         this.transact(this.gm, () => {
-          for (const id of deadMasks) masks.delete(id);
+          for (const id of deadMasks) masks?.delete(id);
+          for (const id of deadVitals) vitals?.delete(id);
         });
       }
       if (deadWalls.length > 0) {
@@ -512,14 +580,19 @@ export class BoardStore {
    * Copia gli oggetti una casella più in basso a destra, sopra agli altri e nello stesso
    * documento (la copia di un oggetto nascosto resta nascosta, quella di un token in incognito
    * resta in incognito). Le copie dei token prendono il primo nome numerato libero e restano
-   * fuori dall'ordine dei turni e dagli agganci; `asPlayer` lascia fuori ciò che un giocatore
-   * non può creare. Restituisce gli id delle copie.
+   * fuori dall'ordine dei turni e dagli agganci, senza condizioni e con i punti ferita pieni;
+   * `asPlayer` lascia fuori ciò che un giocatore non può creare. Restituisce gli id delle copie.
    */
   duplicate(ids: string[], options: { asPlayer?: boolean } = {}): string[] {
     const step = this.grid.size;
     const names = this.sorted.flatMap((i) => (i.kind === "token" ? [i.name] : []));
     const nextZ = new Map<Layer, number>();
-    const copies: { part: DocPart; item: BoardItem; mask: TokenIdentity | null }[] = [];
+    const copies: {
+      part: DocPart;
+      item: BoardItem;
+      mask: TokenIdentity | null;
+      vitals?: HitPoints;
+    }[] = [];
     // In ordine di z, così le copie restano una sopra l'altra come gli originali.
     const originals = ids
       .map((id) => this.byId.get(id))
@@ -537,22 +610,43 @@ export class BoardStore {
         copies.push({ part, item: { ...raw, ...moved }, mask: null });
         continue;
       }
-      const { initiative: _, attachedTo: __, ...token } = raw;
-      const { vision: ___, light: ____, owners: _____, ...playerToken } = token;
+      const { initiative: _, attachedTo: __, conditions: ___, ...token } = raw;
+      const {
+        vision: _v,
+        light: _l,
+        owners: _o,
+        hp: _h,
+        hpVisibility: _hv,
+        hpBand: _hb,
+        ...playerToken
+      } = token;
       const name = duplicateTokenName(shown.name, names);
       names.push(name);
       const item: TokenItem = { ...(options.asPlayer ? playerToken : token), ...moved };
-      if (item.obscured) copies.push({ part, item, mask: { ...identityOf(shown), name } });
-      else copies.push({ part, item: { ...item, name }, mask: null });
+      // I punti ferita della copia sono pieni: nel documento del GM se sono segreti.
+      const full =
+        shown.hp && !options.asPlayer ? { ...shown.hp, value: shown.hp.max, temp: 0 } : null;
+      let vitals: HitPoints | undefined;
+      if (full && isHpSecret(item.hpVisibility)) {
+        vitals = full;
+        if (item.hpVisibility === "band") item.hpBand = hpBandOf(full);
+      } else if (full) {
+        item.hp = full;
+      }
+      if (item.obscured) copies.push({ part, item, mask: { ...identityOf(shown), name }, vitals });
+      else copies.push({ part, item: { ...item, name }, mask: null, vitals });
     }
     if (copies.length === 0) return [];
     const masks = this.masks;
+    const vitals = this.vitals;
     this.action(() => {
-      // Prima le maschere (documento del GM), poi i token che le usano.
+      // Prima maschere e punti ferita segreti (documento del GM), poi i token che li usano.
       const masked = copies.filter((c) => c.mask);
-      if (masks && this.gm && masked.length > 0) {
+      const withVitals = copies.filter((c) => c.vitals);
+      if (this.gm && ((masks && masked.length > 0) || (vitals && withVitals.length > 0))) {
         this.transact(this.gm, () => {
-          for (const { item, mask } of masked) masks.set(item.id, mask);
+          for (const { item, mask } of masked) masks?.set(item.id, mask);
+          for (const { item, vitals: hp } of withVitals) vitals?.set(item.id, hp);
         });
       }
       for (const part of [this.pub, this.gm]) {
@@ -769,11 +863,16 @@ export class BoardStore {
         });
       }
       const masks = this.masks;
-      if (this.gm && (this.gm.items.size > 0 || (masks?.size ?? 0) > 0)) {
+      const vitals = this.vitals;
+      if (
+        this.gm &&
+        (this.gm.items.size > 0 || (masks?.size ?? 0) > 0 || (vitals?.size ?? 0) > 0)
+      ) {
         const gm = this.gm;
         this.transact(gm, () => {
           for (const key of [...gm.items.keys()]) gm.items.delete(key);
           for (const key of [...(masks?.keys() ?? [])]) masks?.delete(key);
+          for (const key of [...(vitals?.keys() ?? [])]) vitals?.delete(key);
         });
       }
     });

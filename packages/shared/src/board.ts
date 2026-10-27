@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HP_BANDS, HP_VISIBILITIES, hitPointsSchema, tokenConditionsSchema } from "./vitals";
 
 /** Livelli fissi della board, dal basso verso l'alto (il terreno dipinto sta sotto a tutti). */
 export const LAYERS = ["paths", "map", "token", "draw"] as const;
@@ -131,6 +132,17 @@ export const tokenItemSchema = z.object({
    * del GM (vedi `MASKS_MAP`), così non arrivano ai giocatori nemmeno nei dati.
    */
   obscured: z.boolean().optional(),
+  /**
+   * Punti ferita (assente o null = il token non ne ha). Se sono segreti (`hpVisibility` «band» o
+   * «gm») qui non ci sono: stanno nel documento del GM (vedi `VITALS_MAP`).
+   */
+  hp: hitPointsSchema.nullable().optional(),
+  /** Chi vede i punti ferita; assente = tutti. */
+  hpVisibility: z.enum(HP_VISIBILITIES).optional(),
+  /** Fascia dei PF segreti con visibilità «band», scritta dal GM insieme ai PF veri. */
+  hpBand: z.enum(HP_BANDS).optional(),
+  /** Condizioni (avvelenato, prono…): etichette, senza effetti sul gioco. */
+  conditions: tokenConditionsSchema.optional(),
 });
 
 /** Campi che identificano un token: per un token in incognito li conosce solo il GM. */

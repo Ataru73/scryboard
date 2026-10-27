@@ -86,6 +86,31 @@ export const effects = {
     labelWithUnit: "Quota ({{unit}})",
     title: "Altezza dal terreno: il righello ne tiene conto tra due token a quote diverse",
   },
+  vitals: {
+    add: "Aggiungi PF",
+    addTitle: "Dai punti ferita al token",
+    valueLabel: "PF",
+    maxLabel: "PF massimi",
+    tempLabel: "PF temporanei",
+    tempShort: "Temp.",
+    damageLabel: "Danno o cura",
+    damagePlaceholder: "-7 / +5",
+    damageTitle:
+      "Scrivi -7 per un danno o +5 per una cura e premi Invio: i temporanei si consumano per primi",
+    damageMany: "Danno o cura a {{count}} token con PF",
+    visibilityLabel: "Chi vede i PF",
+    visibility: {
+      all: "Tutti",
+      band: "Giocatori: fascia",
+      gm: "Solo GM",
+    },
+    remove: "Togli i PF",
+  },
+  conditions: {
+    button: "Condizioni",
+    buttonCount: "Condizioni ({{count}})",
+    label: "Condizioni del token",
+  },
   aura: {
     radiusLabel: "Aura (caselle)",
     colorLabel: "Colore dell'aura",

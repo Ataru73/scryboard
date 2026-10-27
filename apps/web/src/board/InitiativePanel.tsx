@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import type { BoardStore } from "./store";
 import { useBoardUi } from "./tools";
+import { VitalsSummary } from "./VitalsSummary";
 
 interface Props {
   store: BoardStore;
@@ -65,6 +66,7 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
                   <span className="muted small"> ({t("effects.initiative.obscured")})</span>
                 )}
               </span>
+              <VitalsSummary token={token} />
               <input
                 type="number"
                 aria-label={t("effects.initiative.initiativeFor", {

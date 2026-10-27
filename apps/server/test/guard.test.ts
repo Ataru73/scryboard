@@ -144,6 +144,77 @@ describe("isAllowedPlayerItemChange", () => {
   });
 });
 
+describe("token hit points and conditions", () => {
+  const hp = (value: number, max = 20, temp = 0) => ({ value, max, temp });
+
+  it("let players change current and temporary hit points visible to everyone", () => {
+    const hero = token("t", { hp: hp(20) });
+    expect(isAllowedPlayerItemChange("update", "t", hero, token("t", { hp: hp(12) }))).toBe(true);
+    expect(isAllowedPlayerItemChange("update", "t", hero, token("t", { hp: hp(20, 20, 5) }))).toBe(
+      true,
+    );
+  });
+
+  it("reserve giving, removing and raising hit points to the GM", () => {
+    const hero = token("t", { hp: hp(20) });
+    expect(isAllowedPlayerItemChange("update", "t", token("t"), hero)).toBe(false);
+    expect(isAllowedPlayerItemChange("add", "t", undefined, hero)).toBe(false);
+    expect(isAllowedPlayerItemChange("update", "t", hero, token("t", { hp: null }))).toBe(false);
+    expect(isAllowedPlayerItemChange("update", "t", hero, token("t", { hp: hp(30, 30) }))).toBe(
+      false,
+    );
+  });
+
+  it("reserve visibility and bands of secret hit points to the GM", () => {
+    const monster = token("t", { hpVisibility: "band", hpBand: "wounded" });
+    expect(
+      isAllowedPlayerItemChange("update", "t", monster, token("t", { ...monster, x: 5 })),
+    ).toBe(true);
+    expect(
+      isAllowedPlayerItemChange("update", "t", monster, token("t", { ...monster, hpBand: "down" })),
+    ).toBe(false);
+    expect(
+      isAllowedPlayerItemChange("update", "t", monster, token("t", { hpBand: "wounded" })),
+    ).toBe(false);
+    const visible = token("t", { hp: hp(20) });
+    expect(
+      isAllowedPlayerItemChange(
+        "update",
+        "t",
+        visible,
+        token("t", { hp: hp(20), hpVisibility: "gm" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("let players set conditions on the tokens they can move, not on locked ones", () => {
+    const conditions = [{ id: "prone" }, { id: "poisoned" }];
+    expect(isAllowedPlayerItemChange("update", "t", token("t"), token("t", { conditions }))).toBe(
+      true,
+    );
+    const locked = token("t", { locked: true });
+    expect(
+      isAllowedPlayerItemChange("update", "t", locked, token("t", { locked: true, conditions })),
+    ).toBe(false);
+    expect(
+      isAllowedPlayerItemChange(
+        "update",
+        "t",
+        token("t"),
+        token("t", { conditions: [{ id: "prone" }, { id: "prone" }] }),
+      ),
+    ).toBe(false);
+    expect(
+      isAllowedPlayerItemChange(
+        "update",
+        "t",
+        token("t"),
+        token("t", { conditions: [{ id: "x" }] }),
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("token portrait", () => {
   it("can be set by players on the tokens they can edit", () => {
     expect(

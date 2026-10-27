@@ -75,6 +75,10 @@ export const core = {
     locked: ", locked",
     hidden: ", hidden",
     obscured: ", incognito",
+    hitPoints: ", {{value}} of {{max}} hit points",
+    tempHitPoints: ", {{count}} temporary",
+    band: ", {{band}}",
+    conditions: ", {{list}}",
   },
   textEditor: {
     label: "Edit text",

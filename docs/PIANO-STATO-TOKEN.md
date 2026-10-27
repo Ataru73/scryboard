@@ -10,11 +10,11 @@ Il piano nasce da un'analisi esterna che proponeva `conditions: string[]` e
 `health: { current, max }` sul token, con anelli di stato e una barra vita. Confrontata con il
 codice:
 
-| Voce dell'analisi        | Stato nel codice                                                                                         | Decisione                                                                                                                                  |
-| ------------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Barra vita sul token     | Assente: `tokenItemSchema` non ha campi di salute                                                        | **Confermata**, ma i PF esatti dei mostri non devono arrivare ai giocatori (vedi Principi): campo nel documento del GM, come le maschere |
-| Condizioni come stringhe | Assente                                                                                                  | **Confermata** con un catalogo di id (etichette tradotte, icone) invece di testo libero; le condizioni personalizzate in S4              |
-| Anello radiale di stato  | L'anello è già usato da selezione (tratteggio) e turno (oro, `turn-ring`); gli angoli da catena e incognito | **Modificata**: icone piccole lungo l'arco inferiore e barra sotto il cerchio, per non confondersi con gli anelli esistenti                |
+| Voce dell'analisi        | Stato nel codice                                                                                            | Decisione                                                                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Barra vita sul token     | Assente: `tokenItemSchema` non ha campi di salute                                                           | **Confermata**, ma i PF esatti dei mostri non devono arrivare ai giocatori (vedi Principi): campo nel documento del GM, come le maschere |
+| Condizioni come stringhe | Assente                                                                                                     | **Confermata** con un catalogo di id (etichette tradotte, icone) invece di testo libero; le condizioni personalizzate in S4              |
+| Anello radiale di stato  | L'anello è già usato da selezione (tratteggio) e turno (oro, `turn-ring`); gli angoli da catena e incognito | **Modificata**: icone piccole lungo l'arco inferiore e barra sotto il cerchio, per non confondersi con gli anelli esistenti              |
 
 ## Principi
 
@@ -47,6 +47,16 @@ S4 è facoltativa e si decide dopo averla usata in qualche sessione.
 ---
 
 ### S1 — Modello, documento del GM e guard (≈ 3 giorni)
+
+**Stato**: completata. Note rispetto al piano:
+- Schema, catalogo e funzioni pure in `packages/shared/src/vitals.ts` (`hpBandOf`, `applyDamage`,
+  `parseDamage`, `toggleCondition`). `conditions` è già un array di `{ id, rounds? }`, come
+  suggerito nelle decisioni aperte; `rounds` per ora non lo usa nessuno.
+- `BoardStore.routeVitals` decide dove vanno i PF di ogni patch (token o `vitals`) e ricalcola la
+  fascia; `update` lo applica nella stessa azione delle maschere. Un campo della patch messo a
+  `undefined` ora si toglie dall'oggetto, così `hp`, `hpBand` e `hpVisibility` non restano vuoti.
+- Togliere i PF lascia la visibilità sul token: se il GM li rimette, restano segreti.
+- `duplicate` dà alla copia PF pieni e nessuna condizione; quella di un giocatore non ha PF.
 
 **Cosa vede l'utente**
 - Niente ancora: è la base dati. Le stanze esistenti restano valide (tutti i campi facoltativi).
@@ -95,6 +105,17 @@ S4 è facoltativa e si decide dopo averla usata in qualche sessione.
 
 ### S2 — Barra e icone sul token (≈ 2 giorni)
 
+**Stato**: completata. Note rispetto al piano:
+- Componenti in `apps/web/src/board/Vitals.tsx`, icone in `conditionIcons.ts` (tracciati 24×24
+  riusati dal pannello HTML). Le icone stanno sui fianchi del token (sinistra, destra, poi più in
+  basso), non sull'arco inferiore: lì barra e numeri le coprivano.
+- A terra: velo scuro e croce rossa invece della desaturazione, che in Konva richiede la cache del
+  nodo per ogni token.
+- Niente livello di dettaglio per ora: icone e barra scalano con la casella come gli altri badge.
+  `pnpm e2e:perf` resta da lanciare con molti token con condizioni.
+- Al passaggio del mouse o con il token selezionato una pillola con `attuali/massimi +temp`
+  copre la barra e il nome scende sotto.
+
 **Cosa vede l'utente**
 - Sotto il cerchio del token, sopra il nome, una **barra** sottile: verde, gialla, arancione o
   rossa secondo la fascia; i PF temporanei sono un tratto azzurro in coda. Con la visibilità
@@ -123,6 +144,18 @@ S4 è facoltativa e si decide dopo averla usata in qualche sessione.
   «Goblin, malconcio, avvelenato, prono».
 
 ### S3 — Pannello, danni rapidi e turni (≈ 3 giorni)
+
+**Stato**: completata, salvo l'estensione di `archive.spec.ts` (l'archivio salva già lo stato
+intero del documento del GM, `vitals` compresa). Note rispetto al piano:
+- `VitalsFields.tsx` e `ConditionsFields.tsx` nel pannello di selezione; con più token
+  restano «Danno o cura a N token con PF» (solo quelli di cui chi agisce conosce i PF) e le
+  condizioni. Un numero senza segno è un danno.
+- Nei pannelli le icone delle condizioni usano il colore del testo: i gialli del token non si
+  leggono sul tema chiaro. Il riassunto nei turni (`VitalsSummary.tsx`) ha un pallino colorato.
+- L'e2e `vitals.spec.ts` verifica che il nome della mappa `vitals` non arrivi mai sul websocket
+  del giocatore (i numeri sono codificati in binario, cercarli non avrebbe senso), mentre arriva
+  a quello del GM. La cura forzata da un giocatore è coperta dai test del guard.
+- Il pannello di selezione di un token del GM ora va a capo su più righe: da tenere d'occhio.
 
 **Cosa vede l'utente**
 - Nel pannello di selezione del token, una sezione **Punti ferita**: attuali, massimi,

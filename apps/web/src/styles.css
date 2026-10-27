@@ -1265,6 +1265,21 @@ button.danger {
   outline: 2px solid #ffc53d;
 }
 
+.vitals-summary {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+}
+
+.vitals-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 3px;
+  border-radius: 50%;
+}
+
 .initiative-name {
   flex: 1;
   min-width: 0;
@@ -1289,6 +1304,29 @@ button.danger {
   flex: none;
   width: 4rem;
   padding: 0.3rem 0.4rem;
+}
+
+/* Il campo di danno e cura deve contenere «-7 / +5». */
+.selection-panel .damage-field {
+  width: 5rem;
+}
+
+/* Le icone delle condizioni vanno su una riga a sé, sotto gli altri campi. */
+.condition-row {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+/* Spenta, l'icona di una condizione resta visibile ma tenue. */
+.condition-button[aria-pressed="false"] svg {
+  opacity: 0.55;
 }
 
 /* Etichetta e campo vanno a capo insieme. */

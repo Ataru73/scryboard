@@ -68,6 +68,24 @@ function sameObscured(
   return !before?.obscured || TOKEN_IDENTITY_KEYS.every((key) => before[key] === after[key]);
 }
 
+/**
+ * I punti ferita li dà e li toglie il GM, come il massimo, la visibilità e la fascia: un giocatore
+ * cambia solo attuali e temporanei, e solo se i PF sono visibili a tutti.
+ */
+function sameHitPointsShape(
+  before: Extract<BoardItem, { kind: "token" }> | null,
+  after: Extract<BoardItem, { kind: "token" }>,
+): boolean {
+  const old = before?.hp ?? null;
+  const next = after.hp ?? null;
+  const visibility = after.hpVisibility ?? "all";
+  if (!old !== !next || (before?.hpVisibility ?? "all") !== visibility) return false;
+  if ((before?.hpBand ?? null) !== (after.hpBand ?? null)) return false;
+  if (!old || !next) return true;
+  if (old.max !== next.max) return false;
+  return visibility === "all" || (old.value === next.value && old.temp === next.temp);
+}
+
 /** Un giocatore può creare, modificare o cancellare solo oggetti che potrebbe toccare dall'interfaccia. */
 export function isAllowedPlayerItemChange(
   action: Action,
@@ -82,14 +100,15 @@ export function isAllowedPlayerItemChange(
   if (action === "delete") return true;
   if (!after || !canModify(after, "player")) return false;
   if (before && before.kind !== after.kind) return false;
-  // Visione, luce portata e assegnazione dei token le decide il GM: un giocatore non può darsi
-  // scurovisione o prendersi il token di un altro.
+  // Visione, luce portata, assegnazione e punti ferita massimi dei token li decide il GM: un
+  // giocatore non può darsi scurovisione, prendersi il token di un altro o curare un mostro.
   if (after.kind === "token") {
     const previous = before?.kind === "token" ? before : null;
     return (
       visionFields(previous) === visionFields(after) &&
       sameInitiativeMembership(previous, after) &&
-      sameObscured(previous, after)
+      sameObscured(previous, after) &&
+      sameHitPointsShape(previous, after)
     );
   }
   return true;
