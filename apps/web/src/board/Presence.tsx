@@ -1,5 +1,17 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import type { GridSettings, PresenceUser, TokenItem } from "@scryboard/shared";
+import {
+  type DraftStroke,
+  draftStrokeSchema,
+  type GridSettings,
+  type Ping,
+  type PresenceUser,
+  presenceCursorSchema,
+  presencePingSchema,
+  presenceUserSchema,
+  rulerStateSchema,
+  type TokenItem,
+  templateGeometrySchema,
+} from "@scryboard/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Circle, Group, Label, Line, Path, Tag, Text } from "react-konva";
 import type { TemplateGeometry } from "./areas";
@@ -7,19 +19,7 @@ import { RulerShape, type RulerState } from "./Ruler";
 import { AreaPreview } from "./Templates";
 import type { Point } from "./viewport";
 
-/** Tratto a mano libera ancora in corso, condiviso per mostrarlo mentre lo si disegna. */
-export interface DraftStroke {
-  origin: Point;
-  points: number[];
-  color: string;
-  strokeWidth: number;
-}
-
-export interface Ping {
-  id: string;
-  x: number;
-  y: number;
-}
+export type { DraftStroke, Ping };
 
 const BROADCAST_INTERVAL_MS = 50;
 const PING_DURATION_MS = 1800;
@@ -110,22 +110,31 @@ export function Presence({
       const next: RemoteState[] = [];
       const fresh: ActivePing[] = [];
       awareness.getStates().forEach((state, clientId) => {
-        if (!state.user) return;
-        const user = state.user as PresenceUser;
-        const ping = (state.ping as Ping | null) ?? null;
+        const parsedUser = presenceUserSchema.safeParse(state.user);
+        if (!parsedUser.success) return;
+        const user = parsedUser.data;
+
+        const pingParsed = presencePingSchema.safeParse(state.ping);
+        const ping = pingParsed.success ? pingParsed.data : null;
         if (ping && !seenPings.current.has(ping.id)) {
           seenPings.current.add(ping.id);
           fresh.push({ ...ping, color: user.color, name: user.name, start: performance.now() });
         }
+
+        const cursorParsed = presenceCursorSchema.safeParse(state.cursor);
+        const draftParsed = draftStrokeSchema.safeParse(state.draft);
+        const rulerParsed = rulerStateSchema.safeParse(state.ruler);
+        const templateParsed = templateGeometrySchema.safeParse(state.template);
+
         next.push({
           clientId,
           isSelf: clientId === awareness.clientID,
           user,
-          cursor: (state.cursor as Point | null) ?? null,
-          draft: (state.draft as DraftStroke | null) ?? null,
+          cursor: cursorParsed.success ? cursorParsed.data : null,
+          draft: draftParsed.success ? draftParsed.data : null,
           ping,
-          ruler: (state.ruler as RulerState | null) ?? null,
-          template: (state.template as TemplateGeometry | null) ?? null,
+          ruler: rulerParsed.success ? rulerParsed.data : null,
+          template: templateParsed.success ? (templateParsed.data as TemplateGeometry) : null,
         });
       });
       setStates(next);

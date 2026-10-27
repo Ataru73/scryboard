@@ -93,6 +93,14 @@ describe("dice rolls", () => {
     ).toBe(404);
   });
 
+  it("rejects players attempting to claim GM display names", async () => {
+    const room = await createRoom(server);
+    for (const name of ["GM", "gm", "Master", "Game Master", "DM", "Dungeon Master"]) {
+      const res = await post(room.id, `Player ${arwen}`, { formula: "1d20", name });
+      expect(res.status).toBe(401);
+    }
+  });
+
   it("reverts rolls forged by players", async () => {
     const room = await createRoom(server);
     const forger = await connect(server, roomDocumentName(room.id, "public"), "player");

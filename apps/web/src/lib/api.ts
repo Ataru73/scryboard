@@ -154,13 +154,18 @@ export const api = {
       headers: gmToken ? gmHeaders(gmToken) : {},
     }),
   /** Con il token del GM l'immagine resta privata finché un oggetto che la usa non è visibile. */
-  uploadAsset: (roomId: string, file: Blob, gmToken: string | null) =>
-    request<UploadAssetResponse>(`/rooms/${encodeURIComponent(roomId)}/assets`, {
+  uploadAsset: (roomId: string, file: Blob, auth: string | null = null) => {
+    let authorization: string | undefined;
+    if (auth) {
+      authorization = auth.includes(":") ? `Player ${auth}` : `Bearer ${auth}`;
+    }
+    return request<UploadAssetResponse>(`/rooms/${encodeURIComponent(roomId)}/assets`, {
       method: "POST",
       body: file,
       headers: {
         "content-type": file.type || "application/octet-stream",
-        ...(gmToken ? { authorization: `Bearer ${gmToken}` } : {}),
+        ...(authorization ? { authorization } : {}),
       },
-    }),
+    });
+  },
 };

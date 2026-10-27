@@ -49,7 +49,7 @@ function videoSize(file: File): Promise<{ width: number; height: number }> {
 export async function uploadVideo(
   roomId: string,
   file: File,
-  gmToken: string | null,
+  auth: string | null,
 ): Promise<UploadedImage> {
   if (!isSupportedVideo(file)) {
     throw new UploadError(i18n.t("core.upload.unsupportedVideo", { filename: file.name }));
@@ -64,7 +64,7 @@ export async function uploadVideo(
     throw new UploadError(i18n.t("core.upload.unreadableVideo", { filename: file.name }));
   }
   try {
-    const { assetId } = await api.uploadAsset(roomId, file, gmToken);
+    const { assetId } = await api.uploadAsset(roomId, file, auth);
     return { assetId, ...size };
   } catch (error) {
     throw new UploadError(
@@ -80,7 +80,7 @@ export async function uploadVideo(
 export async function uploadImage(
   roomId: string,
   file: File,
-  gmToken: string | null,
+  auth: string | null,
 ): Promise<UploadedImage> {
   if (!isSupportedImage(file)) {
     throw new UploadError(i18n.t("core.upload.unsupportedImage", { filename: file.name }));
@@ -98,7 +98,7 @@ export async function uploadImage(
     throw new UploadError(i18n.t("core.upload.invalidImage", { filename: file.name }));
   }
   try {
-    const { assetId } = await api.uploadAsset(roomId, file, gmToken);
+    const { assetId } = await api.uploadAsset(roomId, file, auth);
     return { assetId, width, height };
   } catch (error) {
     throw new UploadError(

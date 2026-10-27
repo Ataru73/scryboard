@@ -1,5 +1,5 @@
 import { Database } from "@hocuspocus/extension-database";
-import { Hocuspocus } from "@hocuspocus/server";
+import { Hocuspocus, isTransactionOrigin } from "@hocuspocus/server";
 import {
   ACTIVE_SCENE_KEY,
   GM_MAILBOX,
@@ -82,6 +82,20 @@ export function createCollab(
         const meta = document.getMap<string>(META_MAP);
         const active = scenes.activeId(parsed.roomId);
         if (meta.get(ACTIVE_SCENE_KEY) !== active) meta.set(ACTIVE_SCENE_KEY, active);
+      }
+    },
+
+    async beforeHandleAwareness({ states, transactionOrigin }) {
+      if (!isTransactionOrigin(transactionOrigin) || transactionOrigin.source !== "connection")
+        return;
+      const context = transactionOrigin.connection.context as ConnectionContext | undefined;
+      const role = context?.role;
+      for (const [, state] of states) {
+        if (!state.user || typeof state.user !== "object") continue;
+        // Impedisce a un giocatore di spacciare il proprio ruolo per "gm" nell'awareness
+        if (role === "player") {
+          state.user.role = "player";
+        }
       }
     },
 

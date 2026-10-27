@@ -21,10 +21,10 @@ However, several **High** and **Medium** severity vulnerabilities were identifie
 | **H-2** | Player privilege escalation via missing layer constraints in `boardItemSchema` and unchecked `createdBy`  | **High**   | `packages/shared/src/board.ts`, `apps/server/src/collab/guard.ts`            | **Resolved** |
 | **H-3** | Rate-limit bypass and algorithmic complexity DoS via `Fly-Client-IP` / `X-Forwarded-For` spoofing         | **High**   | `apps/server/src/http/rateLimit.ts`                                          | **Resolved** |
 | **H-4** | Denial of Service (OOM crash & event-loop blocking) via archive import and unbounded Yjs payloads         | **High**   | `apps/server/src/rooms/archive.ts`, `packages/shared/src/board.ts`           | **Resolved** |
-| **M-1** | Fog of War, Dynamic Vision, and Secret Doors are enforced only client-side                                | **Medium** | `packages/shared/src/walls.ts`, `apps/web/src/board/store.ts`                | Open         |
-| **M-2** | Unvalidated Yjs awareness payloads allow remote client UI crash (DoS) and role/identity spoofing          | **Medium** | `apps/web/src/board/Presence.tsx`, `apps/web/src/hooks/useRoomConnection.ts` | Open         |
-| **M-3** | Display-name spoofing in dice rolls & private messages and unauthenticated asset uploads                  | **Medium** | `apps/server/src/http/app.ts`, `apps/server/src/collab/rolls.ts`             | Open         |
-| **M-4** | Missing HTTP security headers (CSP, Clickjacking, HSTS) and WebSocket `Origin` validation                 | **Medium** | `apps/server/src/server.ts`, `apps/web/src/lib/storage.ts`                   | Open         |
+| **M-1** | Fog of War, Dynamic Vision, and Secret Doors are enforced only client-side                                | **Medium** | `packages/shared/src/walls.ts`, `apps/web/src/board/store.ts`                | **Resolved** |
+| **M-2** | Unvalidated Yjs awareness payloads allow remote client UI crash (DoS) and role/identity spoofing          | **Medium** | `apps/web/src/board/Presence.tsx`, `apps/web/src/hooks/useRoomConnection.ts` | **Resolved** |
+| **M-3** | Display-name spoofing in dice rolls & private messages and unauthenticated asset uploads                  | **Medium** | `apps/server/src/http/app.ts`, `apps/server/src/collab/rolls.ts`             | **Resolved** |
+| **M-4** | Missing HTTP security headers (CSP, Clickjacking, HSTS) and WebSocket `Origin` validation                 | **Medium** | `apps/server/src/server.ts`, `apps/web/src/lib/storage.ts`                   | **Resolved** |
 | **L-1** | Docker container runs as `root` & hardcoded GCP project in deploy script                                  | **Low**    | `Dockerfile`, `scripts/deploy-cloud-run.sh`                                  | Open         |
 | **L-2** | Unescaped `_` wildcard and orphaned `scenes` rows in `pruneInactiveRooms`                                 | **Low**    | `apps/server/src/rooms/prune.ts`                                             | Open         |
 | **L-3** | Missing rate limit on `/gm-check` & asset visibility ordering in `ArchiveService.import`                  | **Low**    | `apps/server/src/http/app.ts`, `apps/server/src/rooms/archive.ts`            | Open         |
@@ -107,6 +107,7 @@ However, several **High** and **Medium** severity vulnerabilities were identifie
 - **Vulnerability**: While `README.md` states _"Secrets enforced by the server: hidden objects, fog of war and private messages never reach players' browsers"_, only explicitly hidden items (`room:<id>:gm`), obscured token identities (`MASKS_MAP`), secret HP values (`VITALS_MAP`), and private messages (`room:<id>:mail:*`) are kept off players' clients.
   - All secret doors (`kind: "door", secret: true` in `WALLS_MAP`), invisible walls, terrain painted "under the fog" (`addTerrainBatch`), the full map image, and any non-hidden tokens under the fog live in `room:<id>:public` and are sent in full to all players.
 - **Remediation**: Update documentation to clarify that Fog of War and Dynamic Vision are visual masks over the public scene while only _Hidden Objects_ (`Shift+H`), _Incognito Identities_, _Secret HP_, and _Inactive Scenes_ are withheld by the server—or move `secret: true` door metadata into `room:<id>:gm` (representing secret doors as normal walls in `room:<id>:public` until revealed).
+- **Resolution**: Updated `README.md` and `README.it.md` to explicitly describe the security model: hidden objects (`Shift+H`), inactive scenes, private mailboxes, secret vitals, and token masks are withheld by the server, while fog of war and dynamic vision function as client-side rendering masks over the public scene.
 
 ---
 
@@ -117,6 +118,7 @@ However, several **High** and **Medium** severity vulnerabilities were identifie
   1. **Remote React Crash**: Hocuspocus relays awareness states without validation, and the web client casts `state.user`, `state.draft`, `state.ping`, `state.ruler`, and `state.template` with TypeScript `as` assertions instead of runtime Zod schemas. If a client broadcasts `{ user: { name: 123 } }` or `{ draft: { origin: { x: 0, y: 0 }, points: null } }`, `a.name.localeCompare(b.name)` or `<Line points={draft.points} />` throws an uncaught `TypeError` during render, crashing the room UI for all connected participants.
   2. **Awareness Role & Profile ID Spoofing**: Any player can broadcast `user: { role: "gm", name: "..." }` in awareness to show a `GM` badge in the participant list ([`RoomPage.tsx`](../apps/web/src/pages/RoomPage.tsx)), or broadcast another player's `id` with a different `name` to overwrite their display name in `usePlayers` and `MessagesPanel`.
 - **Remediation**: Validate all awareness fields with Zod schemas before rendering in `Presence.tsx` and `useRoomConnection.ts`, and sanitize/enforce `role` and `id` on awareness updates on the server in `hocuspocus.ts`.
+- **Resolution**: Defined Zod schemas (`presenceUserSchema`, `presenceCursorSchema`, `draftStrokeSchema`, `presencePingSchema`, `rulerStateSchema`, `templateGeometrySchema`) in `packages/shared/src/presence.ts`. In `apps/server/src/collab/hocuspocus.ts`, added a `beforeHandleAwareness` hook that forces `state.user.role = "player"` on awareness updates from player connections. On the client, `useRoomConnection`, `usePlayers`, and `Presence` validate awareness payloads using `safeParse()`, discarding corrupt or hostile awareness structures.
 
 ---
 
@@ -127,6 +129,7 @@ However, several **High** and **Medium** severity vulnerabilities were identifie
   - Any client with the `roomId` can invent new `Player <id>:<secret>` credentials and call `POST /api/rooms/:id/rolls` or `POST /api/rooms/:id/messages` with `name` / `fromName` set to `"GM"` or another player's name. Because [`RollPanel.tsx`](../apps/web/src/dice/RollPanel.tsx) and [`RollToasts.tsx`](../apps/web/src/dice/RollToasts.tsx) only render `roll.name`, a player can forge public dice rolls appearing to come from the GM or another player.
   - `POST /api/rooms/:id/assets` requires no player credentials at all, allowing any unauthenticated caller who knows `roomId` (and cross-origin simple `fetch` requests) to upload up to 200 × 20 MB = 4 GB of assets per 10 minutes.
 - **Remediation**: Require valid GM or Player `Authorization` headers on `POST /api/rooms/:id/assets`, reserve the `"GM"` name for `sender.kind === "gm"`, and visually distinguish GM rolls (`roll.from === "gm"`) in `RollPanel.tsx` and `RollToasts.tsx`.
+- **Resolution**: In `apps/server/src/http/app.ts`, `resolveSender` rejects players attempting to claim reserved GM display names (`GM`, `Master`, `DM`, etc.). `POST /api/rooms/:id/assets` requires authorization (`Bearer <gmToken>` or `Player <profileId>:<secret>`). In `RollPanel.tsx`, `RollToasts.tsx`, and `MessagesPanel.tsx`, author badges are rendered when messages/rolls originate from the GM (`from === "gm"`).
 
 ---
 
@@ -138,6 +141,7 @@ However, several **High** and **Medium** severity vulnerabilities were identifie
   - Without `X-Frame-Options: DENY` or `frame-ancestors 'none'`, a malicious site can frame `/r/<roomId>` and use clickjacking against a GM whose token is already stored in `localStorage`.
   - `server.on("upgrade", ...)` in `server.ts` does not verify the `Origin` header, allowing cross-origin websites to open WebSocket connections to `/collab` from a visitor's browser.
 - **Remediation**: Add `Content-Security-Policy` (`default-src 'self'; connect-src 'self' wss: https://generativelanguage.googleapis.com; img-src 'self' blob: data:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer` middleware in `server.ts`, and validate the `Origin` header on WebSocket upgrades.
+- **Resolution**: In `apps/server/src/server.ts`, added `secureHeaders` middleware setting `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Content-Security-Policy` with `frame-ancestors 'none'`. In `server.on("upgrade")`, `isAllowedOrigin()` validates that incoming WebSocket `Origin` matches the target `Host` (taking into account reverse proxy headers when configured), rejecting cross-origin WebSocket hijack attempts with `403 Forbidden`.
 
 ---
 

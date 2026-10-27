@@ -6,6 +6,7 @@ import { createAdaptorServer } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { logger } from "hono/logger";
+import { secureHeaders } from "hono/secure-headers";
 import { WebSocketServer } from "ws";
 import { AssetAccess } from "./assets/access";
 import { createAssetStore } from "./assets/store";
@@ -24,6 +25,27 @@ import { RoomService } from "./rooms/service";
 
 export const COLLAB_PATH = "/collab";
 
+/**
+ * Verifica che l'origine della richiesta WebSocket corrisponda all'host di destinazione
+ * per prevenire attacchi di tipo Cross-Site WebSocket Hijacking (CSWSH).
+ * Client programmatici che omettono l'header Origin sono ammessi.
+ */
+export function isAllowedOrigin(
+  originHeader: string | undefined,
+  hostHeader: string | undefined,
+): boolean {
+  if (!originHeader || !hostHeader) return true;
+  try {
+    const originHost = new URL(originHeader).host.toLowerCase();
+    const targetHost = new URL(
+      hostHeader.includes("://") ? hostHeader : `http://${hostHeader}`,
+    ).host.toLowerCase();
+    return originHost === targetHost;
+  } catch {
+    return false;
+  }
+}
+
 export interface RunningServer {
   port: number;
   stop: () => Promise<void>;
@@ -39,6 +61,24 @@ export async function startServer(config: Config): Promise<RunningServer> {
 
   const app = new Hono();
   if (process.env.NODE_ENV !== "test") app.use(logger());
+  app.use(
+    "*",
+    secureHeaders({
+      xFrameOptions: "DENY",
+      referrerPolicy: "strict-origin-when-cross-origin",
+      strictTransportSecurity: false,
+      contentSecurityPolicy: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "blob:", "data:"],
+        mediaSrc: ["'self'", "blob:"],
+        fontSrc: ["'self'", "data:"],
+        connectSrc: ["'self'", "ws:", "wss:", "https://generativelanguage.googleapis.com"],
+        frameAncestors: ["'none'"],
+      },
+    }),
+  );
   const access = new AssetAccess(db, publicReferenceCheck(collab, db, sceneService));
   const archive = new ArchiveService(collab, rooms, sceneService, assetStore, access);
   app.route(
@@ -76,6 +116,17 @@ export async function startServer(config: Config): Promise<RunningServer> {
   server.on("upgrade", (request, socket, head) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     if (url.pathname !== COLLAB_PATH) {
+      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    const origin = request.headers.origin;
+    const host =
+      (config.trustProxy && typeof request.headers["x-forwarded-host"] === "string"
+        ? request.headers["x-forwarded-host"].split(",")[0]?.trim()
+        : null) || request.headers.host;
+    if (!isAllowedOrigin(origin, host)) {
+      socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
       socket.destroy();
       return;
     }

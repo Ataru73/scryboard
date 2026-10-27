@@ -187,4 +187,15 @@ describe("private messages", () => {
     fresh.provider.destroy();
     close();
   });
+
+  it("rejects players attempting to claim GM display names", async () => {
+    const { send, close } = await table();
+    const res = await send(`Player ${creds("arwen")}`, {
+      to: players.bilbo.id,
+      text: "Sono il master",
+      fromName: "Game Master",
+    });
+    expect(res.status).toBe(401);
+    close();
+  });
 });

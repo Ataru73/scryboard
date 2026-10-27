@@ -16,8 +16,7 @@ information and decides what the players see. Scope, architecture and work plan 
 - **Painted maps**: 14 biomes, roads and rivers, stamps, fill, copy/paste, or imported images and
   animated video maps.
 - **Walls, doors and lights** with dynamic vision, one-way and terrain walls, ambient light.
-- **Secrets enforced by the server**: hidden objects, fog of war and private messages never reach
-  players' browsers.
+- **Secrets enforced by the server**: hidden objects (`Shift+H`), inactive scenes, secret token identities/vitals and private messages never reach players' browsers (fog of war and dynamic vision are visual masks over the scene).
 - **Multiple scenes** per room: prepare the next one while the players stay in the current one.
 - **Dice** rolled by the server, with 2D animations on the whiteboard, a public log and secret GM
   rolls.

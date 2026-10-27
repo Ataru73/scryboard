@@ -1,5 +1,5 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import type { PresenceUser } from "@scryboard/shared";
+import { type PresenceUser, presenceUserSchema } from "@scryboard/shared";
 import { useEffect, useState } from "react";
 
 /**
@@ -15,9 +15,12 @@ export function usePlayers(provider: HocuspocusProvider): (PresenceUser & { id: 
     const update = () => {
       const byId = new Map<string, PresenceUser & { id: string }>();
       awareness.getStates().forEach((state) => {
-        const user = state.user as PresenceUser | undefined;
-        if (user?.id && user.role === "player" && !user.projector)
+        const parsed = presenceUserSchema.safeParse(state.user);
+        if (!parsed.success) return;
+        const user = parsed.data;
+        if (user.id && user.role === "player" && !user.projector) {
           byId.set(user.id, { ...user, id: user.id });
+        }
       });
       const next = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
       // L'awareness cambia a ogni movimento dei cursori: si aggiorna solo se la lista cambia.

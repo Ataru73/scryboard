@@ -105,11 +105,15 @@ export function createApi(
     return token !== undefined && rooms.isGmToken(roomId, token);
   };
 
+  const isGmSenderName = (name: string) =>
+    /^\s*(gm|master|game\s*master|dungeon\s*master|dm)\s*$/i.test(name);
+
   // Chi scrive o tira: il GM con il suo token, un giocatore con id del profilo e segreto
-  // ("Player <id>:<segreto>").
+  // ("Player <id>:<segreto>"). Il nome del GM è riservato: i giocatori non possono spacciarsi per GM.
   const resolveSender = (roomId: string, authorization: string | undefined, name: string) => {
     const header = authorization ?? "";
     if (isGmRequest(roomId, header)) return { kind: "gm", name } satisfies Sender;
+    if (isGmSenderName(name)) return null;
     const credentials = parsePlayerCredentials(header.match(/^Player (.+)$/)?.[1] ?? "");
     if (
       credentials &&
@@ -197,7 +201,18 @@ export function createApi(
       if (!room) return c.json({ error: "Stanza non trovata" }, 404);
       const data = new Uint8Array(await c.req.arrayBuffer());
       if (data.length === 0) return c.json({ error: "File vuoto" }, 400);
-      const byGm = isGmRequest(room.id, c.req.header("authorization"));
+      const header = c.req.header("authorization");
+      const byGm = isGmRequest(room.id, header);
+      const isPlayer = () => {
+        const credentials = parsePlayerCredentials(header?.match(/^Player (.+)$/)?.[1] ?? "");
+        return (
+          credentials !== null &&
+          messaging.players.authenticate(room.id, credentials.profileId, credentials.secret)
+        );
+      };
+      if (!byGm && !isPlayer()) {
+        return c.json({ error: "Non autorizzato" }, 401);
+      }
       const type = detectAssetType(data);
       if (type && type in VIDEO_MIME_TYPES && !byGm) {
         return c.json({ error: "Solo il GM può caricare video" }, 403);

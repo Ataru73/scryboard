@@ -167,7 +167,9 @@ function RollEntry({ roll, secret }: { roll: Roll; secret: boolean }) {
   return (
     <li className={secret ? "roll-entry secret" : "roll-entry"}>
       <span className="roll-head">
-        <strong>{roll.name}</strong> <span className="muted">{roll.formula}</span>
+        <strong>{roll.name}</strong>{" "}
+        {roll.from === "gm" && <span className="badge role-badge">GM</span>}{" "}
+        <span className="muted">{roll.formula}</span>
         {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}
       </span>
       <span className="roll-detail muted small">{describeRoll(roll)}</span>

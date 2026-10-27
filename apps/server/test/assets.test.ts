@@ -1,8 +1,10 @@
-import { roomDocumentName } from "@scryboard/shared";
+import { playerCredentials, roomDocumentName } from "@scryboard/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { detectAssetType, detectImageType } from "../src/assets/store";
 import { parseByteRange } from "../src/http/app";
 import { connect, createRoom, startTestServer, type TestServer, tempDatabasePath } from "./helpers";
+
+const testPlayer = playerCredentials("1111222233334444", "player-secret-0123456789");
 
 // PNG 1x1 trasparente.
 const PNG = Buffer.from(
@@ -63,10 +65,15 @@ describe("assets API", () => {
     cleanup();
   });
 
-  const upload = (roomId: string, body: Uint8Array | string) =>
+  const upload = (roomId: string, body: Uint8Array | string, token: string | null = null) =>
     fetch(`${server.baseUrl}/api/rooms/${roomId}/assets`, {
       method: "POST",
-      headers: { "content-type": "application/octet-stream" },
+      headers: {
+        "content-type": "application/octet-stream",
+        ...(token
+          ? { authorization: `Bearer ${token}` }
+          : { authorization: `Player ${testPlayer}` }),
+      },
       body,
     });
 
@@ -87,7 +94,15 @@ describe("assets API", () => {
   it("lets only the GM upload videos, and serves them in ranges", async () => {
     const room = await createRoom(server);
     const base = `${server.baseUrl}/api/rooms/${room.id}/assets`;
-    expect((await fetch(base, { method: "POST", body: MP4 })).status).toBe(403);
+    expect(
+      (
+        await fetch(base, {
+          method: "POST",
+          headers: { authorization: `Player ${testPlayer}` },
+          body: MP4,
+        })
+      ).status,
+    ).toBe(403);
     const res = await fetch(base, {
       method: "POST",
       headers: { authorization: `Bearer ${room.gmToken}` },
@@ -190,7 +205,11 @@ describe("hidden assets", () => {
 
     // Un'immagine caricata da un giocatore è subito pubblica.
     const other = new Uint8Array([...PNG, 1]);
-    const playerUpload = await fetch(base, { method: "POST", body: other });
+    const playerUpload = await fetch(base, {
+      method: "POST",
+      headers: { authorization: `Player ${testPlayer}` },
+      body: other,
+    });
     const { assetId: shared } = (await playerUpload.json()) as { assetId: string };
     expect((await list()).map((a) => a.assetId)).toEqual([shared]);
     expect((await list(room.gmToken)).map((a) => a.assetId).sort()).toEqual(
@@ -255,10 +274,20 @@ describe("hidden assets", () => {
     gm.provider.destroy();
   });
 
+  it("rejects unauthenticated uploads", async () => {
+    const room = await createRoom(server);
+    const res = await fetch(`${server.baseUrl}/api/rooms/${room.id}/assets`, {
+      method: "POST",
+      body: PNG,
+    });
+    expect(res.status).toBe(401);
+  });
+
   it("makes player uploads public", async () => {
     const room = await createRoom(server);
     const res = await fetch(`${server.baseUrl}/api/rooms/${room.id}/assets`, {
       method: "POST",
+      headers: { authorization: `Player ${testPlayer}` },
       body: PNG,
     });
     const { assetId } = (await res.json()) as { assetId: string };

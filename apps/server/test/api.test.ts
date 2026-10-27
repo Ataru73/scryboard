@@ -77,6 +77,31 @@ describe("unknown API routes", () => {
   });
 });
 
+describe("security headers", () => {
+  let server: TestServer;
+  let cleanup: () => void;
+
+  beforeAll(async () => {
+    const db = tempDatabasePath();
+    cleanup = db.cleanup;
+    server = await startTestServer(db.path);
+  });
+  afterAll(async () => {
+    await server.stop();
+    cleanup();
+  });
+
+  it("sets standard security headers on responses", async () => {
+    const res = await fetch(`${server.baseUrl}/api/health`);
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+    const csp = res.headers.get("content-security-policy");
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+  });
+});
+
 describe("startup", () => {
   it("explains when the port is already in use", async () => {
     const dbA = tempDatabasePath();

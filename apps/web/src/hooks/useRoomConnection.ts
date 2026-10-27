@@ -7,6 +7,7 @@ import {
   metaDocumentName,
   type PresenceUser,
   playerCredentials,
+  presenceUserSchema,
   roomDocumentName,
 } from "@scryboard/shared";
 import { useEffect, useRef, useState } from "react";
@@ -131,12 +132,17 @@ export function useRoomConnection({
         onRemoteActivity();
         const selfId = metaProvider.awareness?.clientID;
         const next = states
-          .filter((s) => s.user)
-          .map((s) => ({
-            ...(s.user as PresenceUser),
-            clientId: s.clientId,
-            isSelf: s.clientId === selfId,
-          }))
+          .flatMap((s) => {
+            const parsed = presenceUserSchema.safeParse(s.user);
+            if (!parsed.success) return [];
+            return [
+              {
+                ...parsed.data,
+                clientId: s.clientId,
+                isSelf: s.clientId === selfId,
+              },
+            ];
+          })
           .sort(
             (a, b) =>
               Number(b.role === "gm") - Number(a.role === "gm") || a.name.localeCompare(b.name),

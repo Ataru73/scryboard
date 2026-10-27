@@ -17,8 +17,7 @@ informazioni e decide cosa vedono i giocatori. Perimetro, architettura e piano d
 - **Mappe dipinte**: 14 biomi, strade e fiumi, timbri, riempimento, copia e incolla, oppure
   immagini importate e mappe animate in video.
 - **Muri, porte e luci** con visione dinamica, muri a senso unico e di terreno, luce ambientale.
-- **Segreti garantiti dal server**: oggetti nascosti, nebbia e messaggi privati non arrivano mai ai
-  browser dei giocatori.
+- **Segreti garantiti dal server**: oggetti nascosti (`Shift+H`), scene inattive, identità/PF segreti dei token e messaggi privati non arrivano mai ai browser dei giocatori (nebbia di guerra e visione dinamica sono maschere visive sulla scena).
 - **Scene multiple** per stanza: si prepara la prossima mentre i giocatori restano in quella attuale.
 - **Dadi** tirati dal server, con animazione 2D sulla lavagna, registro pubblico e tiri nascosti del
   GM.

@@ -334,6 +334,15 @@ button.danger {
   font-weight: 700;
 }
 
+.badge.role-badge {
+  margin-left: 0;
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 0.65rem;
+  padding: 0.08rem 0.35rem;
+  line-height: 1.1;
+}
+
 .messages {
   display: flex;
   flex-direction: column;

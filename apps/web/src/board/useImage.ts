@@ -19,7 +19,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  */
 async function fetchImage(url: string, token: string | null): Promise<HTMLImageElement> {
   if (!token) return loadImage(url);
-  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
+  const authorization = token.includes(":") ? `Player ${token}` : `Bearer ${token}`;
+  const res = await fetch(url, { headers: { authorization } });
   if (!res.ok) throw new Error(`Immagine non disponibile (${res.status})`);
   return loadImage(URL.createObjectURL(await res.blob()));
 }

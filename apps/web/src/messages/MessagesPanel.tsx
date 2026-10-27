@@ -214,7 +214,11 @@ function Thread({
       >
         {messages.map((m) => (
           <li key={m.id} className={m.from === me ? "bubble mine" : "bubble"}>
-            {m.from !== me && <span className="bubble-author">{m.fromName}</span>}
+            {m.from !== me && (
+              <span className="bubble-author">
+                {m.fromName} {m.from === "gm" && <span className="badge role-badge">GM</span>}
+              </span>
+            )}
             {m.note ? (
               <div className="bubble-note">
                 <strong>{m.note.title || t("effects.note.untitled")}</strong>

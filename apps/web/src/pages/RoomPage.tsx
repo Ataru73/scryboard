@@ -243,7 +243,9 @@ function Room({
           </div>
         )}
         {store && provider ? (
-          <AssetAuthContext.Provider value={gmToken}>
+          <AssetAuthContext.Provider
+            value={gmToken ?? playerCredentials(profile.id, profile.secret)}
+          >
             <Board
               key={sceneId}
               store={store}
