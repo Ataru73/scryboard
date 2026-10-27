@@ -24,6 +24,7 @@ informazioni e decide cosa vedono i giocatori. Perimetro, architettura e piano d
   GM.
 - **Esporta e importa** un'intera stanza in un file `.scryboard`.
 - **Integrazione opzionale con Gemini** per generare immagini di token e mappe e tracciare i muri.
+- **Touch, tablet e dispositivi pieghevoli**: gesti multi-touch (pinch-to-zoom, pan a due dita, tap per annulla/ripeti), modificatori a schermo (selezione multipla, movimento libero), maniglie ingrandite e supporto W3C Device Posture API con Flex Mode automatica/manuale (mappa in alto, console in basso).
 
 ## Struttura
 
@@ -94,6 +95,11 @@ con un job suo.
 | ] / [                                  | Porta in primo piano / sullo sfondo                                              |
 | Ctrl+Z / Ctrl+Shift+Z                  | Annulla / ripeti                                                                 |
 | Esc                                    | Deseleziona, chiude l'editor di testo, annulla una misura o un aggancio          |
+| Trascinamento a due dita               | Sposta la vista (pan a due dita)                                                 |
+| Pinch (due dita)                       | Zoom fluido ancorato alle dita                                                   |
+| Tap a due dita                         | Annulla (Ctrl+Z)                                                                 |
+| Tap a tre dita                         | Ripeti (Ctrl+Shift+Z)                                                            |
+| Pulsanti touch (barra zoom)            | Selezione multipla (Maiusc), Movimento libero (Alt), Modalità Flex (90°)         |
 | Clic prolungato                        | Ping visibile a tutti (il GM con Shift richiama anche i giocatori su quel punto) |
 | Trascinare su uno spazio vuoto         | Selezione a riquadro (con Shift si aggiunge)                                     |
 
@@ -144,6 +150,25 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   il _Porta qui i giocatori_ del GM, mostra di chi è il turno e non si disconnette per inattività.
   Con la visione dinamica mostra ciò che vede tutto il gruppo; il GM può vederlo in anteprima da
   _Vista_ nel pannello delle luci.
+
+## Touch, tablet e dispositivi pieghevoli
+
+Scryboard include supporto nativo completo per schermi touch, tablet e smartphone pieghevoli:
+- **Navigazione multi-touch**: con qualsiasi strumento attivo, trascinare due dita sposta la vista
+  (pan) e allontanarle o avvicinarle controlla lo zoom proporzionale centrato tra i polpastrelli. Il tocco
+  del secondo dito annulla subito qualsiasi azione monomano in corso (tratto a matita, drag o riquadro).
+- **Tap multi-dito**: tap rapido a due dita per annullare (`Ctrl+Z`), tap a tre dita per ripetere
+  (`Ctrl+Shift+Z`).
+- **Modificatori touch a schermo**: la barra dello zoom offre toggle dedicati per la **Selezione multipla**
+  (seleziona o deseleziona più elementi con tocchi singoli, equivalente al tasto `Maiusc`) e per il
+  **Movimento libero** (muove token, muri e righello senza agganciarsi alla griglia, equivalente ad `Alt`).
+- **Ergonomia touch**: target di tocco minimi di 44×44 px per puntatori touch (`pointer: coarse`), maniglie
+  di selezione e rotazione Konva ingrandite a 22 px e aree di presa ampliate per vertici di muri e percorsi.
+- **Dispositivi pieghevoli e Flex Mode**: rileva la piega fisicamente tramite la specifica standard W3C
+  Device Posture API (`@media (device-posture: folded)` e `navigator.devicePosture`) o tramite il pulsante rapido
+  nell'header. Piegato a 90° sul tavolo (postura tabletop), lo schermo si divide con la **mappa nella metà
+  superiore inclinata** e la **console con dadi, messaggi, scene e partecipanti nella metà inferiore** appoggiata al
+  tavolo; in verticale, la postura a libro affianca comodamente console e mappa sui due schermi.
 
 ## Scene
 

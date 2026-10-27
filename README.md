@@ -23,6 +23,7 @@ information and decides what the players see. Scope, architecture and work plan 
   rolls.
 - **Export and import** a whole room as a `.scryboard` file.
 - **Optional Gemini integration** to generate token images and maps and to trace walls.
+- **Touch, tablet and foldable devices**: multi-touch gestures (pinch-to-zoom, two-finger pan, 2/3-finger tap undo/redo), on-screen touch modifiers (multi-select, free grid), enlarged handles and W3C Device Posture API support with automatic/manual Flex Mode (tabletop with map on top, console on bottom).
 
 ## Structure
 
@@ -93,6 +94,11 @@ each in its own job.
 | ] / [                           | Bring to front / send to back                                                    |
 | Ctrl+Z / Ctrl+Shift+Z           | Undo / redo                                                                      |
 | Esc                             | Deselects, closes the text editor, cancels a measurement or an attachment        |
+| Two-finger drag                 | Pans the view (two-finger pan)                                                   |
+| Pinch (two fingers)             | Zooms smoothly centered on the fingers                                           |
+| Two-finger tap                  | Undo (Ctrl+Z)                                                                    |
+| Three-finger tap                | Redo (Ctrl+Shift+Z)                                                              |
+| Touch toolbar buttons           | Multi-select toggle (Shift), Free movement toggle (Alt), Flex Mode toggle        |
 | Long press                      | Ping visible to everyone (GM with Shift: also summons the players to that point) |
 | Dragging on an empty space      | Box selection (hold Shift to add)                                                |
 
@@ -140,6 +146,26 @@ for the GM, also walls and doors.
   _Bring players here_, shows whose turn it is and never disconnects for inactivity. With dynamic
   vision on it shows what the whole party sees; the GM can preview it under _View_ in the lights
   panel.
+
+## Touch, tablets and foldable devices
+
+Scryboard offers first-class touch support without needing a physical keyboard:
+- **Multi-touch canvas navigation**: regardless of the active tool, dragging with two fingers pans
+  the whiteboard and pinching zooms dynamically centered between your fingers. Placing a second
+  finger cancels any single-finger action in progress (pen strokes, drag or marquee selection).
+- **Multi-finger taps**: tap with two fingers to undo (`Ctrl+Z`), tap with three fingers to redo
+  (`Ctrl+Shift+Z`).
+- **On-screen touch modifiers**: the zoom toolbar includes dedicated toggle buttons for
+  **Multi-select** (selects or deselects multiple items with single taps, equivalent to holding `Shift`)
+  and **Free movement** (moves tokens, walls and ruler without snapping to grid lines, equivalent to `Alt`).
+- **Touch ergonomics**: interactive buttons and controls guarantee a minimum 44×44 px touch target on
+  coarse pointers, transformer selection handles are enlarged to 22 px, and handles on walls and
+  paths feature widened hit areas.
+- **Foldables & Flex Mode**: detects folding posture natively via the W3C Device Posture API
+  (`@media (device-posture: folded)` and `navigator.devicePosture`) or through the header/zoom toggle.
+  When bent at 90° resting on a table (tabletop posture), the layout automatically splits with the
+  **battlemap on the upper angled screen** and the **tactical console (chat, dice, participants, notes)**
+  on the lower flat screen. In portrait, book posture neatly organizes the console and map side-by-side.
 
 ## Scenes
 
