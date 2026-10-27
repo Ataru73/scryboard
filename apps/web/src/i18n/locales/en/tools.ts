@@ -185,6 +185,11 @@ export const tools = {
     label: "Stamps",
     random: "Vary rotation and size",
     hint: "Click to place a stamp, or drag to scatter many.",
+    generateTitle: "Generate a stamp with AI",
+    generateLabel: "Generate stamp",
+    customStamp: "Custom stamp",
+    customStampTitle: "Custom stamp ({{count}} cells)",
+    removeCustom: "Remove stamp from palette",
   },
   path: {
     label: "Path",

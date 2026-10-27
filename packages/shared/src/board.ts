@@ -277,18 +277,24 @@ const STAMP_IDS = STAMPS.map((s) => s.id) as [StampId, ...StampId[]];
 
 /**
  * Timbro sul livello mappa (lo modifica solo il GM): (x, y) è il centro, `size` il lato in
- * caselle, `variant` il seme che ne varia la forma.
+ * caselle, `variant` il seme che ne varia la forma procedurale, oppure `assetId` per un timbro con immagine.
  */
 export const stampItemSchema = z
   .object({
     ...baseItem,
     kind: z.literal("stamp"),
     layer: z.literal("map"),
-    stamp: z.enum(STAMP_IDS),
+    stamp: z.enum(STAMP_IDS).nullable().optional(),
+    /** Immagine del timbro personalizzato o generato con l'AI. */
+    assetId: z.string().nullable().optional(),
     size: z.number().positive().max(20),
-    variant: z.number().int().min(0).max(1_000_000),
+    variant: z.number().int().min(0).max(1_000_000).optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (item) => item.stamp != null || Boolean(item.assetId),
+    "Un timbro deve specificare un id procedurale o un assetId",
+  );
 
 /** Sagome d'area: cerchio, cono (largo quanto è lungo), cubo e linea larga `width` caselle. */
 export const TEMPLATE_SHAPES = [

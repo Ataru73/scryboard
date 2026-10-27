@@ -52,6 +52,34 @@ export const MAP_STYLES = [
 ] as const;
 export type MapStyleId = (typeof MAP_STYLES)[number]["id"];
 
+export const STAMP_STYLES = [
+  {
+    id: "prop",
+    label: "Oggetto o arredo",
+    template:
+      "Top-down orthographic view of a fantasy tabletop RPG battle map prop or furniture, seen directly from above:",
+  },
+  {
+    id: "nature",
+    label: "Natura o vegetazione",
+    template:
+      "Top-down orthographic view of a fantasy tabletop battle map nature element, tree, plant, rock, or terrain feature, seen directly from above:",
+  },
+  {
+    id: "structure",
+    label: "Struttura o rovina",
+    template:
+      "Top-down orthographic view of an architectural element, ruin, statue, altar, or structure for a fantasy tabletop battle map, seen directly from above:",
+  },
+  {
+    id: "magic",
+    label: "Effetto magico o runa",
+    template:
+      "Top-down orthographic view of a magical circle, rune, portal, crystal, or arcane element for a fantasy tabletop battle map, seen directly from above:",
+  },
+] as const;
+export type StampStyleId = (typeof STAMP_STYLES)[number]["id"];
+
 export const MAP_FORMATS = [
   { id: "16:9", label: "Orizzontale (16:9)" },
   { id: "4:3", label: "Orizzontale (4:3)" },
@@ -106,6 +134,16 @@ export function buildMapPrompt(description: string, style: MapStyleId): string {
       ? "Seen from above, no text, no letters, no labels, no border, no frame."
       : "Orthographic view from directly above, evenly lit, no grid lines, no characters, no creatures, no tokens, no text, no letters, no border, no frame.",
     "The image fills the whole canvas edge to edge.",
+  ].join(" ");
+}
+
+/** Descrizione del timbro/oggetto di scenario isolato, visto dall'alto su sfondo bianco uniforme. */
+export function buildStampPrompt(description: string, style: StampStyleId): string {
+  const template = STAMP_STYLES.find((s) => s.id === style)?.template ?? STAMP_STYLES[0].template;
+  return [
+    `${template} ${description.trim()}.`,
+    "Single isolated subject, centered, tabletop battle map asset or stamp, seen directly from above,",
+    "isolated on a plain solid white background, no ground texture, no shadow clipping, no floor, no characters, no creatures, no tokens, no text, no letters, no border, no frame.",
   ].join(" ");
 }
 

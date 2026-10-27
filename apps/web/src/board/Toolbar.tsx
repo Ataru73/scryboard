@@ -363,7 +363,13 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
       {tool === "fog" && role === "gm" && <FogPanel store={store} />}
       {tool === "terrain" && role === "gm" && <TerrainPanel store={store} />}
       {tool === "path" && role === "gm" && <PathPanel />}
-      {tool === "stamp" && role === "gm" && <StampPanel />}
+      {tool === "stamp" && role === "gm" && (
+        <StampPanel
+          store={store}
+          roomId={roomId}
+          centerWorld={() => screenToWorld(viewport, center)}
+        />
+      )}
       {tool === "roof" && role === "gm" && <RoofPanel />}
       {tool === "light" && role === "gm" && <LightPanel store={store} provider={provider} />}
       {tool === "wall" && role === "gm" && <WallPanel store={store} roomId={roomId} />}

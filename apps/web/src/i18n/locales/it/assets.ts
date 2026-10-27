@@ -86,6 +86,31 @@ export const assets = {
       portrait34: "Verticale (3:4)",
     },
   },
+  stampGenerator: {
+    generationFailed: "Generazione non riuscita.",
+    useFailed: "Impossibile usare questo timbro.",
+    title: "Genera un timbro con l'AI",
+    description: "Descrizione",
+    descriptionPlaceholder:
+      "Es. forziere del tesoro aperto con monete e gemme, altare runico, falò acceso",
+    kind: "Tipo",
+    size: "Dimensione",
+    cells: "{{count}} caselle",
+    transparent: "Sfondo trasparente (rimuove il fondo bianco)",
+    variants: "Varianti",
+    billing:
+      "Ogni variante è una richiesta a Gemini, addebitata sul conto Google della tua chiave. Il timbro viene salvato nella tavolozza e piazzato al centro.",
+    useStamp: "Usa il timbro {{number}}",
+    close: "Chiudi",
+    generate: "Genera",
+    generating: "Generazione…",
+    styles: {
+      prop: "Oggetto o arredo",
+      nature: "Natura o vegetazione",
+      structure: "Struttura o rovina",
+      magic: "Effetto magico o runa",
+    },
+  },
   gemini: {
     errors: {
       "invalid-key": "Chiave API non valida.",

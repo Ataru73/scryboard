@@ -136,7 +136,7 @@ export const ItemNode = memo(function ItemNode({
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
       ) : item.kind === "stamp" ? (
-        <StampContent item={item} cellSize={cellSize} selected={selected} />
+        <StampContent item={item} cellSize={cellSize} selected={selected} roomId={roomId} />
       ) : item.kind === "template" ? (
         <TemplateContent item={item} cellSize={cellSize} selected={selected} />
       ) : item.kind === "roof" ? (
@@ -914,30 +914,62 @@ function LightIcon({
   );
 }
 
-/** Timbro di scenario: immagine procedurale centrata sull'origine, con un'ombra leggera. */
+function StampAssetImage({
+  assetId,
+  roomId,
+  side,
+}: {
+  assetId: string;
+  roomId: string;
+  side: number;
+}) {
+  const image = useImage(assetUrl(roomId, assetId));
+  if (!image) return null;
+  return (
+    <Image
+      image={image}
+      x={-side / 2}
+      y={-side / 2}
+      width={side}
+      height={side}
+      shadowColor="#000000"
+      shadowOpacity={0.35}
+      shadowBlur={side * 0.06}
+      shadowOffset={{ x: side * 0.03, y: side * 0.04 }}
+    />
+  );
+}
+
+/** Timbro di scenario: immagine procedurale o generata centrata sull'origine, con un'ombra leggera. */
 export function StampContent({
   item,
   cellSize,
   selected = false,
+  roomId,
 }: {
-  item: Pick<StampItem, "stamp" | "variant" | "size">;
+  item: Pick<StampItem, "stamp" | "variant" | "size"> & { assetId?: string | null };
   cellSize: number;
   selected?: boolean;
+  roomId?: string;
 }) {
   const side = item.size * cellSize;
   return (
     <>
-      <Image
-        image={stampImage(item.stamp, item.variant)}
-        x={-side / 2}
-        y={-side / 2}
-        width={side}
-        height={side}
-        shadowColor="#000000"
-        shadowOpacity={0.35}
-        shadowBlur={side * 0.06}
-        shadowOffset={{ x: side * 0.03, y: side * 0.04 }}
-      />
+      {item.assetId && roomId ? (
+        <StampAssetImage assetId={item.assetId} roomId={roomId} side={side} />
+      ) : item.stamp ? (
+        <Image
+          image={stampImage(item.stamp, item.variant ?? 0)}
+          x={-side / 2}
+          y={-side / 2}
+          width={side}
+          height={side}
+          shadowColor="#000000"
+          shadowOpacity={0.35}
+          shadowBlur={side * 0.06}
+          shadowOffset={{ x: side * 0.03, y: side * 0.04 }}
+        />
+      ) : null}
       {selected && (
         <Rect
           x={-side / 2}

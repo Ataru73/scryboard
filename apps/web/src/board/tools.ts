@@ -174,6 +174,10 @@ interface BoardUiState {
   /** Nota che il giocatore sta leggendo (il GM legge e modifica quella selezionata). */
   openNoteId: string | null;
   stampId: StampId;
+  /** Timbro personalizzato / generato attivo (se null, usa lo stampId procedurale). */
+  stampAssetId: string | null;
+  /** Dimensione in caselle del timbro personalizzato. */
+  stampCustomSize: number;
   /** Rotazione, taglia e variante casuali a ogni timbro, per un aspetto naturale. */
   stampRandom: boolean;
   /** Modalità selezione cumulativa su schermi touch (equivale a Shift). */
@@ -211,7 +215,11 @@ interface BoardUiState {
   setVisionPreview: (viewpoint: Viewpoint | null) => void;
   setWeatherHidden: (hidden: boolean) => void;
   setOpenNote: (id: string | null) => void;
-  setStamp: (patch: Partial<Pick<BoardUiState, "stampId" | "stampRandom">>) => void;
+  setStamp: (
+    patch: Partial<
+      Pick<BoardUiState, "stampId" | "stampRandom" | "stampAssetId" | "stampCustomSize">
+    >,
+  ) => void;
   setRoofStyle: (style: RoofStyle) => void;
   setMultiSelectMode: (on: boolean) => void;
   toggleMultiSelectMode: () => void;
@@ -297,6 +305,8 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   weatherHidden: storage.getWeatherHidden(),
   openNoteId: null,
   stampId: "tree",
+  stampAssetId: null,
+  stampCustomSize: 1,
   stampRandom: true,
   multiSelectMode: false,
   freeGridMode: false,

@@ -157,6 +157,15 @@ export const MapGenerateIcon = (
   </Icon>
 );
 
+export const StampGenerateIcon = (
+  <Icon>
+    <circle cx="8" cy="10" r="4.5" />
+    <path d="M8 14.5v5.5" />
+    <path d="M18 2v5M15.5 4.5h5" />
+    <path d="M15 13l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" />
+  </Icon>
+);
+
 export const UndoIcon = (
   <Icon>
     <path d="M9 14L4 9l5-5" />

@@ -1,3 +1,9 @@
+export interface CustomStamp {
+  assetId: string;
+  size: number;
+  label?: string;
+}
+
 export interface Profile {
   /** Identifica l'autore degli oggetti creati da questo browser. */
   id: string;
@@ -119,6 +125,28 @@ export const storage = {
         ),
       ),
     ),
+  /** Timbri personalizzati o generati dall'AI in questa stanza. */
+  getCustomStamps: (roomId: string): CustomStamp[] => {
+    try {
+      const saved: unknown = JSON.parse(read(`scryboard:stamps:${roomId}`) ?? "[]");
+      return Array.isArray(saved)
+        ? saved.filter(
+            (s): s is CustomStamp =>
+              typeof s === "object" && s !== null && typeof (s as CustomStamp).assetId === "string",
+          )
+        : [];
+    } catch {
+      return [];
+    }
+  },
+  addCustomStamp: (roomId: string, stamp: CustomStamp) => {
+    const list = storage.getCustomStamps(roomId).filter((s) => s.assetId !== stamp.assetId);
+    write(`scryboard:stamps:${roomId}`, JSON.stringify([stamp, ...list].slice(0, 32)));
+  },
+  removeCustomStamp: (roomId: string, assetId: string) => {
+    const list = storage.getCustomStamps(roomId).filter((s) => s.assetId !== assetId);
+    write(`scryboard:stamps:${roomId}`, JSON.stringify(list));
+  },
   getRecentPortraits: (): string[] => {
     try {
       const saved: unknown = JSON.parse(read(RECENT_PORTRAITS_KEY) ?? "[]");

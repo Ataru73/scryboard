@@ -71,8 +71,39 @@ describe("board items", () => {
         color: "#000000",
         width: null,
       },
+      {
+        ...base,
+        id: "s_proc",
+        layer: "map",
+        z: 0,
+        kind: "stamp",
+        stamp: "tree",
+        size: 2,
+        variant: 12,
+      },
+      {
+        ...base,
+        id: "s_img",
+        layer: "map",
+        z: 0,
+        kind: "stamp",
+        assetId: "chest.webp",
+        size: 1,
+      },
     ];
     for (const item of items) expect(boardItemSchema.safeParse(item).success).toBe(true);
+  });
+
+  it("rejects stamps without stamp id or assetId", () => {
+    const invalidStamp = {
+      ...base,
+      id: "s_bad",
+      layer: "map",
+      z: 0,
+      kind: "stamp",
+      size: 1,
+    };
+    expect(boardItemSchema.safeParse(invalidStamp).success).toBe(false);
   });
 
   it("rejects paths with a single point, broken triples or zero widths", () => {

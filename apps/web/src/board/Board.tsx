@@ -157,7 +157,8 @@ type Interaction =
 interface StampDraft {
   x: number;
   y: number;
-  stamp: StampId;
+  stamp?: StampId;
+  assetId?: string;
   size: number;
   rotation: number;
   variant: number;
@@ -1191,7 +1192,18 @@ export function Board({
   }
 
   function stampDraft(at: Point): StampDraft {
-    const { stampId, stampRandom } = useBoardUi.getState();
+    const { stampId, stampRandom, stampAssetId, stampCustomSize } = useBoardUi.getState();
+    if (stampAssetId) {
+      const baseSize = stampCustomSize || 1;
+      return {
+        x: at.x,
+        y: at.y,
+        assetId: stampAssetId,
+        size: baseSize * (stampRandom ? 0.85 + Math.random() * 0.3 : 1),
+        rotation: stampRandom ? Math.random() * 360 : 0,
+        variant: 0,
+      };
+    }
     const def = STAMPS.find((st) => st.id === stampId) ?? STAMPS[0];
     const furniture = def.group === "furniture";
     return {
@@ -1334,10 +1346,11 @@ export function Board({
         return;
       case "stampScatter": {
         // Trascinando si sparge un timbro a ogni passo pari a circa la sua larghezza.
-        const spacing =
-          (STAMPS.find((st) => st.id === useBoardUi.getState().stampId)?.size ?? 1) *
-          grid.size *
-          0.9;
+        const { stampAssetId, stampCustomSize, stampId } = useBoardUi.getState();
+        const baseSize = stampAssetId
+          ? stampCustomSize || 1
+          : (STAMPS.find((st) => st.id === stampId)?.size ?? 1);
+        const spacing = baseSize * grid.size * 0.9;
         if (Math.hypot(p.world.x - interaction.last.x, p.world.y - interaction.last.y) < spacing)
           return;
         setInteraction({
@@ -1424,6 +1437,7 @@ export function Board({
           rotation: st.rotation,
           kind: "stamp" as const,
           stamp: st.stamp,
+          assetId: st.assetId,
           size: st.size,
           variant: st.variant,
         })),
@@ -2247,7 +2261,7 @@ export function Board({
                 interaction.stamps.map((st, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: i timbri in anteprima non hanno id.
                   <Group key={i} x={st.x} y={st.y} rotation={st.rotation} opacity={0.85}>
-                    <StampContent item={st} cellSize={grid.size} />
+                    <StampContent item={st} cellSize={grid.size} roomId={roomId} />
                   </Group>
                 ))}
               {interaction?.type === "marquee" && (

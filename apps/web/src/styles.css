@@ -773,6 +773,49 @@ button.danger {
   background-color: var(--board-bg);
 }
 
+.stamp-custom-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.stamp-delete-button {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+}
+
+.stamp-custom-wrapper:hover .stamp-delete-button {
+  opacity: 1;
+}
+
+.stamp-generate-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.stamp-generate-button svg {
+  width: 18px;
+  height: 18px;
+}
+
 .biome-button[aria-pressed="true"] {
   outline: 2px solid var(--accent);
   outline-offset: 1px;

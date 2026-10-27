@@ -87,6 +87,31 @@ export const assets = {
       portrait34: "Portrait (3:4)",
     },
   },
+  stampGenerator: {
+    generationFailed: "Generation failed.",
+    useFailed: "Unable to use this stamp.",
+    title: "Generate a stamp with AI",
+    description: "Description",
+    descriptionPlaceholder:
+      "E.g. open treasure chest with coins and gems, runic stone altar, campfire",
+    kind: "Type",
+    size: "Size",
+    cells: "{{count}} cells",
+    transparent: "Transparent background (remove solid white background)",
+    variants: "Variants",
+    billing:
+      "Each variant is a request to Gemini, billed to your Google key account. The stamp is saved to your palette and placed at the center.",
+    useStamp: "Use stamp {{number}}",
+    close: "Close",
+    generate: "Generate",
+    generating: "Generating…",
+    styles: {
+      prop: "Prop or furniture",
+      nature: "Nature or vegetation",
+      structure: "Structure or ruin",
+      magic: "Magic effect or rune",
+    },
+  },
   gemini: {
     errors: {
       "invalid-key": "Invalid API key.",

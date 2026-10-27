@@ -185,6 +185,11 @@ export const tools = {
     label: "Timbri",
     random: "Varia rotazione e taglia",
     hint: "Clic per un timbro, trascina per spargerne tanti.",
+    generateTitle: "Genera un timbro con l'AI",
+    generateLabel: "Genera timbro",
+    customStamp: "Timbro personalizzato",
+    customStampTitle: "Timbro personalizzato ({{count}} caselle)",
+    removeCustom: "Rimuovi timbro dalla tavolozza",
   },
   path: {
     label: "Percorso",

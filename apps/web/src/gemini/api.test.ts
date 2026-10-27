@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildMapPrompt,
   buildPrompt,
+  buildStampPrompt,
   GeminiError,
   generateImage,
   generateVariants,
@@ -30,6 +31,19 @@ describe("buildMapPrompt", () => {
     expect(dungeon).toContain("no grid lines");
     expect(dungeon).toContain("no characters");
     expect(buildMapPrompt("isola", "region")).toContain("parchment");
+  });
+});
+
+describe("buildStampPrompt", () => {
+  it("asks for an isolated top-down prop/stamp on a plain white background", () => {
+    const chest = buildStampPrompt("  forziere dorato  ", "prop");
+    expect(chest).toContain("forziere dorato.");
+    expect(chest).toContain("Top-down");
+    expect(chest).toContain("isolated on a plain solid white background");
+    expect(chest).toContain("no floor");
+    expect(buildStampPrompt("albero", "nature")).toContain("nature element");
+    expect(buildStampPrompt("portale", "magic")).toContain("magical circle");
+    expect(buildStampPrompt("altare", "structure")).toContain("architectural element");
   });
 });
 
