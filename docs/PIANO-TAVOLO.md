@@ -34,6 +34,7 @@ costa poco, poi il lavoro architetturale (scene), infine le rifiniture.
 ```
 T1 Righello  →  T2 Aree e aure  →  T3 Turni  →  T4 Dadi  →  T5 Ping+  →  T6 Scene
 →  T7 Esporta/importa  →  T8 Raccolta asset  →  T9 Cavalcature  →  T10 Muri speciali  →  T11 Video
+→  T12 Schermo al tavolo
 ```
 
 T1–T5 sono indipendenti tra loro. T6 cambia i nomi dei documenti: T7 va fatta **dopo** T6
@@ -389,6 +390,25 @@ perché tocca nomi dei documenti, permessi, visibilità degli asset e potatura.
 - Web: in `ItemNode.tsx` un `Konva.Image` con un `<video loop muted autoplay playsinline>` e
   un'unica `Konva.Animation` per livello che ridisegna solo se c'è almeno un video visibile.
 - Per i muri da Gemini si usa il primo fotogramma.
+
+### T12 — Schermo al tavolo (modalità proiettore)
+
+**Stato**: completata, senza un piano scritto prima. Note:
+- Si apre con `/r/<stanza>?view=projector` (_Link per lo schermo al tavolo_ nel pannello
+  Condividi). Per il server è un giocatore: riceve solo il documento pubblico. Non usa mai il
+  token GM, nemmeno quello salvato nel browser, e ha un'identità sua (`scryboard:projector`),
+  separata dal profilo: aperto nel browser del GM non vede attraverso i token del GM.
+- Nella presenza ha `projector: true`: nell'elenco di chi è al tavolo ha il badge «Schermo», ma
+  non è un destinatario dei messaggi, non si può assegnare ai token e non conta come giocatore.
+- Niente intestazione, barra laterale, strumenti, pannelli, scorciatoie, cursori altrui né
+  interazioni (`Board` con `projector`: lo stage non ascolta gli eventi). Restano ping, frecce dei
+  ping fuori vista, tiri di dado, immagini mostrate dal GM, meteo e un banner con il turno.
+- Visione del gruppo (`Viewpoint` «party»): i token assegnati a qualcuno e quelli creati dai
+  giocatori connessi. Il GM la può vedere in anteprima dal pannello delle luci.
+- La vista inquadra i token del gruppo con tre caselle di margine (al massimo al 150 %), 250 ms
+  dopo l'ultimo movimento. Un richiamo del GM vince finché il gruppo non si muove.
+- Non si disconnette per inattività: nessuno tocca lo schermo, e così tiene acceso anche il server
+  finché resta aperto.
 
 ---
 

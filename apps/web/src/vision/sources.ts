@@ -36,10 +36,27 @@ export function viewerTokens(items: BoardItem[], viewerId: string): TokenItem[] 
   );
 }
 
-/** Da dove si guarda: tutti i token di un utente, o un solo token (anteprima del GM). */
-export type Viewpoint = { kind: "player" | "token"; id: string };
+/**
+ * Da dove si guarda: tutti i token di un utente, un solo token (anteprima del GM) o il gruppo
+ * (schermo condiviso: i token dei giocatori `players`, id dei profili connessi).
+ */
+export type Viewpoint =
+  | { kind: "player" | "token"; id: string }
+  | { kind: "party"; players: readonly string[] };
+
+/**
+ * Token del gruppo: quelli assegnati a qualcuno dal GM e quelli creati dai giocatori connessi.
+ * I token nascosti non ci sono nemmeno, perché il documento pubblico non li contiene.
+ */
+export function partyTokens(items: BoardItem[], players: readonly string[]): TokenItem[] {
+  const ids = new Set(players);
+  return items.filter(
+    (i): i is TokenItem => i.kind === "token" && (!!i.owners?.length || ids.has(i.createdBy)),
+  );
+}
 
 export function viewpointTokens(items: BoardItem[], viewpoint: Viewpoint): TokenItem[] {
+  if (viewpoint.kind === "party") return partyTokens(items, viewpoint.players);
   if (viewpoint.kind === "player") return viewerTokens(items, viewpoint.id);
   return items.filter((i): i is TokenItem => i.kind === "token" && i.id === viewpoint.id);
 }

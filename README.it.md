@@ -81,6 +81,7 @@ con un job suo.
 | I (solo GM)                            | Luci, visione dinamica, luce ambientale e anteprima come un giocatore            |
 | S (solo GM)                            | Timbri: alberi, rocce e mobili; trascina per spargerne tanti                     |
 | N (solo GM)                            | Turno successivo nell'ordine di iniziativa                                       |
+| D                                      | Danno o cura per i token selezionati                                             |
 | 1–9 (Terreno, Percorso, Timbri)        | Biomi recenti, stili di percorso, timbri                                         |
 | Doppio clic su un percorso selezionato | Aggiunge un punto di controllo                                                   |
 | F (solo GM)                            | Nebbia: copri o scopri con rettangolo, poligono o pennello                       |
@@ -128,6 +129,17 @@ cancella gli oggetti e, per il GM, anche muri e porte.
 - **Aggancio**: _Aggancia a…_ nel pannello di selezione di un token lo lega a un altro (un
   cavaliere a una cavalcatura): muovendo il principale gli agganciati lo seguono con le stesse
   collisioni; muoverne uno da solo lo sgancia.
+- **Punti ferita e condizioni**: il GM dà a un token i punti ferita (attuali, massimi,
+  temporanei) e sceglie chi li vede: tutti, i giocatori solo come fascia (illeso, ferito,
+  malconcio, a terra) o solo il GM; i numeri segreti non arrivano mai ai giocatori. Una barra sotto
+  il token li mostra. _Danno o cura_ (`D`) accetta `-7` o `+5`, anche su più token insieme, e
+  consuma prima i temporanei. Le condizioni (prono, avvelenato… o personalizzate) sono icone sul
+  token e possono durare un certo numero di round, che scendono all'inizio del turno del token.
+- **Schermo al tavolo**: il _Link per lo schermo al tavolo_ (pannello Condividi) apre la lavagna
+  su una TV o un proiettore come la vedono i giocatori, senza comandi: segue i token del gruppo e
+  il _Porta qui i giocatori_ del GM, mostra di chi è il turno e non si disconnette per inattività.
+  Con la visione dinamica mostra ciò che vede tutto il gruppo; il GM può vederlo in anteprima da
+  _Vista_ nel pannello delle luci.
 
 ## Scene
 

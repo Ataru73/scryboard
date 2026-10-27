@@ -39,6 +39,9 @@ export const pages = {
       title: "Share",
       playerLink: "Player link",
       gmLink: "GM link (keep it secret)",
+      projectorLink: "Link for the table screen",
+      projectorHint:
+        "Open it on the computer connected to the TV or projector: it shows the board as the players see it and follows the party.",
       exportTitle:
         "Save scenes, hidden objects, and images to a file you can import into a new room",
       exporting: "Exporting…",
@@ -46,6 +49,13 @@ export const pages = {
       copy: "Copy",
       copied: "Copied",
     },
+  },
+  projector: {
+    name: "Table screen",
+    badge: "Screen",
+    fullscreen: "Full screen",
+    turnOf: "Round {{round}} · {{name}}'s turn",
+    round: "Round {{round}}",
   },
   profile: {
     gmPrompt: "You are joining as the GM.",

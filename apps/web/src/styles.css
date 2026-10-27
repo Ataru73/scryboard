@@ -483,6 +483,56 @@ button.danger {
   min-width: 0;
 }
 
+/* Schermo al tavolo: solo la lavagna, a tutta pagina. */
+.projector-room {
+  position: relative;
+  height: 100dvh;
+}
+
+.projector-room > .board-area {
+  height: 100%;
+}
+
+.projector-turn {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 3;
+  padding: 0.5rem 1.2rem;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgb(29 26 36 / 0.8);
+  color: #ffffff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.projector-status {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 3;
+  margin: 0;
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+/* Discreto finché non ci passa sopra il mouse: sulla TV non deve distrarre. */
+.projector-fullscreen {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  opacity: 0.35;
+}
+
+.projector-fullscreen:hover,
+.projector-fullscreen:focus-visible {
+  opacity: 1;
+}
+
 .board-placeholder {
   height: 100%;
   display: grid;
@@ -783,9 +833,13 @@ button.danger {
   max-width: calc(100% - 140px);
 }
 
+/*
+ * Il pannello di selezione è ciò su cui si sta lavorando: sta sopra i pannelli laterali (griglia,
+ * luci…), che altrimenti ne coprono i comandi quando va a capo su più righe.
+ */
 .toolbar-style:has(~ .selection-panel),
 .selection-panel {
-  z-index: 3;
+  z-index: 4;
 }
 
 .toolbar select,

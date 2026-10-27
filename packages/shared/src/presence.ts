@@ -7,6 +7,11 @@ export interface PresenceUser {
   name: string;
   color: string;
   role: Role;
+  /**
+   * Schermo condiviso al tavolo (TV, proiettore): entra come un giocatore ma non è un giocatore,
+   * quindi non riceve messaggi né token e non conta per la visione del gruppo.
+   */
+  projector?: boolean;
 }
 
 export const PLAYER_COLORS = [

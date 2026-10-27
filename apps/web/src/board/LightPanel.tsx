@@ -105,13 +105,25 @@ export function LightPanel({
       </label>
       <select
         id={previewId}
-        value={visionPreview ? `${visionPreview.kind}:${visionPreview.id}` : ""}
+        value={
+          !visionPreview
+            ? ""
+            : visionPreview.kind === "party"
+              ? "party"
+              : `${visionPreview.kind}:${visionPreview.id}`
+        }
         onChange={(e) => {
+          if (e.target.value === "party") {
+            // I giocatori del gruppo li sceglie la lavagna, tra quelli connessi in quel momento.
+            setVisionPreview({ kind: "party", players: [] });
+            return;
+          }
           const [kind, id] = e.target.value.split(/:(.*)/);
           setVisionPreview((kind === "player" || kind === "token") && id ? { kind, id } : null);
         }}
       >
         <option value="">{t("effects.lighting.gmView")}</option>
+        <option value="party">{t("effects.lighting.partyView")}</option>
         <optgroup label={t("effects.lighting.players")}>
           {players.map((p) => (
             <option key={p.id} value={`player:${p.id}`}>

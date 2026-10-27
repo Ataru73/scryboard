@@ -6,6 +6,18 @@ export function playerLink(origin: string, roomId: string): string {
   return `${origin}/r/${roomId}`;
 }
 
+/**
+ * Vista per lo schermo condiviso al tavolo: la vede chiunque abbia il link dei giocatori, perché
+ * mostra solo ciò che vedono loro.
+ */
+export function projectorLink(origin: string, roomId: string): string {
+  return `${playerLink(origin, roomId)}?view=projector`;
+}
+
+export function isProjectorView(search: string): boolean {
+  return new URLSearchParams(search).get("view") === "projector";
+}
+
 export function gmLink(origin: string, roomId: string, gmToken: string): string {
   return `${playerLink(origin, roomId)}#gm=${encodeURIComponent(gmToken)}`;
 }

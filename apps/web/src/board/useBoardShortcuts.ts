@@ -10,6 +10,8 @@ interface Options {
   canEdit: (item: BoardItem | undefined) => boolean;
   fitToContent: () => void;
   viewportSize: { width: number; height: number };
+  /** false sullo schermo condiviso, che non ha scorciatoie. */
+  enabled?: boolean;
 }
 
 const NON_TEXT_INPUTS = new Set([
@@ -30,8 +32,16 @@ function isTyping(target: EventTarget | null): boolean {
   return target.closest("textarea, select, [contenteditable]") !== null;
 }
 
-export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewportSize }: Options) {
+export function useBoardShortcuts({
+  store,
+  role,
+  canEdit,
+  fitToContent,
+  viewportSize,
+  enabled = true,
+}: Options) {
   useEffect(() => {
+    if (!enabled) return;
     function onKeyDown(e: KeyboardEvent) {
       if (isTyping(e.target) || document.querySelector("dialog[open]")) return;
       const ui = useBoardUi.getState();
@@ -175,5 +185,5 @@ export function useBoardShortcuts({ store, role, canEdit, fitToContent, viewport
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [store, role, canEdit, fitToContent, viewportSize]);
+  }, [store, role, canEdit, fitToContent, viewportSize, enabled]);
 }

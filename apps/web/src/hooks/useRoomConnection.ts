@@ -34,6 +34,11 @@ interface Options {
   profile: { id: string; name: string; color: string; secret: string };
   /** Solo GM: scena da aprire per prepararla; di default quella dei giocatori. */
   viewScene?: string | null;
+  /**
+   * Schermo condiviso: si presenta come proiettore e non si disconnette mai per inattività,
+   * perché nessuno lo tocca.
+   */
+  projector?: boolean;
 }
 
 function collabUrl(): string {
@@ -47,7 +52,13 @@ function collabUrl(): string {
  * per il GM, nascosto) si riaprono quando cambia la scena che si sta guardando. I giocatori
  * guardano sempre la scena attiva; il GM può aprirne un'altra per prepararla.
  */
-export function useRoomConnection({ roomId, gmToken, profile, viewScene = null }: Options) {
+export function useRoomConnection({
+  roomId,
+  gmToken,
+  profile,
+  viewScene = null,
+  projector = false,
+}: Options) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [users, setUsers] = useState<ConnectedUser[]>([]);
   const [socket, setSocket] = useState<HocuspocusProviderWebsocket | null>(null);
@@ -79,7 +90,7 @@ export function useRoomConnection({ roomId, gmToken, profile, viewScene = null }
     };
     const armIdleTimer = () => {
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(goIdle, IDLE_DISCONNECT_MS);
+      if (!projector) idleTimer = setTimeout(goIdle, IDLE_DISCONNECT_MS);
     };
     /** Attività propria: se eravamo disconnessi per inattività, si riconnette. */
     const onUserActivity = () => {
@@ -139,7 +150,13 @@ export function useRoomConnection({ roomId, gmToken, profile, viewScene = null }
       },
     });
     let usersKey = "";
-    const user: PresenceUser = { id: profile.id, name: profile.name, color: profile.color, role };
+    const user: PresenceUser = {
+      id: profile.id,
+      name: profile.name,
+      color: profile.color,
+      role,
+      ...(projector && { projector: true }),
+    };
     metaProvider.setAwarenessField("user", user);
     metaProvider.document.on("update", onRemoteActivity);
     metaProvider.attach();
@@ -172,7 +189,7 @@ export function useRoomConnection({ roomId, gmToken, profile, viewScene = null }
       mailProvider.destroy();
       socket.destroy();
     };
-  }, [roomId, gmToken, profile]);
+  }, [roomId, gmToken, profile, projector]);
 
   // Documenti della scena che si sta guardando: si riaprono a ogni cambio di scena.
   useEffect(() => {
@@ -183,6 +200,7 @@ export function useRoomConnection({ roomId, gmToken, profile, viewScene = null }
       name: profile.name,
       color: profile.color,
       role: gmToken ? "gm" : "player",
+      ...(projector && { projector: true }),
     };
     const scenePublic = new HocuspocusProvider({
       websocketProvider: socket,
@@ -213,7 +231,7 @@ export function useRoomConnection({ roomId, gmToken, profile, viewScene = null }
       scenePublic.destroy();
       sceneGm?.destroy();
     };
-  }, [socket, sceneId, roomId, gmToken, profile]);
+  }, [socket, sceneId, roomId, gmToken, profile, projector]);
 
   return { status, users, provider, gmProvider, mailProvider, activeScene, sceneId, sceneFailed };
 }

@@ -39,6 +39,9 @@ export const pages = {
       title: "Condividi",
       playerLink: "Link per i giocatori",
       gmLink: "Link GM (tienilo segreto)",
+      projectorLink: "Link per lo schermo al tavolo",
+      projectorHint:
+        "Aprilo sul computer collegato alla TV o al proiettore: mostra la lavagna come la vedono i giocatori e segue il gruppo.",
       exportTitle:
         "Salva scene, oggetti nascosti e immagini in un file da importare in una nuova stanza",
       exporting: "Esportazione…",
@@ -46,6 +49,13 @@ export const pages = {
       copy: "Copia",
       copied: "Copiato",
     },
+  },
+  projector: {
+    name: "Schermo al tavolo",
+    badge: "Schermo",
+    fullscreen: "Schermo intero",
+    turnOf: "Round {{round}} · Turno di {{name}}",
+    round: "Round {{round}}",
   },
   profile: {
     gmPrompt: "Entri come GM.",

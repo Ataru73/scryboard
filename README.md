@@ -80,6 +80,7 @@ each in its own job.
 | I (GM only)                     | Lights, dynamic vision, ambient light and preview as a player                    |
 | S (GM only)                     | Stamps: trees, rocks and furniture; drag to scatter many                         |
 | N (GM only)                     | Next turn in the initiative order                                                |
+| D                               | Damage or healing for the selected tokens                                        |
 | 1–9 (Terrain, Path, Stamps)     | Recent biomes, path styles, stamps                                               |
 | Double-click on a selected path | Adds a control point                                                             |
 | F (GM only)                     | Fog: cover or reveal with a rectangle, polygon or brush                          |
@@ -125,6 +126,17 @@ for the GM, also walls and doors.
 - **Attachments**: _Attach to…_ in the token's selection panel binds it to another token (a rider
   to a mount): moving the main token moves the attached ones with the same collisions; moving one
   alone detaches it.
+- **Hit points and conditions**: the GM gives a token hit points (current, maximum, temporary) and
+  picks who sees them: everyone, players only as a band (unhurt, wounded, bloodied, down) or the
+  GM only; secret numbers never reach the players. A bar under the token shows them. _Damage or
+  healing_ (`D`) takes `-7` or `+5`, also on several tokens at once, spending temporary hit points
+  first. Conditions (prone, poisoned… or custom ones) appear as icons on the token and can last a
+  number of rounds, counted down when the token's turn starts.
+- **Table screen**: the _Link for the table screen_ (Share panel) opens the board on a TV or
+  projector as the players see it, with no controls: it follows the party's tokens and the GM's
+  _Bring players here_, shows whose turn it is and never disconnects for inactivity. With dynamic
+  vision on it shows what the whole party sees; the GM can preview it under _View_ in the lights
+  panel.
 
 ## Scenes
 

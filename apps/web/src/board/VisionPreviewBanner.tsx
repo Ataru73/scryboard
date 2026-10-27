@@ -29,10 +29,12 @@ export function VisionPreviewBanner({
   }, [lost, setVisionPreview]);
   if (!visionPreview || lost) return null;
   const name =
-    visionPreview.kind === "player"
-      ? (players.find((p) => p.id === visionPreview.id)?.name ??
-        t("effects.lighting.disconnectedPlayer"))
-      : (token?.kind === "token" && token.name) || t("core.tokenList.unnamed");
+    visionPreview.kind === "party"
+      ? t("effects.lighting.party")
+      : visionPreview.kind === "player"
+        ? (players.find((p) => p.id === visionPreview.id)?.name ??
+          t("effects.lighting.disconnectedPlayer"))
+        : (token?.kind === "token" && token.name) || t("core.tokenList.unnamed");
   return (
     <div className="board-notice vision-preview-banner" role="status">
       <span>

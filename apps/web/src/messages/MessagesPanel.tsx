@@ -35,7 +35,11 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
   // I nomi dei giocatori connessi valgono più di quelli salvati (chi non ha mai scritto non ne ha).
   const knownNames = useMemo(
     () =>
-      new Map(users.flatMap((u) => (u.id && u.role === "player" ? [[u.id, u.name] as const] : []))),
+      new Map(
+        users.flatMap((u) =>
+          u.id && u.role === "player" && !u.projector ? [[u.id, u.name] as const] : [],
+        ),
+      ),
     [users],
   );
   // biome-ignore lint/correctness/useExhaustiveDependencies: la lingua aggiorna anche i titoli di riserva.
@@ -52,7 +56,10 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
   const recipients = useMemo(() => {
     const map = new Map<string, string>();
     if (!isGm) map.set(GM_MAILBOX, "GM");
-    for (const u of users) if (u.id && u.role === "player" && u.id !== me) map.set(u.id, u.name);
+    // Lo schermo condiviso non riceve messaggi.
+    for (const u of users) {
+      if (u.id && u.role === "player" && !u.projector && u.id !== me) map.set(u.id, u.name);
+    }
     for (const c of conversations)
       if (c.partner && !map.has(c.partner)) map.set(c.partner, c.title);
     return [...map.entries()];

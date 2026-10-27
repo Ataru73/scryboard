@@ -21,6 +21,8 @@ export const effects = {
     },
     view: "Vista",
     gmView: "GM (tutto)",
+    partyView: "Il gruppo (schermo al tavolo)",
+    party: "il gruppo",
     players: "Giocatori",
     tokens: "Token",
     previewing: "Stai guardando con gli occhi di {{name}}.",

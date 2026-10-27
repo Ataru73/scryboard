@@ -7,7 +7,7 @@ import { InfoIcon, SettingsIcon, SidebarIcon } from "../board/icons";
 import { BoardStore } from "../board/store";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
 import { ApiRequestError, api, describeApiError } from "../lib/api";
-import { gmLink, gmTokenFromHash, playerLink } from "../lib/links";
+import { gmLink, gmTokenFromHash, isProjectorView, playerLink, projectorLink } from "../lib/links";
 import { type Profile, storage } from "../lib/storage";
 import { MessagesPanel } from "../messages/MessagesPanel";
 import { ScenesPanel } from "../scenes/ScenesPanel";
@@ -15,6 +15,7 @@ import { useScenes } from "../scenes/useScenes";
 import { CreditsButton } from "./Credits";
 import { SettingsButton } from "./GeminiSettings";
 import { ProfileForm } from "./ProfileForm";
+import { ProjectorRoom } from "./ProjectorRoom";
 
 type Load =
   | { state: "loading" }
@@ -22,8 +23,20 @@ type Load =
   | { state: "error" }
   | { state: "ready"; room: RoomInfo; gmToken: string | null };
 
-/** Legge il token GM dall'URL (poi lo rimuove) o da localStorage e lo verifica col server. */
-async function loadRoom(roomId: string): Promise<Load> {
+/**
+ * Legge il token GM dall'URL (poi lo rimuove) o da localStorage e lo verifica col server. Lo
+ * schermo condiviso non lo usa mai: anche nel browser del GM mostra solo ciò che vedono i giocatori.
+ */
+async function loadRoom(roomId: string, projector: boolean): Promise<Load> {
+  if (projector) {
+    try {
+      return { state: "ready", room: await api.getRoom(roomId), gmToken: null };
+    } catch (error) {
+      return error instanceof ApiRequestError && error.status === 404
+        ? { state: "not-found" }
+        : { state: "error" };
+    }
+  }
   const fromHash = gmTokenFromHash(window.location.hash);
   if (fromHash) {
     storage.setGmToken(roomId, fromHash);
@@ -48,16 +61,17 @@ export function RoomPage({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [profile, setProfile] = useState(storage.getProfile);
+  const [projector] = useState(() => isProjectorView(window.location.search));
 
   useEffect(() => {
     let cancelled = false;
-    loadRoom(roomId).then((result) => {
+    loadRoom(roomId, projector).then((result) => {
       if (!cancelled) setLoad(result);
     });
     return () => {
       cancelled = true;
     };
-  }, [roomId]);
+  }, [roomId, projector]);
 
   if (load.state === "loading") {
     return <main className="centered muted">{t("pages.room.loading")}</main>;
@@ -76,6 +90,7 @@ export function RoomPage({ roomId }: { roomId: string }) {
   if (load.state === "error") {
     return <main className="centered error">{t("pages.room.serverError")}</main>;
   }
+  if (projector) return <ProjectorRoom room={load.room} />;
   if (!profile) {
     return (
       <ProfileForm
@@ -177,6 +192,7 @@ function Room({
                 {u.name}
                 {u.isSelf && <span className="muted"> {t("pages.room.self")}</span>}
                 {u.role === "gm" && <span className="badge">GM</span>}
+                {u.projector && <span className="badge">{t("pages.projector.badge")}</span>}
               </li>
             ))}
           </ul>
@@ -266,6 +282,11 @@ function SharePanel({
         value={gmLink(origin, roomId, gmToken)}
         secret
       />
+      <CopyField
+        label={t("pages.room.share.projectorLink")}
+        value={projectorLink(origin, roomId)}
+        hint={t("pages.room.share.projectorHint")}
+      />
       <button
         type="button"
         disabled={exporting}
@@ -283,7 +304,17 @@ function SharePanel({
   );
 }
 
-function CopyField({ label, value, secret }: { label: string; value: string; secret?: boolean }) {
+function CopyField({
+  label,
+  value,
+  secret,
+  hint,
+}: {
+  label: string;
+  value: string;
+  secret?: boolean;
+  hint?: string;
+}) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const id = useId();
@@ -311,6 +342,7 @@ function CopyField({ label, value, secret }: { label: string; value: string; sec
           {copied ? t("pages.room.share.copied") : t("pages.room.share.copy")}
         </button>
       </div>
+      {hint && <p className="muted small">{hint}</p>}
     </div>
   );
 }

@@ -88,12 +88,15 @@ export function Presence({
   scale,
   grid,
   tokens,
+  cursors = true,
 }: {
   provider: HocuspocusProvider;
   scale: number;
   grid: GridSettings;
   /** Token che chi guarda può vedere: quelli toccati da una sagoma si evidenziano. */
   tokens: TokenItem[];
+  /** false sullo schermo condiviso: i cursori di tutti distrarrebbero, i ping e i righelli no. */
+  cursors?: boolean;
 }) {
   const [states, setStates] = useState<RemoteState[]>([]);
   const [pings, setPings] = useState<ActivePing[]>([]);
@@ -220,6 +223,7 @@ export function Presence({
       })}
       {others.map(
         ({ clientId, user, cursor }) =>
+          cursors &&
           cursor && (
             <Group key={clientId} x={cursor.x} y={cursor.y} scaleX={1 / scale} scaleY={1 / scale}>
               <Path

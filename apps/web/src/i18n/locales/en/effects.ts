@@ -21,6 +21,8 @@ export const effects = {
     },
     view: "View",
     gmView: "GM (all)",
+    partyView: "The party (table screen)",
+    party: "the party",
     players: "Players",
     tokens: "Tokens",
     previewing: "You are seeing through the eyes of {{name}}.",

@@ -11,6 +11,7 @@ import type {
   TerrainOp,
   TextItem,
   TokenItem,
+  TurnSettings,
   Wall,
 } from "@scryboard/shared";
 import {
@@ -52,7 +53,7 @@ import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
 import { ExploredMap } from "../vision/explored";
 import { drawVisibleArea } from "../vision/render";
-import { isDoorSeen, type Viewpoint } from "../vision/sources";
+import { isDoorSeen, partyTokens, type Viewpoint } from "../vision/sources";
 import { useVision } from "../vision/useVision";
 import { VisionLayer } from "../vision/VisionLayer";
 import { movementFraction, wallSegments } from "../walls/geometry";
@@ -88,6 +89,7 @@ import {
 import { NotePanel } from "./NotePanel";
 import { PingArrows } from "./PingArrows";
 import { type DraftStroke, Presence, useAwarenessBroadcast } from "./Presence";
+import { PROJECTOR_FOLLOW_DELAY_MS, PROJECTOR_MAX_SCALE, partyBounds } from "./projector";
 import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
@@ -106,6 +108,7 @@ import {
   uploadVideo,
 } from "./upload";
 import { useBoardShortcuts } from "./useBoardShortcuts";
+import { usePlayers } from "./usePlayers";
 import { isUvttFile, parseUvtt, UvttError, uvttToBoard } from "./uvtt";
 import { VisionPreviewBanner } from "./VisionPreviewBanner";
 import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
@@ -119,6 +122,11 @@ interface Props {
   /** Scena aperta: la memoria delle zone esplorate è separata per scena. */
   sceneId?: string;
   role: Role;
+  /**
+   * Schermo condiviso al tavolo: niente interfaccia né interazioni, la visione del gruppo e la
+   * vista che segue i token dei giocatori.
+   */
+  projector?: boolean;
 }
 
 type Interaction =
@@ -158,6 +166,23 @@ const PING_HOLD_MS = 550;
 
 /** Durata dello spostamento della vista quando il GM richiama i giocatori. */
 const SUMMON_MS = 450;
+
+/** Sposta la vista con una breve animazione; restituisce la funzione che la interrompe. */
+function animateViewport(to: Viewport): () => void {
+  const from = useBoardUi.getState().viewport;
+  const start = performance.now();
+  let frame = requestAnimationFrame(function tick(now) {
+    const t = Math.min(1, (now - start) / SUMMON_MS);
+    const k = 1 - (1 - t) ** 3;
+    useBoardUi.getState().setViewport({
+      x: from.x + (to.x - from.x) * k,
+      y: from.y + (to.y - from.y) * k,
+      scale: from.scale + (to.scale - from.scale) * k,
+    });
+    if (t < 1) frame = requestAnimationFrame(tick);
+  });
+  return () => cancelAnimationFrame(frame);
+}
 /** Tetto o chioma (procedurale o immagine della mappa): disegnato sopra i token. */
 const isRoof = (item: BoardItem) =>
   item.kind === "roof" || (item.kind === "image" && !!item.overhead);
@@ -230,7 +255,14 @@ function findWallId(node: Konva.Node | null): string | null {
   return null;
 }
 
-export function Board({ store, provider, roomId, sceneId = "main", role }: Props) {
+export function Board({
+  store,
+  provider,
+  roomId,
+  sceneId = "main",
+  role,
+  projector = false,
+}: Props) {
   const { t } = useTranslation();
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
@@ -424,15 +456,20 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   // Visione: il giocatore guarda dai suoi token; il GM vede tutto o, in anteprima, come un
   // giocatore o con gli occhi di un singolo token.
   const visionPreview = useBoardUi((s) => s.visionPreview);
-  const viewpoint = useMemo<Viewpoint | null>(
-    () => (role === "player" ? { kind: "player", id: store.userId } : visionPreview),
-    [role, store.userId, visionPreview],
-  );
-  // L'anteprima di un giocatore ignora ciò che i giocatori non ricevono (oggetti nascosti); quella
-  // di un token no: un mostro nascosto vede comunque, e le luci nascoste illuminano lo stesso.
+  // Il gruppo (schermo condiviso e anteprima del GM) sono i giocatori connessi in questo momento.
+  const players = usePlayers(provider);
+  const playerIdsKey = players.map((p) => p.id).join(",");
+  const playerIds = useMemo(() => (playerIdsKey ? playerIdsKey.split(",") : []), [playerIdsKey]);
+  const viewpoint = useMemo<Viewpoint | null>(() => {
+    if (projector || visionPreview?.kind === "party") return { kind: "party", players: playerIds };
+    return role === "player" ? { kind: "player", id: store.userId } : visionPreview;
+  }, [projector, role, store.userId, visionPreview, playerIds]);
+  // L'anteprima di un giocatore o del gruppo ignora ciò che i giocatori non ricevono (oggetti
+  // nascosti); quella di un token no: un mostro nascosto vede comunque, e le luci nascoste
+  // illuminano lo stesso.
   const viewerItems = useMemo(
     () =>
-      role === "gm" && visionPreview?.kind === "player"
+      role === "gm" && visionPreview && visionPreview.kind !== "token"
         ? items.filter((i) => !store.isHidden(i.id))
         : items,
     [items, role, visionPreview, store],
@@ -553,7 +590,14 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     contentBounds,
   ]);
 
-  useBoardShortcuts({ store, role, canEdit, fitToContent: fitView, viewportSize: size });
+  useBoardShortcuts({
+    store,
+    role,
+    canEdit,
+    fitToContent: fitView,
+    viewportSize: size,
+    enabled: !projector,
+  });
 
   /** Il GM può creare gli oggetti già nascosti ai giocatori. */
   const addItems = (newItems: BoardItem[]) =>
@@ -594,6 +638,14 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
   // presente all'ingresso è vecchio e si ignora.
   const summon = useSyncExternalStore(store.subscribe, store.getSummon);
   const summonSeen = useRef<string | null | undefined>(undefined);
+  // Schermo condiviso: il riquadro dei token del gruppo da inquadrare e, dopo un richiamo del GM,
+  // la posizione del gruppo in quel momento (finché non cambia la vista resta sul richiamo).
+  const partyBox = projector ? partyBounds(partyTokens(items, playerIds), grid.size) : null;
+  const partyKey = partyBox
+    ? `${partyBox.x},${partyBox.y},${partyBox.width},${partyBox.height}`
+    : null;
+  const followPausedAt = useRef<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: conta solo l'arrivo di un richiamo.
   useEffect(() => {
     if (!synced) return;
     if (summonSeen.current === undefined) {
@@ -603,21 +655,26 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
     if (!summon || summon.id === summonSeen.current) return;
     summonSeen.current = summon.id;
     if (role === "gm" || size.width === 0) return;
-    const from = useBoardUi.getState().viewport;
-    const to = centerOn(summon, summon.scale, size);
-    const start = performance.now();
-    let frame = requestAnimationFrame(function tick(now) {
-      const t = Math.min(1, (now - start) / SUMMON_MS);
-      const k = 1 - (1 - t) ** 3;
-      useBoardUi.getState().setViewport({
-        x: from.x + (to.x - from.x) * k,
-        y: from.y + (to.y - from.y) * k,
-        scale: from.scale + (to.scale - from.scale) * k,
-      });
-      if (t < 1) frame = requestAnimationFrame(tick);
-    });
-    return () => cancelAnimationFrame(frame);
+    // Lo schermo condiviso resta sul punto richiamato finché il gruppo non si muove.
+    followPausedAt.current = partyKey;
+    return animateViewport(centerOn(summon, summon.scale, size));
   }, [summon, synced, role, size]);
+
+  // Schermo condiviso: la vista segue il gruppo, con un attimo di ritardo dopo l'ultimo movimento.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: partyKey riassume partyBox.
+  useEffect(() => {
+    if (!projector || !synced || size.width === 0 || !partyBox) return;
+    if (followPausedAt.current === partyKey) return;
+    followPausedAt.current = null;
+    let cancel: (() => void) | null = null;
+    const timer = setTimeout(() => {
+      cancel = animateViewport(fitBounds(partyBox, size, 48, PROJECTOR_MAX_SCALE));
+    }, PROJECTOR_FOLLOW_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      cancel?.();
+    };
+  }, [projector, synced, size, partyKey]);
 
   // Tiene il Transformer agganciato ai nodi selezionati (che possono cambiare da remoto).
   // biome-ignore lint/correctness/useExhaustiveDependencies: i nodi Konva cambiano con `items`.
@@ -1713,6 +1770,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
 
   function onDrop(event: ReactDragEvent) {
     event.preventDefault();
+    if (projector) return;
     const files = Array.from(event.dataTransfer.files);
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect || files.length === 0) return;
@@ -1904,6 +1962,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
               broadcastCursor(null);
             }}
             onWheel={onWheel}
+            // Lo schermo condiviso si guarda soltanto: nessun clic, cursore o zoom.
+            listening={!projector}
           >
             <TerrainLayer ops={terrain} visible={visibleWorld} scale={viewport.scale} />
             <Layer>
@@ -2145,6 +2205,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
                 scale={viewport.scale}
                 grid={grid}
                 tokens={visibleTokens}
+                cursors={!projector}
               />
               {items.map(
                 (item) =>
@@ -2221,7 +2282,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
             }}
           />
         )}
-        {tool === "select" && selectedIds.length > 0 && (
+        {!projector && tool === "select" && selectedIds.length > 0 && (
           <SelectionPanel store={store} role={role} roomId={roomId} provider={provider} />
         )}
         {tool === "select" && selectedWallId && <WallSelectionPanel store={store} />}
@@ -2239,7 +2300,8 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           size={size}
           onFocus={(point) => setViewport(centerOn(point, viewport.scale, size))}
         />
-        {initiativeOpen && (
+        {projector && <TurnBanner turn={turn} tokens={visibleTokens} />}
+        {!projector && initiativeOpen && (
           <InitiativePanel
             store={store}
             role={role}
@@ -2254,7 +2316,7 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         />
         <HandoutModal store={store} role={role} roomId={roomId} />
         {role === "gm" && <VisionPreviewBanner store={store} provider={provider} />}
-        <NotePanel store={store} role={role} roomId={roomId} provider={provider} />
+        {!projector && <NotePanel store={store} role={role} roomId={roomId} provider={provider} />}
         <TokenList
           // Al buio i token degli altri non si vedono: nemmeno nell'elenco per gli screen reader.
           items={
@@ -2263,15 +2325,17 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
           grid={grid}
           isHidden={(id) => store.isHidden(id)}
         />
-        <Toolbar
-          provider={provider}
-          store={store}
-          role={role}
-          roomId={roomId}
-          onUpload={(files) => void addImages(files, viewportCenter())}
-          onFit={fitView}
-          viewportSize={size}
-        />
+        {!projector && (
+          <Toolbar
+            provider={provider}
+            store={store}
+            role={role}
+            roomId={roomId}
+            onUpload={(files) => void addImages(files, viewportCenter())}
+            onFit={fitView}
+            viewportSize={size}
+          />
+        )}
         {notice && (
           <div className="board-notice" role="status">
             {notice.text}
@@ -2291,6 +2355,21 @@ export function Board({ store, provider, roomId, sceneId = "main", role }: Props
         )}
       </div>
     </ShowHandoutContext.Provider>
+  );
+}
+
+/** Schermo condiviso: di chi è il turno, se è in corso un combattimento e il token si vede. */
+function TurnBanner({ turn, tokens }: { turn: TurnSettings; tokens: TokenItem[] }) {
+  const { t } = useTranslation();
+  if (!turn.activeId) return null;
+  const active = tokens.find((token) => token.id === turn.activeId);
+  const name = active?.name;
+  return (
+    <div className="projector-turn" role="status">
+      {name
+        ? t("pages.projector.turnOf", { round: turn.round, name })
+        : t("pages.projector.round", { round: turn.round })}
+    </div>
   );
 }
 

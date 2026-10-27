@@ -155,4 +155,24 @@ export const storage = {
     }
   },
   setProfile: (profile: Profile) => write("scryboard:profile", JSON.stringify(profile)),
+  /**
+   * Identità dello schermo condiviso, separata dal profilo: aperto nel browser del GM non deve
+   * vedere attraverso i token del GM. Senza localStorage ne nasce una nuova a ogni apertura.
+   */
+  getProjectorIdentity: (): { id: string; secret: string } => {
+    try {
+      const parsed = JSON.parse(read("scryboard:projector") ?? "null") as {
+        id?: unknown;
+        secret?: unknown;
+      } | null;
+      if (typeof parsed?.id === "string" && typeof parsed.secret === "string") {
+        return { id: parsed.id, secret: parsed.secret };
+      }
+    } catch {
+      // Valore illeggibile: se ne crea uno nuovo.
+    }
+    const identity = { id: newProfileId(), secret: newProfileSecret() };
+    write("scryboard:projector", JSON.stringify(identity));
+    return identity;
+  },
 };
