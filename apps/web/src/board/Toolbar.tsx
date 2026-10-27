@@ -19,7 +19,9 @@ import {
   FitIcon,
   GridIcon,
   ImageIcon,
+  MagnetIcon,
   MapGenerateIcon,
+  MultiSelectIcon,
   RedoIcon,
   SummonIcon,
   TOOL_ICONS,
@@ -38,6 +40,7 @@ import { TerrainPanel } from "./TerrainPanel";
 import { TokenStyleFields } from "./TokenStyleFields";
 import { ToolGroup } from "./ToolGroup";
 import { type Tool, useBoardUi } from "./tools";
+import { useIsTouchDevice } from "./touchDevice";
 import { clampScale, screenToWorld, zoomAt } from "./viewport";
 import { WallPanel } from "./WallPanel";
 
@@ -91,7 +94,10 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     rulerShape,
     initiativeOpen,
     weatherHidden,
+    multiSelectMode,
+    freeGridMode,
   } = useBoardUi();
+  const isTouch = useIsTouchDevice();
   const {
     setTool,
     setColor,
@@ -106,6 +112,8 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
     setWeatherHidden,
     select,
     setEditingText,
+    toggleMultiSelectMode,
+    toggleFreeGridMode,
   } = useBoardUi.getState();
   const grid = useSyncExternalStore(store.subscribe, store.getGrid);
   const lighting = useSyncExternalStore(store.subscribe, store.getLighting);
@@ -471,6 +479,31 @@ export function Toolbar({ store, provider, role, roomId, onUpload, onFit, viewpo
         role="toolbar"
         aria-label={t("tools.toolbar.zoom.label")}
       >
+        {isTouch && (
+          <>
+            <button
+              type="button"
+              className="icon-button"
+              aria-pressed={multiSelectMode}
+              aria-label={t("tools.toolbar.multiSelect.label")}
+              title={t("tools.toolbar.multiSelect.title")}
+              onClick={toggleMultiSelectMode}
+            >
+              {MultiSelectIcon}
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              aria-pressed={freeGridMode}
+              aria-label={t("tools.toolbar.freeGrid.label")}
+              title={t("tools.toolbar.freeGrid.title")}
+              onClick={toggleFreeGridMode}
+            >
+              {MagnetIcon}
+            </button>
+            <span className="toolbar-separator" />
+          </>
+        )}
         {/* Il righello sta qui: la colonna degli strumenti è già alta quanto la finestra. */}
         <button
           type="button"

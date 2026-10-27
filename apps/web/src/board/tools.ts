@@ -176,6 +176,10 @@ interface BoardUiState {
   stampId: StampId;
   /** Rotazione, taglia e variante casuali a ogni timbro, per un aspetto naturale. */
   stampRandom: boolean;
+  /** Modalità selezione cumulativa su schermi touch (equivale a Shift). */
+  multiSelectMode: boolean;
+  /** Modalità movimento e righello liberi su schermi touch senza snap griglia (equivale ad Alt). */
+  freeGridMode: boolean;
   /** Stile del prossimo tetto. */
   roofStyle: RoofStyle;
   setTool: (tool: Tool) => void;
@@ -207,6 +211,10 @@ interface BoardUiState {
   setOpenNote: (id: string | null) => void;
   setStamp: (patch: Partial<Pick<BoardUiState, "stampId" | "stampRandom">>) => void;
   setRoofStyle: (style: RoofStyle) => void;
+  setMultiSelectMode: (on: boolean) => void;
+  toggleMultiSelectMode: () => void;
+  setFreeGridMode: (on: boolean) => void;
+  toggleFreeGridMode: () => void;
   setTerrain: (
     patch: Partial<
       Pick<
@@ -286,6 +294,8 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   openNoteId: null,
   stampId: "tree",
   stampRandom: true,
+  multiSelectMode: false,
+  freeGridMode: false,
   roofStyle: "shingles",
   setTool: (tool) =>
     set({
@@ -334,4 +344,8 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setOpenNote: (openNoteId) => set({ openNoteId }),
   setStamp: (patch) => set(patch),
   setRoofStyle: (roofStyle) => set({ roofStyle }),
+  setMultiSelectMode: (multiSelectMode) => set({ multiSelectMode }),
+  toggleMultiSelectMode: () => set((s) => ({ multiSelectMode: !s.multiSelectMode })),
+  setFreeGridMode: (freeGridMode) => set({ freeGridMode }),
+  toggleFreeGridMode: () => set((s) => ({ freeGridMode: !s.freeGridMode })),
 }));

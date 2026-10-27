@@ -23,7 +23,7 @@ import {
   STAMPS,
   type StampId,
 } from "@scryboard/shared";
-import type Konva from "konva";
+import Konva from "konva";
 import {
   type DragEvent as ReactDragEvent,
   type ReactNode,
@@ -74,6 +74,7 @@ import {
   pointInItem,
   unionBounds,
 } from "./geometry";
+import { TouchGestureTracker } from "./gestures";
 import { calibrateFromBox, nextTokenName, snapGridCorner, snapTokenCenter } from "./grid";
 import { HandoutModal, ShowHandoutContext } from "./HandoutModal";
 import { InitiativePanel } from "./InitiativePanel";
@@ -102,6 +103,7 @@ import { TextEditor } from "./TextEditor";
 import { TokenList } from "./TokenList";
 import { Toolbar } from "./Toolbar";
 import { useBoardUi } from "./tools";
+import { useIsTouchDevice } from "./touchDevice";
 import {
   isSupportedImage,
   isSupportedVideo,
@@ -116,6 +118,8 @@ import { VisionPreviewBanner } from "./VisionPreviewBanner";
 import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
 import { WallSelectionPanel } from "./WallPanel";
 import { WeatherOverlay } from "./WeatherOverlay";
+import { TouchGestureTracker } from "./gestures";
+import { useIsTouchDevice } from "./touchDevice";
 
 interface Props {
   store: BoardStore;
@@ -321,6 +325,7 @@ export function Board({
   const createHidden = useBoardUi((s) => s.createHidden);
   const draftAssetId = useBoardUi((s) => s.tokenDraft.assetId);
   const draftPortrait = useBoardUi((s) => s.tokenDraft.portrait ?? null);
+  const isTouch = useIsTouchDevice();
   const terrainBiome = useBoardUi((s) => s.terrainBiome);
   const terrainMode = useBoardUi((s) => s.terrainMode);
   const terrainSize = useBoardUi((s) => s.terrainSize);
@@ -394,6 +399,27 @@ export function Board({
     null,
   );
   const pressRef = useRef<{ timer: ReturnType<typeof setTimeout>; screen: Point } | null>(null);
+  const gestureTrackerRef = useRef<TouchGestureTracker | null>(null);
+  if (!gestureTrackerRef.current) {
+    gestureTrackerRef.current = new TouchGestureTracker({
+      onViewportChange: (nextVp) => {
+        setViewport(nextVp);
+      },
+      onTwoFingerTap: () => {
+        store.undo();
+      },
+      onThreeFingerTap: () => {
+        store.redo();
+      },
+      onCancelActiveInteraction: () => {
+        cancelPress();
+        setInteraction(null);
+        if (Konva.DD?.node) {
+          Konva.DD.node.stopDrag();
+        }
+      },
+    });
+  }
   /** Ultime posizioni sicure degli oggetti durante il trascinamento (inizialmente quelle di partenza). */
   const dragLastRef = useRef<Map<string, Point> | null>(null);
   const dragStartRef = useRef<Map<string, Point> | null>(null);
@@ -763,12 +789,30 @@ export function Board({
   }
 
   function onPointerDown(e: Konva.KonvaEventObject<PointerEvent>) {
+    const raw = e.evt;
+    if (
+      gestureTrackerRef.current?.onPointerDown(
+        {
+          id: raw.pointerId,
+          screen: { x: raw.clientX, y: raw.clientY },
+          pointerType: raw.pointerType,
+        },
+        viewport,
+      )
+    ) {
+      cancelPress();
+      return;
+    }
+    if (gestureTrackerRef.current?.inGracePeriod) return;
+
     const p = pointer();
     if (!p) return;
     cancelPress();
+    const isShift = raw.shiftKey || useBoardUi.getState().multiSelectMode;
+    const isAlt = raw.altKey || useBoardUi.getState().freeGridMode;
     if (e.evt.button === 1 || (e.evt.button === 0 && panMode)) {
       setInteraction({ type: "pan", start: p.screen, viewport });
-      if (e.evt.button === 0) startPress(p, e.evt.shiftKey);
+      if (e.evt.button === 0) startPress(p, isShift);
       return;
     }
     if (e.evt.button !== 0) return;
@@ -804,23 +848,24 @@ export function Board({
         if (!canSelect(target, role)) {
           // Su uno spazio vuoto: selezione a riquadro, oppure ping se si resta fermi.
           if (selectedWallId) selectWall(null);
-          if (!e.evt.shiftKey) select([]);
+          if (!isShift) select([]);
           setInteraction({
             type: "marquee",
             start: p.world,
             end: p.world,
-            additive: e.evt.shiftKey,
+            additive: isShift,
           });
-          startPress(p, e.evt.shiftKey);
+          startPress(p, isShift);
           return;
         }
-        if (e.evt.shiftKey) {
+        if (isShift) {
+          const currentSelectedIds = useBoardUi.getState().selectedIds;
           select(
-            selectedIds.includes(target.id)
-              ? selectedIds.filter((id) => id !== target.id)
-              : [...selectedIds, target.id],
+            currentSelectedIds.includes(target.id)
+              ? currentSelectedIds.filter((id) => id !== target.id)
+              : [...currentSelectedIds, target.id],
           );
-        } else if (!selectedIds.includes(target.id)) {
+        } else if (!useBoardUi.getState().selectedIds.includes(target.id)) {
           select([target.id]);
         }
         return;
@@ -887,11 +932,11 @@ export function Board({
             shape,
             start: p.world,
             end: p.world,
-            free: e.evt.altKey,
+            free: isAlt,
           });
           return;
         }
-        const start = snapRulerPoint(p.world, grid, e.evt.altKey);
+        const start = snapRulerPoint(p.world, grid, isAlt);
         setInteraction({ type: "ruler", points: [start], cursor: start });
         return;
       }
@@ -918,7 +963,7 @@ export function Board({
         pathDrawing.down(p.world, p.screen, viewport.scale);
         return;
       case "wall":
-        wallDrawing.down(p.world, viewport.scale, e.evt.altKey);
+        wallDrawing.down(p.world, viewport.scale, isAlt);
         return;
       case "stamp": {
         const first = stampDraft(p.world);
@@ -1190,12 +1235,26 @@ export function Board({
   }
 
   function onPointerMove(e: Konva.KonvaEventObject<PointerEvent>) {
+    const raw = e.evt;
+    if (
+      gestureTrackerRef.current?.onPointerMove(raw.pointerId, {
+        x: raw.clientX,
+        y: raw.clientY,
+      })
+    ) {
+      return;
+    }
+    if (gestureTrackerRef.current?.inGracePeriod || gestureTrackerRef.current?.isPinching) {
+      return;
+    }
+
     const p = pointer();
     if (!p) return;
+    const isAlt = raw.altKey || useBoardUi.getState().freeGridMode;
     broadcastCursor(p.world);
     if (tool === "path") pathDrawing.move(p.world, p.screen);
     if (tool === "terrain" && terrainMode === "paste") setPasteCursor(p.world);
-    if (tool === "wall") wallDrawing.move(p.world, e.evt.altKey);
+    if (tool === "wall") wallDrawing.move(p.world, isAlt);
     if (
       pressRef.current &&
       Math.hypot(p.screen.x - pressRef.current.screen.x, p.screen.y - pressRef.current.screen.y) > 5
@@ -1247,7 +1306,7 @@ export function Board({
         return;
       }
       case "ruler": {
-        const cursor = snapRulerPoint(p.world, grid, e.evt.altKey);
+        const cursor = snapRulerPoint(p.world, grid, isAlt);
         setInteraction({ ...interaction, cursor });
         const points = [...interaction.points, cursor];
         broadcastRuler({
@@ -1257,10 +1316,10 @@ export function Board({
         return;
       }
       case "template": {
-        setInteraction({ ...interaction, end: p.world, free: e.evt.altKey });
+        setInteraction({ ...interaction, end: p.world, free: isAlt });
         if (!(role === "gm" && createHidden)) {
           broadcastTemplate(
-            templateFromDrag(interaction.shape, interaction.start, p.world, grid, e.evt.altKey),
+            templateFromDrag(interaction.shape, interaction.start, p.world, grid, isAlt),
           );
         }
         return;
@@ -1305,11 +1364,20 @@ export function Board({
   }
 
   function onPointerUp(e: Konva.KonvaEventObject<PointerEvent>) {
+    const raw = e.evt;
+    const handled = gestureTrackerRef.current?.onPointerUp(raw.pointerId);
+    if (handled || gestureTrackerRef.current?.inGracePeriod) {
+      cancelPress();
+      setInteraction(null);
+      return;
+    }
+
     cancelPress();
     if (tool === "path") pathDrawing.up();
     const current = interaction;
     setInteraction(null);
     if (!current) return;
+    const isShift = raw.shiftKey || useBoardUi.getState().multiSelectMode;
     if (current.type === "laser") {
       broadcastLaser(null);
       return;
@@ -1331,7 +1399,7 @@ export function Board({
         grid,
         current.free,
       );
-      if (e.evt.shiftKey) {
+      if (isShift) {
         // Maiusc al rilascio: la sagoma diventa un oggetto che si sposta e si cancella.
         broadcastTemplate(null);
         addItems([
@@ -1515,10 +1583,11 @@ export function Board({
   }
 
   function applyItemDrag(e: Konva.KonvaEventObject<DragEvent>) {
+    const isAlt = e.evt.altKey || useBoardUi.getState().freeGridMode;
     const dragged = e.target;
     const item = store.get(dragged.id());
-    // I token si agganciano alla griglia (Alt per muoverli liberi).
-    if (item?.kind === "token" && grid.enabled && !e.evt.altKey) {
+    // I token si agganciano alla griglia (Alt o FreeGrid per muoverli liberi).
+    if (item?.kind === "token" && grid.enabled && !isAlt) {
       dragged.position(snapTokenCenter(dragged.position(), item.size, grid));
     }
     const lastPositions = dragLastRef.current;
@@ -1532,7 +1601,7 @@ export function Board({
     // curva non deve permettere di attraversare il muro fra due eventi consecutivi del puntatore.
     // Tutti i token seguono lo stesso delta e l'intera selezione si ferma al primo impatto.
     // Soltanto il GM può ignorare il blocco con Alt; per i giocatori Alt disattiva solo lo snap.
-    if (role !== "gm" || !e.evt.altKey) {
+    if (role !== "gm" || !isAlt) {
       let fraction = 1;
       for (const node of nodes) {
         const start = lastPositions.get(node.id());
@@ -1982,6 +2051,7 @@ export function Board({
             onPointerUp={onPointerUp}
             onDblClick={onDoubleClick}
             onPointerLeave={() => {
+              gestureTrackerRef.current?.reset();
               cancelPress();
               broadcastCursor(null);
               // Fuori dalla lavagna il puntatore si spegne: la scia svanisce da sola.
@@ -2066,7 +2136,9 @@ export function Board({
                 rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
                 ignoreStroke
                 flipEnabled={false}
-                anchorSize={9}
+                anchorSize={isTouch ? 22 : 9}
+                anchorCornerRadius={isTouch ? 4 : 0}
+                rotateAnchorOffset={isTouch ? 36 : 20}
                 borderStroke="#8e7cf0"
                 anchorStroke="#8e7cf0"
               />

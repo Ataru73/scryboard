@@ -45,6 +45,14 @@ export const tools = {
       hiddenTitle: "I nuovi oggetti sono nascosti ai giocatori (clic per crearli visibili)",
       visibleTitle: "I nuovi oggetti sono visibili (clic per crearli nascosti)",
     },
+    multiSelect: {
+      label: "Selezione multipla",
+      title: "Selezione multipla touch (equivale a Maiusc)",
+    },
+    freeGrid: {
+      label: "Movimento libero",
+      title: "Movimento e righello liberi senza snap griglia (equivale ad Alt)",
+    },
     grid: "Griglia",
     undo: {
       label: "Annulla",

@@ -282,3 +282,19 @@ export const SidebarIcon = (
     <path d="M9 4v16" />
   </Icon>
 );
+
+export const MagnetIcon = (
+  <Icon>
+    <path d="M6 14v-6a6 6 0 1 1 12 0v6" />
+    <path d="M4 14h4v5H4z" />
+    <path d="M16 14h4v5h-4z" />
+  </Icon>
+);
+
+export const MultiSelectIcon = (
+  <Icon>
+    <rect x="3" y="3" width="11" height="11" rx="2" />
+    <path d="M7 17h11a2 2 0 0 0 2-2V7" />
+    <path d="M6.5 8.5l2 2 3.5-3.5" />
+  </Icon>
+);

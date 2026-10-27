@@ -221,7 +221,7 @@ button.danger {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem 10rem 0.75rem 1rem;
+  padding: max(0.75rem, env(safe-area-inset-top)) 10rem 0.75rem max(1rem, env(safe-area-inset-left));
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
@@ -577,8 +577,8 @@ button.danger {
 }
 
 .toolbar-tools {
-  top: 12px;
-  left: 12px;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
   flex-direction: column;
   /* Su schermi bassi gli strumenti scorrono dentro la barra, invece di far scorrere la lavagna. */
   max-height: calc(100% - 24px);
@@ -614,15 +614,15 @@ button.danger {
 }
 
 .toolbar-style {
-  top: 12px;
-  left: 64px;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(64px, calc(16px + env(safe-area-inset-left) + 48px));
   flex-wrap: wrap;
   max-width: calc(100% - 76px);
 }
 
 .toolbar-zoom {
-  right: 12px;
-  bottom: 12px;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
 }
 
 .toolbar-separator {
@@ -1022,6 +1022,89 @@ button.danger {
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid var(--border);
+  }
+
+  .selection-panel {
+    top: auto;
+    bottom: 64px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: calc(100% - 16px);
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  .toolbar-zoom {
+    bottom: 8px;
+    right: 8px;
+  }
+
+  .toolbar-tools {
+    top: 8px;
+    left: 8px;
+    max-height: calc(100% - 80px);
+  }
+}
+
+/* Touch & Coarse Pointer Ergonomics */
+@media (pointer: coarse) {
+  .icon-button {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+
+  .toolbar {
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .color-button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .toolbar select,
+  .toolbar .token-name,
+  .toolbar > button:not(.icon-button):not(.color-button) {
+    min-height: 38px;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* Dispositivi Foldable — Postura a libro (cerniera verticale aperta a 2 schermi) */
+/* biome-ignore lint/correctness/noUnknownMediaFeatureName: Foldable CSS draft standard */
+@media (vertical-viewport-segments: 2), (screen-fold-posture: book) {
+  .room:not(.sidebar-collapsed) {
+    grid-template-columns: minmax(18rem, env(viewport-segment-width 0 0, 18rem)) 1fr;
+  }
+}
+
+/* Dispositivi Foldable — Flex Mode / Tabletop (schermo piegato orizzontale appoggiato sul tavolo) */
+/* biome-ignore lint/correctness/noUnknownMediaFeatureName: Foldable CSS draft standard */
+@media (horizontal-viewport-segments: 2), (screen-fold-posture: table-top) {
+  .room {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .board-area {
+    height: env(viewport-segment-height 0 0, 50vh);
+    flex: none;
+  }
+
+  .sidebar {
+    height: env(viewport-segment-height 0 1, 50vh);
+    flex: none;
+    overflow-y: auto;
+    border-top: 2px solid var(--accent);
+  }
+
+  .sidebar[hidden] {
+    display: block;
+    height: auto;
   }
 }
 

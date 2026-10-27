@@ -37,6 +37,28 @@ export function zoomAt(vp: Viewport, anchor: Point, factor: number): Viewport {
   return { scale, x: anchor.x - world.x * scale, y: anchor.y - world.y * scale };
 }
 
+/**
+ * Trasformazione durante un pinch-to-zoom combinato con pan (gesto a 2 dita).
+ * Mantiene il punto del mondo sotto `startCenter` esattamente sotto `currentCenter`.
+ */
+export function pinchTransform(
+  startVp: Viewport,
+  startDistance: number,
+  currentDistance: number,
+  startCenter: Point,
+  currentCenter: Point,
+): Viewport {
+  if (startDistance <= 0 || currentDistance <= 0) return startVp;
+  const factor = currentDistance / startDistance;
+  const scale = clampScale(startVp.scale * factor);
+  const world = screenToWorld(startVp, startCenter);
+  return {
+    scale,
+    x: currentCenter.x - world.x * scale,
+    y: currentCenter.y - world.y * scale,
+  };
+}
+
 /** Viewport che mette al centro di uno schermo `size` il punto del mondo `point`. */
 export function centerOn(
   point: Point,

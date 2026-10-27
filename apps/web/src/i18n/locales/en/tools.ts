@@ -45,6 +45,14 @@ export const tools = {
       hiddenTitle: "New objects are hidden from players (click to make them visible)",
       visibleTitle: "New objects are visible (click to make them hidden)",
     },
+    multiSelect: {
+      label: "Multi-select",
+      title: "Touch multi-select (Shift equivalent)",
+    },
+    freeGrid: {
+      label: "Free movement",
+      title: "Free movement and ruler ignoring grid snap (Alt equivalent)",
+    },
     grid: "Grid",
     undo: {
       label: "Undo",

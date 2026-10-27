@@ -2,6 +2,8 @@ import type { Wall } from "@scryboard/shared";
 import type Konva from "konva";
 import { Circle } from "react-konva";
 import { SELECTION_COLOR } from "../board/ItemNode";
+import { useBoardUi } from "../board/tools";
+import { useIsTouchDevice } from "../board/touchDevice";
 import type { Point } from "../board/viewport";
 
 interface Props {
@@ -14,9 +16,12 @@ interface Props {
 
 /** Maniglie dei vertici del muro selezionato; anche le modifiche restano agganciate alla griglia. */
 export function WallHandles({ wall, scale, snap, onChange }: Props) {
+  const isTouch = useIsTouchDevice();
+  const freeGridMode = useBoardUi((s) => s.freeGridMode);
+
   const moved = (index: number, event: Konva.KonvaEventObject<DragEvent>) => {
     const raw = { x: event.target.x(), y: event.target.y() };
-    const point = event.evt.altKey ? raw : snap(raw);
+    const point = event.evt.altKey || freeGridMode ? raw : snap(raw);
     event.target.position(point);
     const points = wall.points.slice();
     points[index * 2] = point.x;
@@ -32,11 +37,11 @@ export function WallHandles({ wall, scale, snap, onChange }: Props) {
           name="wall-handle"
           x={wall.points[index * 2]}
           y={wall.points[index * 2 + 1]}
-          radius={5.5 / scale}
+          radius={(isTouch ? 8 : 5.5) / scale}
           fill="#ffffff"
           stroke={SELECTION_COLOR}
           strokeWidth={2 / scale}
-          hitStrokeWidth={10 / scale}
+          hitStrokeWidth={Math.max(isTouch ? 28 : 14, 14) / scale}
           draggable
           onPointerDown={(event) => {
             event.cancelBubble = true;
