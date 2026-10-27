@@ -3,6 +3,7 @@ import { GM_MAILBOX, MAX_MESSAGE_LENGTH, type Message, type PresenceUser } from 
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Markdown } from "../board/markdown";
+import { unlockAudioContext } from "../dice/diceSound";
 import { RollPanel } from "../dice/RollPanel";
 import { rollFormula } from "../dice/rolls";
 import { api, describeApiError } from "../lib/api";
@@ -101,8 +102,10 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
           onSend={(text) => {
             // «/r 2d6+1» in qualunque conversazione tira i dadi per tutto il tavolo.
             const dice = /^\/r\s+(.+)$/i.exec(text);
-            if (dice)
+            if (dice) {
+              unlockAudioContext();
               return rollFormula(roomId, dice[1] as string, myName, auth).then(() => undefined);
+            }
             return api
               .sendMessage(roomId, { to: openPartner as string, text, fromName: myName }, auth)
               .then(() => undefined);

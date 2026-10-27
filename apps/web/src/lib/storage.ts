@@ -53,6 +53,7 @@ const GEMINI_KEY = "scryboard:gemini-key";
 const GEMINI_MODEL_KEY = "scryboard:gemini-model";
 const GEMINI_VISION_MODEL_KEY = "scryboard:gemini-vision-model";
 const DICE_PRESETS_KEY = "scryboard:dice-presets";
+const DICE_SOUND_MUTED_KEY = "scryboard:dice-sound-muted";
 const WEATHER_HIDDEN_KEY = "scryboard:weather-hidden";
 const MAX_GENERATED = 24;
 /** Quante formule si possono salvare: oltre, i pulsanti non starebbero più nel pannello. */
@@ -89,6 +90,9 @@ export const storage = {
   },
   setDicePresets: (formulas: string[]) =>
     write(DICE_PRESETS_KEY, JSON.stringify(formulas.slice(0, MAX_DICE_PRESETS))),
+  /** Disattiva l'effetto sonoro al lancio dei dadi per questo browser. */
+  getDiceSoundMuted: () => read(DICE_SOUND_MUTED_KEY) === "1",
+  setDiceSoundMuted: (muted: boolean) => write(DICE_SOUND_MUTED_KEY, muted ? "1" : null),
   /** Chi trova fastidioso il meteo animato lo spegne per sé, in tutte le stanze. */
   getWeatherHidden: () => read(WEATHER_HIDDEN_KEY) === "1",
   setWeatherHidden: (hidden: boolean) => write(WEATHER_HIDDEN_KEY, hidden ? "1" : null),

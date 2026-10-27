@@ -49,6 +49,8 @@ export const social = {
     presetRemove: "Remove the formula {{formula}}",
     presetSave: "Save",
     presetSaveHint: "Save the typed formula as a quick button (kept in this browser)",
+    soundEnable: "Enable dice sound",
+    soundDisable: "Mute dice sound",
     help: "Keep highest: 2d20kh1 · explode: 3d6! · successes: 10d10>=7 · together: 8d10!>=8",
     successes_one: "success",
     successes_other: "successes",

@@ -2,6 +2,7 @@ import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { meetsSuccess, type Roll, type Success } from "@scryboard/shared";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { playDiceRollSound } from "./diceSound";
 import { useLocalRolls, useRolls } from "./rolls";
 
 const TOAST_MS = 6200;
@@ -231,7 +232,12 @@ function RollToastCard({ roll, secret }: Toast) {
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
     if (explodedDice.length > 0) {
-      timers.push(setTimeout(() => setShowExploded(true), baseDoneMs));
+      timers.push(
+        setTimeout(() => {
+          setShowExploded(true);
+          playDiceRollSound(explodedDice.length);
+        }, baseDoneMs),
+      );
     }
     if (visibleDice.length > 0) {
       timers.push(setTimeout(() => setTotalReady(true), totalDoneMs));
@@ -329,6 +335,12 @@ export function RollToasts({ provider }: { provider: HocuspocusProvider }) {
       }
     }
     if (fresh.length === 0) return;
+    const latestToast = fresh[fresh.length - 1];
+    if (latestToast) {
+      const { dice } = flattenRoll(latestToast.roll);
+      const count = dice.filter((d) => !d.extra).length;
+      playDiceRollSound(count);
+    }
     setToasts((current) => [...current, ...fresh].slice(-2));
     for (const toast of fresh) {
       setTimeout(

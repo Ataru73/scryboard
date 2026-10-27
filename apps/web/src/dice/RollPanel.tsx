@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "rea
 import { useTranslation } from "react-i18next";
 import { describeApiError } from "../lib/api";
 import { MAX_DICE_PRESETS, storage } from "../lib/storage";
+import { playDiceRollSound, unlockAudioContext } from "./diceSound";
 import { type Auth, rollFormula, useLocalRolls, useRolls } from "./rolls";
 
 const QUICK_DICE = [4, 6, 8, 10, 12, 20, 100] as const;
@@ -23,6 +24,7 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
   const isGm = "gmToken" in auth;
   const [formula, setFormula] = useState("");
   const [hidden, setHidden] = useState(false);
+  const [soundMuted, setSoundMuted] = useState(() => storage.getDiceSoundMuted());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [presets, setPresets] = useState(() => storage.getDicePresets());
@@ -48,6 +50,7 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
   async function roll(text: string) {
     const body = text.trim();
     if (!body || busy) return;
+    unlockAudioContext();
     setBusy(true);
     setError(null);
     try {
@@ -99,6 +102,55 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
         />
         <button type="submit" className="primary" disabled={busy || !formula.trim()}>
           {t("social.dice.roll")}
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          aria-pressed={!soundMuted}
+          title={soundMuted ? t("social.dice.soundEnable") : t("social.dice.soundDisable")}
+          aria-label={soundMuted ? t("social.dice.soundEnable") : t("social.dice.soundDisable")}
+          onClick={() => {
+            const next = !soundMuted;
+            setSoundMuted(next);
+            storage.setDiceSoundMuted(next);
+            if (!next) {
+              playDiceRollSound(1);
+            }
+          }}
+        >
+          {soundMuted ? (
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              <line x1="23" y1="9" x2="17" y2="15" />
+              <line x1="17" y1="9" x2="23" y2="15" />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M11 5L6 9H2v6h4l5 4V5z" />
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+            </svg>
+          )}
         </button>
       </form>
       {error && (
