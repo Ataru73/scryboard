@@ -36,6 +36,7 @@ import { roofTexture, TEXTURE_SIZE } from "../terrain/textures";
 import { useAssetAuth } from "./assetAuth";
 import { localBox, normalizeBox } from "./geometry";
 import { tokenInitials } from "./grid";
+import { elevationOffset, elevationShadow, pitOverlayShade } from "./measure";
 import { usePortraitPath } from "./portraitPaths";
 import { TemplateBody } from "./Templates";
 import { useImage } from "./useImage";
@@ -75,6 +76,8 @@ interface Props {
   connectorEnds?: { from: { x: number; y: number }; to: { x: number; y: number } };
   /** Quota del token già formattata («+15 ft»): assente se è a terra. */
   elevationLabel?: string;
+  /** Valore di scala della griglia (es. 5 ft/casella) per scalare alzata e ombra. */
+  scaleAmount?: number;
   /** Luce ambientale che tinge le immagini; assente con le luci spente. */
   ambient?: LightingSettings["ambient"];
   onDragStart?: (event: Konva.KonvaEventObject<DragEvent>) => void;
@@ -94,6 +97,7 @@ export const ItemNode = memo(function ItemNode({
   attached,
   unmasked,
   elevationLabel,
+  scaleAmount,
   connectorEnds,
   fade,
   listening = true,
@@ -127,6 +131,7 @@ export const ItemNode = memo(function ItemNode({
           attached={attached}
           unmasked={unmasked}
           elevationLabel={elevationLabel}
+          scaleAmount={scaleAmount}
         />
       ) : item.kind === "path" ? (
         <PathShape points={item.points} style={item.style} selected={selected} />
@@ -351,6 +356,7 @@ function TokenContent({
   attached,
   unmasked,
   elevationLabel,
+  scaleAmount,
 }: {
   item: TokenItem;
   roomId: string;
@@ -360,12 +366,16 @@ function TokenContent({
   attached?: boolean;
   unmasked?: boolean;
   elevationLabel?: string;
+  scaleAmount?: number;
 }) {
   const masked = !!item.obscured && !unmasked;
   const color = masked ? OBSCURED_IDENTITY.color : item.color;
   const r = (item.size * cellSize) / 2;
   const ring = Math.max(2, r * 0.1);
   const labelSize = Math.max(10, cellSize * 0.22);
+  const offset = elevationOffset(item.elevation, cellSize, scaleAmount);
+  const shadow = elevationShadow(item.elevation, r, cellSize, scaleAmount);
+  const pitShade = pitOverlayShade(item.elevation, scaleAmount);
   // I numeri dei punti ferita (se chi guarda li conosce) solo al passaggio o con il token scelto.
   const [hover, setHover] = useState(false);
   const band = visibleBand(item.hp, item.hpBand);
@@ -381,98 +391,121 @@ function TokenContent({
   const nameY = hpText ? pillBottom + 2 : band ? barY + barHeight + 2 : r + 4;
   return (
     <Group onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      {item.aura && (
+      {shadow && (
+        <Group y={0} listening={false} name="elevation-shadow">
+          <Ellipse
+            radiusX={shadow.radiusX}
+            radiusY={shadow.radiusY}
+            fill={shadow.fill}
+            shadowColor="#000000"
+            shadowBlur={shadow.blur}
+            shadowOpacity={shadow.shadowOpacity}
+          />
+        </Group>
+      )}
+      <Group y={-offset}>
+        {item.aura && (
+          <Circle
+            radius={r + item.aura.radius * cellSize}
+            fill={item.aura.color}
+            opacity={0.18}
+            stroke={item.aura.color}
+            strokeWidth={2}
+            dash={[10, 6]}
+            listening={false}
+          />
+        )}
+        {turn && (
+          <Circle
+            radius={r + ring + 7}
+            stroke="#ffc53d"
+            strokeWidth={5}
+            shadowColor="#ffc53d"
+            shadowBlur={14}
+            shadowOpacity={0.9}
+            listening={false}
+            name="turn-ring"
+          />
+        )}
+        {selected && (
+          <Circle radius={r + ring + 3} stroke={SELECTION_COLOR} strokeWidth={3} dash={[6, 4]} />
+        )}
         <Circle
-          radius={r + item.aura.radius * cellSize}
-          fill={item.aura.color}
-          opacity={0.18}
-          stroke={item.aura.color}
-          strokeWidth={2}
-          dash={[10, 6]}
-          listening={false}
-        />
-      )}
-      {turn && (
-        <Circle
-          radius={r + ring + 7}
-          stroke="#ffc53d"
-          strokeWidth={5}
-          shadowColor="#ffc53d"
-          shadowBlur={14}
-          shadowOpacity={0.9}
-          listening={false}
-          name="turn-ring"
-        />
-      )}
-      {selected && (
-        <Circle radius={r + ring + 3} stroke={SELECTION_COLOR} strokeWidth={3} dash={[6, 4]} />
-      )}
-      <Circle
-        radius={r}
-        fill={color}
-        shadowColor="#000000"
-        shadowOpacity={0.35}
-        shadowBlur={6}
-        shadowOffsetY={2}
-      />
-      {masked ? (
-        <UnknownFace radius={r} />
-      ) : item.assetId ? (
-        <TokenImage roomId={roomId} assetId={item.assetId} radius={r - ring / 2} />
-      ) : (
-        <TokenFace item={item} radius={r} />
-      )}
-      <Circle radius={r - ring / 2} stroke={color} strokeWidth={ring} />
-      {band === "down" && <DownMark radius={r - ring} />}
-      {item.conditions && (
-        <ConditionBadges
-          conditions={item.conditions}
           radius={r}
-          size={Math.max(16, cellSize * 0.32)}
+          fill={color}
+          shadowColor="#000000"
+          shadowOpacity={0.35}
+          shadowBlur={6}
+          shadowOffsetY={2}
         />
-      )}
-      {attached && <ChainBadge x={r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />}
-      {item.obscured && !masked && (
-        <ObscuredBadge x={-r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />
-      )}
-      {elevationLabel && (
-        <ElevationPill text={elevationLabel} y={-r - ring} size={labelSize * 0.9} />
-      )}
-      {band && (
-        <VitalsBar
-          hp={item.hp}
-          band={item.hpBand}
-          y={barY}
-          width={Math.max(cellSize * 0.6, r * 1.5)}
-          height={barHeight}
-        />
-      )}
-      {item.name && !masked && (
-        <Text
-          text={item.name}
-          x={-cellSize * 2}
-          y={nameY}
-          width={cellSize * 4}
-          align="center"
-          fontFamily={FONT_FAMILY}
-          fontStyle="bold"
-          fontSize={labelSize}
-          fill="#ffffff"
-          stroke="#1d1a24"
-          strokeWidth={labelSize * 0.25}
-          fillAfterStrokeEnabled
-          listening={false}
-        />
-      )}
-      {hpText && (
-        <ElevationPill
-          text={hpText}
-          // ElevationPill si mette sopra al punto dato: si passa il fondo della pillola.
-          y={pillBottom}
-          size={pillSize}
-          name="hp-text"
-        />
-      )}
+        {masked ? (
+          <UnknownFace radius={r} />
+        ) : item.assetId ? (
+          <TokenImage roomId={roomId} assetId={item.assetId} radius={r - ring / 2} />
+        ) : (
+          <TokenFace item={item} radius={r} />
+        )}
+        <Circle radius={r - ring / 2} stroke={color} strokeWidth={ring} />
+        {band === "down" && <DownMark radius={r - ring} />}
+        {pitShade > 0 && (
+          <Circle
+            radius={r - ring / 2}
+            fill="#000000"
+            opacity={pitShade}
+            listening={false}
+            name="pit-shade"
+          />
+        )}
+        {item.conditions && (
+          <ConditionBadges
+            conditions={item.conditions}
+            radius={r}
+            size={Math.max(16, cellSize * 0.32)}
+          />
+        )}
+        {attached && <ChainBadge x={r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />}
+        {item.obscured && !masked && (
+          <ObscuredBadge x={-r * 0.72} y={-r * 0.72} size={Math.max(16, cellSize * 0.3)} />
+        )}
+        {elevationLabel && (
+          <ElevationPill text={elevationLabel} y={-r - ring} size={labelSize * 0.9} />
+        )}
+        {band && (
+          <VitalsBar
+            hp={item.hp}
+            band={item.hpBand}
+            y={barY}
+            width={Math.max(cellSize * 0.6, r * 1.5)}
+            height={barHeight}
+          />
+        )}
+        {item.name && !masked && (
+          <Text
+            text={item.name}
+            x={-cellSize * 2}
+            y={nameY}
+            width={cellSize * 4}
+            align="center"
+            fontFamily={FONT_FAMILY}
+            fontStyle="bold"
+            fontSize={labelSize}
+            fill="#ffffff"
+            stroke="#1d1a24"
+            strokeWidth={labelSize * 0.25}
+            fillAfterStrokeEnabled
+            listening={false}
+          />
+        )}
+        {hpText && (
+          <ElevationPill
+            text={hpText}
+            // ElevationPill si mette sopra al punto dato: si passa il fondo della pillola.
+            y={pillBottom}
+            size={pillSize}
+            name="hp-text"
+          />
+        )}
+      </Group>
     </Group>
   );
 }

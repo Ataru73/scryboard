@@ -69,6 +69,91 @@ export function measureRise(points: Point[], tokens: TokenItem[], grid: GridSett
   return rise / grid.scale.amount;
 }
 
+export interface ElevationShadow {
+  radiusX: number;
+  radiusY: number;
+  fill: string;
+  blur: number;
+  shadowOpacity: number;
+  isPit: boolean;
+}
+
+/**
+ * Spostamento verticale in pixel dovuto alla quota (in su per quote positive, in giù per fosse).
+ * Restituisce i pixel di cui alzare il token sull'asse Y dello schermo (quindi positivo = verso l'alto).
+ */
+export function elevationOffset(
+  elevation: number | undefined,
+  cellSize: number,
+  scaleAmount = 5,
+): number {
+  if (!elevation || !Number.isFinite(elevation)) return 0;
+  const unit = scaleAmount > 0 ? scaleAmount : 5;
+  const absCells = Math.abs(elevation) / unit;
+  if (absCells === 0) return 0;
+  const isPositive = elevation > 0;
+  const factor = absCells <= 1 ? absCells * 0.28 : 0.28 + Math.log2(absCells) * 0.38;
+  const maxFactor = isPositive ? 2.5 : 1.2;
+  const clamped = Math.min(factor, maxFactor);
+  return (isPositive ? 1 : -1) * clamped * cellSize;
+}
+
+/**
+ * Calcola la forma e le proprietà dell'ombra ellittica sul pavimento della griglia.
+ * In quota l'ombra si ammorbidisce e si sfuma; nelle fosse segna l'apertura del terreno.
+ */
+export function elevationShadow(
+  elevation: number | undefined,
+  radius: number,
+  cellSize: number,
+  scaleAmount = 5,
+): ElevationShadow | null {
+  if (!elevation || !Number.isFinite(elevation)) return null;
+  const unit = scaleAmount > 0 ? scaleAmount : 5;
+  const absCells = Math.abs(elevation) / unit;
+  if (absCells === 0) return null;
+
+  if (elevation > 0) {
+    const spread = Math.min(absCells / 12, 1);
+    const radiusX = Math.max(radius * 0.6, radius * (0.95 - spread * 0.25));
+    const radiusY = radiusX * 0.52;
+    const blur = Math.max(4, cellSize * (0.08 + spread * 0.24));
+    const opacity = Math.max(0.18, 0.45 - spread * 0.22);
+    return {
+      radiusX,
+      radiusY,
+      fill: `rgba(15, 12, 22, ${opacity.toFixed(3)})`,
+      blur,
+      shadowOpacity: Math.min(0.6, opacity * 1.2),
+      isPit: false,
+    };
+  }
+
+  const depth = Math.min(absCells / 6, 1);
+  const radiusX = radius * (1.02 + depth * 0.08);
+  const radiusY = radiusX * 0.55;
+  const blur = Math.max(6, cellSize * (0.1 + depth * 0.15));
+  const opacity = Math.min(0.65, 0.45 + depth * 0.18);
+  return {
+    radiusX,
+    radiusY,
+    fill: `rgba(10, 8, 16, ${opacity.toFixed(3)})`,
+    blur,
+    shadowOpacity: opacity,
+    isPit: true,
+  };
+}
+
+/**
+ * Livello di ombreggiatura da sovrapporre al token quando sprofonda in una fossa (< 0).
+ */
+export function pitOverlayShade(elevation: number | undefined, scaleAmount = 5): number {
+  if (!elevation || elevation >= 0 || !Number.isFinite(elevation)) return 0;
+  const unit = scaleAmount > 0 ? scaleAmount : 5;
+  const absCells = Math.abs(elevation) / unit;
+  return Math.min(0.4, 0.18 + Math.min(absCells / 6, 1) * 0.2);
+}
+
 /** Quota da mostrare sul token: «+15 ft», «-5 m». */
 export function formatElevation(elevation: number, grid: GridSettings): string {
   const unit = grid.scale.unit ? ` ${grid.scale.unit}` : "";

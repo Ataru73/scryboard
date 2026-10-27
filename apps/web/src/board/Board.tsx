@@ -1974,6 +1974,7 @@ export function Board({
             ? formatElevation(item.elevation, grid)
             : undefined
         }
+        scaleAmount={grid.scale.amount}
         ambient={lighting.enabled ? lighting.ambient : undefined}
         onDragStart={onItemDragStart}
         onDragMove={onItemDragMove}

@@ -1,6 +1,7 @@
 import { type BoardItem, DEFAULT_GRID } from "@scryboard/shared";
 import { pathBounds } from "../paths/geometry";
 import { templateLocalBox } from "./areas";
+import { elevationOffset } from "./measure";
 import type { Box, Point } from "./viewport";
 
 export function normalizeBox(a: Point, b: Point): Box {
@@ -14,13 +15,16 @@ export function normalizeBox(a: Point, b: Point): Box {
 
 /**
  * Riquadro dell'oggetto non ruotato, relativo alla sua origine (x, y). Per i token l'origine è
- * il centro e il diametro dipende dalla casella della griglia.
+ * il centro sul terreno; in quota include anche il disco sollevato o sprofondato.
  */
 export function localBox(item: BoardItem, cellSize = DEFAULT_GRID.size): Box {
   switch (item.kind) {
     case "token": {
       const r = (item.size * cellSize) / 2;
-      return { x: -r, y: -r, width: 2 * r, height: 2 * r };
+      const off = elevationOffset(item.elevation, cellSize);
+      const minY = Math.min(-r, -r - off);
+      const maxY = Math.max(r, r - off);
+      return { x: -r, y: minY, width: 2 * r, height: maxY - minY };
     }
     case "path":
       return pathBounds(item.points);

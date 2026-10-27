@@ -35,6 +35,18 @@ const stroke: StrokeItem = {
   color: "#000000",
   strokeWidth: 2,
 };
+const token = (id: string, x: number, y: number): TokenItem => ({
+  ...base,
+  layer: "token",
+  id,
+  kind: "token",
+  x,
+  y,
+  name: id,
+  color: "#000000",
+  assetId: null,
+  size: 1,
+});
 
 describe("geometry", () => {
   it("normalizes boxes drawn in any direction", () => {
@@ -59,6 +71,19 @@ describe("geometry", () => {
     expect(itemBounds(stroke)).toEqual({ x: -1, y: -1, width: 12, height: 22 });
   });
 
+  it("includes elevation offset in token bounds for marquee selection", () => {
+    const grounded = token("g", 100, 100);
+    const bounds0 = itemBounds(grounded, 50);
+    expect(bounds0).toEqual({ x: 75, y: 75, width: 50, height: 50 });
+
+    const elevated = { ...token("e", 100, 100), elevation: 15 }; // 3 cells up
+    const boundsFly = itemBounds(elevated, 50);
+    expect(boundsFly.x).toBe(75);
+    expect(boundsFly.width).toBe(50);
+    expect(boundsFly.y).toBeLessThan(75);
+    expect(boundsFly.height).toBeGreaterThan(50);
+  });
+
   it("unions bounds", () => {
     expect(unionBounds([])).toBeNull();
     expect(unionBounds([rect, stroke])).toEqual({ x: -1, y: -1, width: 111, height: 71 });
@@ -78,19 +103,6 @@ describe("geometry", () => {
 });
 
 describe("connectorEnds", () => {
-  const token = (id: string, x: number, y: number): TokenItem => ({
-    ...base,
-    layer: "token",
-    id,
-    kind: "token",
-    x,
-    y,
-    name: id,
-    color: "#000000",
-    assetId: null,
-    size: 1,
-  });
-
   it("runs from the edge of one token to the edge of the other", () => {
     // Token di 50 px (raggio 25) più 4 px di margine.
     expect(connectorEnds(token("a", 0, 0), token("b", 200, 0), 50)).toEqual({
