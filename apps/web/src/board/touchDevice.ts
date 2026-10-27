@@ -26,4 +26,3 @@ export function useIsTouchDevice(): boolean {
 
   return touch;
 }
-

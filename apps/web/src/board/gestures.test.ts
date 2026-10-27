@@ -137,4 +137,3 @@ describe("TouchGestureTracker", () => {
     expect(tracker.inGracePeriod).toBe(true);
   });
 });
-

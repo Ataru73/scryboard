@@ -95,4 +95,3 @@ F1 Multi-Touch Engine  →  F2 Touch Targets & Transformer  →  F3 Touch Modifi
 - Aggiornamento di `apps/web/index.html` con `viewport-fit=cover` e `interactive-widget=resizes-content`.
 - CSS con `env(safe-area-inset-*)`.
 - Test E2E Playwright con profili tablet (`iPad Pro 11`) e foldable (`Galaxy Z Fold`).
-

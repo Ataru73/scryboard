@@ -118,8 +118,6 @@ import { VisionPreviewBanner } from "./VisionPreviewBanner";
 import { centerOn, fitBounds, type Point, screenToWorld, type Viewport, zoomAt } from "./viewport";
 import { WallSelectionPanel } from "./WallPanel";
 import { WeatherOverlay } from "./WeatherOverlay";
-import { TouchGestureTracker } from "./gestures";
-import { useIsTouchDevice } from "./touchDevice";
 
 interface Props {
   store: BoardStore;
