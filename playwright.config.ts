@@ -8,9 +8,9 @@ export default defineConfig({
   // I test di prestazioni girano solo con `pnpm e2e:perf`.
   grepInvert: process.env.PERF ? undefined : /@perf/,
   fullyParallel: false,
-  // In CI un solo worker evita di saturare la memoria con Firefox e WebKit (ogni test apre GM e giocatore).
+  // In CI un solo worker evita di saturare la memoria con Firefox (ogni test apre GM e giocatore).
   workers: process.env.CI ? 1 : undefined,
-  // I runner di CI sono più lenti del computer di chi sviluppa, soprattutto con Firefox e WebKit.
+  // I runner di CI sono più lenti del computer di chi sviluppa, soprattutto con Firefox.
   timeout: process.env.CI ? 60_000 : 30_000,
   expect: { timeout: process.env.CI ? 10_000 : 5_000 },
   retries: process.env.CI ? 1 : 0,
@@ -20,7 +20,8 @@ export default defineConfig({
     trace: "retain-on-failure",
     viewport: { width: 1280, height: 800 },
   },
-  // In locale basta Chromium; in CI (o con ALL_BROWSERS=1) anche Firefox e WebKit (Safari).
+  // In locale basta Chromium; con ALL_BROWSERS=1 anche Firefox e WebKit (Safari). La CI sceglie il
+  // progetto con --project e gira solo su Chromium e Firefox.
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"], viewport } },
     ...(process.env.CI || process.env.ALL_BROWSERS

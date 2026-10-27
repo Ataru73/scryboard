@@ -64,8 +64,8 @@ the shared package and the migrations are loaded at startup.
 
 The end-to-end tests need Chromium, which you install once with
 `pnpm exec playwright install chromium`. Locally the suite runs on Chromium; with
-`ALL_BROWSERS=1 pnpm e2e` it also runs on Firefox and WebKit (as in CI, where each browser runs
-in its own job).
+`ALL_BROWSERS=1 pnpm e2e` it also runs on Firefox and WebKit. CI runs it on Chromium and Firefox,
+each in its own job.
 
 ## Whiteboard shortcuts
 

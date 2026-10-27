@@ -65,8 +65,8 @@ riavvialo: il pacchetto condiviso e le migrazioni si caricano all'avvio.
 
 Per i test end-to-end serve Chromium, da installare una volta con
 `pnpm exec playwright install chromium`. In locale la suite gira su Chromium; con
-`ALL_BROWSERS=1 pnpm e2e` anche su Firefox e WebKit (come in CI, dove ogni browser ha un job
-suo).
+`ALL_BROWSERS=1 pnpm e2e` anche su Firefox e WebKit. In CI gira su Chromium e Firefox, ognuno
+con un job suo.
 
 ## Scorciatoie della lavagna
 
