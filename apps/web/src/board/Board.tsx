@@ -133,6 +133,9 @@ interface Props {
   projector?: boolean;
 }
 
+/** A cosa serve il poligono in costruzione. */
+type PolygonPurpose = "fog" | "terrain" | "roof";
+
 type Interaction =
   | { type: "pan"; start: Point; viewport: Viewport }
   | { type: "stroke"; origin: Point; points: number[] }
@@ -151,7 +154,19 @@ type Interaction =
   | { type: "stampScatter"; stamps: StampDraft[]; last: Point }
   | { type: "terrainCopy"; start: Point; end: Point }
   /** Connettore in corso: dall'oggetto di partenza al cursore. */
-  | { type: "connect"; from: string; cursor: Point };
+  | { type: "connect"; from: string; cursor: Point }
+  /**
+   * Pressione con uno strumento a poligono: se il puntatore non si sposta oltre `slop` è un
+   * vertice, altrimenti diventa un lazo a mano libera (`drawing`).
+   */
+  | {
+      type: "lasso";
+      purpose: PolygonPurpose;
+      start: Point;
+      points: number[];
+      slop: number;
+      drawing: boolean;
+    };
 
 /** Timbro in anteprima mentre lo si sparge, prima di salvarlo. */
 interface StampDraft {
@@ -169,6 +184,10 @@ const FIT_VIEW_MAX_SCALE = 2;
 
 /** Tempo di pressione, senza muoversi, che lancia un ping. */
 const PING_HOLD_MS = 550;
+
+/** Spostamento, in pixel dello schermo, oltre il quale una pressione diventa un lazo. */
+const LASSO_SLOP_MOUSE_PX = 5;
+const LASSO_SLOP_TOUCH_PX = 10;
 
 /** Durata dello spostamento della vista quando il GM richiama i giocatori. */
 const SUMMON_MS = 450;
@@ -302,7 +321,7 @@ export function Board({
   const [polygon, setPolygon] = useState<{
     points: number[];
     cursor: Point;
-    purpose: "fog" | "terrain" | "roof";
+    purpose: PolygonPurpose;
   } | null>(null);
   const [draftText, setDraftText] = useState<TextItem | null>(null);
   const fittedRef = useRef(false);
@@ -325,6 +344,8 @@ export function Board({
   const draftAssetId = useBoardUi((s) => s.tokenDraft.assetId);
   const draftPortrait = useBoardUi((s) => s.tokenDraft.portrait ?? null);
   const isTouch = useIsTouchDevice();
+  /** Distanza, in pixel dello schermo, entro cui toccare il primo vertice chiude il poligono. */
+  const polygonCloseRadius = isTouch ? 24 : 10;
   const terrainBiome = useBoardUi((s) => s.terrainBiome);
   const terrainMode = useBoardUi((s) => s.terrainMode);
   const terrainSize = useBoardUi((s) => s.terrainSize);
@@ -943,10 +964,10 @@ export function Board({
         if (fogShape === "rect") setInteraction({ type: "fogRect", start: p.world, end: p.world });
         else if (fogShape === "brush")
           setInteraction({ type: "fogBrush", points: [p.world.x, p.world.y] });
-        else addPolygonPoint(p.world, "fog");
+        else startPolygonGesture(p, "fog", raw.pointerType);
         return;
       case "terrain":
-        if (terrainMode === "region") addPolygonPoint(p.world, "terrain");
+        if (terrainMode === "region") startPolygonGesture(p, "terrain", raw.pointerType);
         else if (terrainMode === "fill") fillTerrainAt(p.world);
         else if (terrainMode === "copy")
           setInteraction({ type: "terrainCopy", start: p.world, end: p.world });
@@ -970,7 +991,7 @@ export function Board({
         return;
       }
       case "roof":
-        addPolygonPoint(p.world, "roof");
+        startPolygonGesture(p, "roof", raw.pointerType);
         return;
       case "note": {
         // Le note nascono nascoste: il GM le rivela quando vuole farle leggere.
@@ -1003,7 +1024,32 @@ export function Board({
     }
   }
 
-  function addPolygonPoint(at: Point, purpose: "fog" | "terrain" | "roof") {
+  /** Il vertice si fissa al rilascio: trascinando si traccia invece il contorno a mano libera. */
+  function startPolygonGesture(p: { world: Point }, purpose: PolygonPurpose, pointerType: string) {
+    setInteraction({
+      type: "lasso",
+      purpose,
+      start: p.world,
+      points: [p.world.x, p.world.y],
+      slop: pointerType === "mouse" ? LASSO_SLOP_MOUSE_PX : LASSO_SLOP_TOUCH_PX,
+      drawing: false,
+    });
+  }
+
+  /**
+   * Fine del lazo: senza poligono aperto il contorno diventa subito la regione; con un poligono
+   * già avviato il tratto a mano libera si aggiunge ai suoi vertici.
+   */
+  function finishLasso(lasso: Extract<Interaction, { type: "lasso" }>) {
+    const points = simplify(lasso.points, 2 / viewport.scale);
+    if (polygon) {
+      setPolygon({ ...polygon, points: [...polygon.points, ...points] });
+      return;
+    }
+    if (points.length >= 6) commitPolygon(points, lasso.purpose);
+  }
+
+  function addPolygonPoint(at: Point, purpose: PolygonPurpose) {
     if (!polygon) {
       setPolygon({ points: [at.x, at.y], cursor: at, purpose });
       return;
@@ -1011,7 +1057,7 @@ export function Board({
     const [x0 = 0, y0 = 0] = polygon.points;
     const n = polygon.points.length;
     // Clic vicino al primo vertice: chiude il poligono.
-    if (n >= 6 && Math.hypot(at.x - x0, at.y - y0) * viewport.scale < 10) {
+    if (n >= 6 && Math.hypot(at.x - x0, at.y - y0) * viewport.scale < polygonCloseRadius) {
       finishPolygon();
       return;
     }
@@ -1019,7 +1065,7 @@ export function Board({
     // di Konva non va bene: scatta anche con due clic rapidi in punti diversi.)
     const lastX = polygon.points[n - 2] as number;
     const lastY = polygon.points[n - 1] as number;
-    if (Math.hypot(at.x - lastX, at.y - lastY) * viewport.scale < 4) {
+    if (Math.hypot(at.x - lastX, at.y - lastY) * viewport.scale < (isTouch ? 12 : 4)) {
       finishPolygon();
       return;
     }
@@ -1027,20 +1073,32 @@ export function Board({
   }
 
   function finishPolygon() {
-    if (polygon && polygon.points.length >= 6) {
-      if (polygon.purpose === "fog") {
-        store.addFog({ mode: fogMode, shape: "polygon", points: polygon.points });
-      } else if (polygon.purpose === "roof") {
+    if (polygon) commitPolygon(polygon.points, polygon.purpose);
+    setPolygon(null);
+  }
+
+  /** Toglie l'ultimo vertice; senza vertici il poligono si annulla. */
+  function undoPolygonPoint() {
+    if (!polygon) return;
+    const points = polygon.points.slice(0, -2);
+    setPolygon(points.length > 0 ? { ...polygon, points } : null);
+  }
+
+  function commitPolygon(points: number[], purpose: PolygonPurpose) {
+    if (points.length >= 6) {
+      if (purpose === "fog") {
+        store.addFog({ mode: fogMode, shape: "polygon", points });
+      } else if (purpose === "roof") {
         // L'origine del tetto è l'angolo in alto a sinistra: i vertici le sono relativi.
-        const xs = polygon.points.filter((_, i) => i % 2 === 0);
-        const ys = polygon.points.filter((_, i) => i % 2 === 1);
+        const xs = points.filter((_, i) => i % 2 === 0);
+        const ys = points.filter((_, i) => i % 2 === 1);
         const origin = { x: Math.min(...xs), y: Math.min(...ys) };
         addItems([
           {
             ...base("map", origin),
             kind: "roof",
             style: useBoardUi.getState().roofStyle,
-            points: polygon.points.map((v, i) => v - (i % 2 === 0 ? origin.x : origin.y)),
+            points: points.map((v, i) => v - (i % 2 === 0 ? origin.x : origin.y)),
           },
         ]);
       } else {
@@ -1048,20 +1106,22 @@ export function Board({
           biome: terrainBiome,
           mode: "paint",
           shape: "region",
-          points: polygon.points,
+          points,
           ...(terrainExact ? { exact: true } : {}),
         });
       }
     }
-    setPolygon(null);
   }
 
-  // Invio chiude il poligono, Esc lo annulla; cambiando strumento si perde.
+  // Invio chiude il poligono, Esc lo annulla, Backspace toglie l'ultimo vertice; cambiando
+  // strumento si perde.
   useEffect(() => {
     if (!polygon) return;
     function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === "Enter") finishPolygon();
       else if (e.key === "Escape") setPolygon(null);
+      else if (e.key === "Backspace") undoPolygonPoint();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1344,6 +1404,24 @@ export function Board({
       case "fogBrush":
         setInteraction({ ...interaction, points: [...interaction.points, p.world.x, p.world.y] });
         return;
+      case "lasso": {
+        if (!interaction.drawing) {
+          const moved =
+            Math.hypot(p.world.x - interaction.start.x, p.world.y - interaction.start.y) *
+            viewport.scale;
+          if (moved <= interaction.slop) return;
+        }
+        const n = interaction.points.length;
+        const lastX = interaction.points[n - 2] as number;
+        const lastY = interaction.points[n - 1] as number;
+        if (Math.hypot(p.world.x - lastX, p.world.y - lastY) * viewport.scale < 3) return;
+        setInteraction({
+          ...interaction,
+          drawing: true,
+          points: [...interaction.points, p.world.x, p.world.y],
+        });
+        return;
+      }
       case "stampScatter": {
         // Trascinando si sparge un timbro a ogni passo pari a circa la sua larghezza.
         const { stampAssetId, stampCustomSize, stampId } = useBoardUi.getState();
@@ -1391,6 +1469,11 @@ export function Board({
     const isShift = raw.shiftKey || useBoardUi.getState().multiSelectMode;
     if (current.type === "laser") {
       broadcastLaser(null);
+      return;
+    }
+    if (current.type === "lasso") {
+      if (current.drawing) finishLasso(current);
+      else addPolygonPoint(current.start, current.purpose);
       return;
     }
     if (current.type === "ruler") {
@@ -2013,6 +2096,14 @@ export function Board({
   })();
 
   /** Doppio clic su un percorso selezionato: aggiunge un punto di controllo lì. */
+  // Anteprima del poligono: i vertici fissati più il lazo in corso, o il lato verso il cursore.
+  const lasso = interaction?.type === "lasso" && interaction.drawing ? interaction : null;
+  const polygonPreview = lasso
+    ? [...(polygon?.points ?? []), ...lasso.points]
+    : polygon
+      ? [...polygon.points, polygon.cursor.x, polygon.cursor.y]
+      : null;
+
   function onDoubleClick() {
     const p = pointer();
     if (!p || !editablePath) return;
@@ -2217,14 +2308,27 @@ export function Board({
                   lineJoin="round"
                 />
               )}
-              {polygon && (
+              {polygonPreview && (
                 <Line
-                  points={[...polygon.points, polygon.cursor.x, polygon.cursor.y]}
+                  points={polygonPreview}
                   stroke={SELECTION_COLOR}
                   strokeWidth={2 / viewport.scale}
                   dash={[6 / viewport.scale, 4 / viewport.scale]}
                   fill="rgba(142, 124, 240, 0.2)"
                   closed
+                  listening={false}
+                />
+              )}
+              {polygon && polygon.points.length >= 6 && (
+                // Il primo vertice: toccarlo chiude il poligono.
+                <Circle
+                  x={polygon.points[0]}
+                  y={polygon.points[1]}
+                  radius={polygonCloseRadius / viewport.scale}
+                  stroke={SELECTION_COLOR}
+                  strokeWidth={2 / viewport.scale}
+                  fill="rgba(142, 124, 240, 0.25)"
+                  listening={false}
                 />
               )}
               {interaction?.type === "shape" && (
@@ -2457,6 +2561,24 @@ export function Board({
             onFit={fitView}
             viewportSize={size}
           />
+        )}
+        {!projector && polygon && (
+          <div className="polygon-bar" role="toolbar" aria-label={t("tools.polygon.label")}>
+            <button type="button" onClick={() => setPolygon(null)}>
+              {t("tools.polygon.cancel")}
+            </button>
+            <button type="button" onClick={undoPolygonPoint}>
+              {t("tools.polygon.undoPoint")}
+            </button>
+            <button
+              type="button"
+              className="primary"
+              disabled={polygon.points.length < 6}
+              onClick={finishPolygon}
+            >
+              {t("tools.polygon.close")}
+            </button>
+          </div>
         )}
         {notice && (
           <div className="board-notice" role="status">

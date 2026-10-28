@@ -137,7 +137,8 @@ export const tools = {
     brush: "Pennello {{size}}",
     coverAll: "Copri tutto",
     revealAll: "Scopri tutto",
-    polygonHint: "Clic per i vertici, doppio clic o Invio per chiudere.",
+    polygonHint:
+      "Trascina per tracciare il contorno, oppure clic per i vertici e doppio clic o Invio per chiudere.",
   },
   terrain: {
     label: "Terreno",
@@ -166,7 +167,8 @@ export const tools = {
       title: "Non interpola i vertici: riempie il poligono esatto, senza smussatura né rumore",
     },
     hints: {
-      region: "Clic per i vertici, doppio clic o Invio per chiudere.",
+      region:
+        "Trascina per tracciare il contorno, oppure clic per i vertici e doppio clic o Invio per chiudere.",
       fill: "Clic dentro un'area chiusa da muri o da altri biomi.",
       copy: "Trascina un riquadro sul terreno da copiare.",
       paste: "Clic dove incollare il terreno copiato.",
@@ -179,7 +181,13 @@ export const tools = {
       thatch: "Paglia",
       slate: "Ardesia",
     },
-    hint: "Clic sui vertici sopra l'edificio, doppio clic o Invio per chiudere. Svanisce quando un token entra.",
+    hint: "Trascina attorno all'edificio, oppure clic sui vertici e doppio clic o Invio per chiudere. Svanisce quando un token entra.",
+  },
+  polygon: {
+    label: "Poligono in corso",
+    cancel: "Annulla",
+    undoPoint: "Togli vertice",
+    close: "Chiudi",
   },
   stamp: {
     label: "Timbri",

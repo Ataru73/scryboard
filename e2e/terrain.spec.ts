@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { board, click, drag, setupTable } from "./helpers";
+import { at, board, click, drag, setupTable } from "./helpers";
 
 test("the GM paints biomes live; players see them but cannot paint", async ({ browser }) => {
   const { gm, player } = await setupTable(browser);
@@ -29,19 +29,48 @@ test("the GM paints biomes live; players see them but cannot paint", async ({ br
   await gm.keyboard.press("Enter");
   await expect(board(player)).toHaveAttribute("data-terrain-count", "3");
 
+  // Lazo: trascinando si traccia il contorno e al rilascio la regione si chiude da sola.
+  const loop = [
+    [200, 420],
+    [320, 400],
+    [360, 500],
+    [260, 560],
+    [190, 500],
+  ] as const;
+  const first = await at(gm, ...loop[0]);
+  await gm.mouse.move(first.x, first.y);
+  await gm.mouse.down();
+  for (const point of loop.slice(1)) {
+    const next = await at(gm, ...point);
+    await gm.mouse.move(next.x, next.y, { steps: 5 });
+  }
+  await gm.mouse.up();
+  await expect(board(player)).toHaveAttribute("data-terrain-count", "4");
+
+  // Senza tastiera: la barra del poligono toglie l'ultimo vertice e chiude.
+  const bar = gm.getByRole("toolbar", { name: "Poligono in corso" });
+  await click(gm, 850, 200);
+  await click(gm, 950, 220);
+  await click(gm, 900, 320);
+  await click(gm, 990, 330);
+  await bar.getByRole("button", { name: "Togli vertice" }).click();
+  await bar.getByRole("button", { name: "Chiudi" }).click();
+  await expect(bar).toHaveCount(0);
+  await expect(board(player)).toHaveAttribute("data-terrain-count", "5");
+
   // Gomma e annulla.
   await panel.getByRole("button", { name: "Gomma" }).click();
   await panel.getByRole("button", { name: "Larghezza 1 caselle" }).click();
   await drag(gm, [300, 200], [320, 350]);
-  await expect(board(player)).toHaveAttribute("data-terrain-count", "4");
+  await expect(board(player)).toHaveAttribute("data-terrain-count", "6");
   await gm.screenshot({ path: "e2e/.data/terrain-gm.png" });
   await gm.keyboard.press("Control+z");
-  await expect(board(player)).toHaveAttribute("data-terrain-count", "3");
+  await expect(board(player)).toHaveAttribute("data-terrain-count", "5");
 
   // Chi entra dopo trova il terreno e la vista centrata su di esso.
   await player.reload();
   await expect(player.getByText("Connesso")).toBeVisible();
-  await expect(board(player)).toHaveAttribute("data-terrain-count", "3");
+  await expect(board(player)).toHaveAttribute("data-terrain-count", "5");
   await player.waitForTimeout(300);
   await player.screenshot({ path: "e2e/.data/terrain-player.png" });
 

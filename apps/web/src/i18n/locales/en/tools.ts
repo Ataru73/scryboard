@@ -137,7 +137,8 @@ export const tools = {
     brush: "Brush {{size}}",
     coverAll: "Cover all",
     revealAll: "Reveal all",
-    polygonHint: "Click to add vertices, double-click or press Enter to close.",
+    polygonHint:
+      "Drag to trace the outline, or click to add vertices and double-click or press Enter to close.",
   },
   terrain: {
     label: "Terrain",
@@ -166,7 +167,8 @@ export const tools = {
       title: "Do not interpolate vertices: fills the exact polygon, without smoothing or noise",
     },
     hints: {
-      region: "Click to add vertices, double-click or press Enter to close.",
+      region:
+        "Drag to trace the outline, or click to add vertices and double-click or press Enter to close.",
       fill: "Click inside an area enclosed by walls or other biomes.",
       copy: "Drag a rectangle over the terrain to copy.",
       paste: "Click where you want to paste the copied terrain.",
@@ -179,7 +181,13 @@ export const tools = {
       thatch: "Thatch",
       slate: "Slate",
     },
-    hint: "Click the corners over the building, double-click or Enter to close. It fades when a token enters.",
+    hint: "Drag around the building, or click the corners and double-click or Enter to close. It fades when a token enters.",
+  },
+  polygon: {
+    label: "Polygon in progress",
+    cancel: "Cancel",
+    undoPoint: "Remove vertex",
+    close: "Close",
   },
   stamp: {
     label: "Stamps",
