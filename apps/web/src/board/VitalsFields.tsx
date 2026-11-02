@@ -4,11 +4,13 @@ import {
   HP_VISIBILITIES,
   type HpVisibility,
   parseDamage,
+  parseDamageRoll,
   type Role,
   type TokenItem,
 } from "@scryboard/shared";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useRoll } from "../dice/rollContext";
 import type { BoardStore } from "./store";
 
 /** PF iniziali quando il GM ne dà a un token. */
@@ -177,9 +179,43 @@ export function DamageField({ tokens, store }: { tokens: TokenItem[]; store: Boa
   const { t } = useTranslation();
   const id = useId();
   const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const roll = useRoll();
   const targets = tokens.filter((token) => token.hp);
   if (targets.length === 0) return null;
   const many = tokens.length > 1;
+
+  const apply = (delta: number) => {
+    // Dopo un tiro i PF possono essere cambiati: si parte da quelli attuali dello store.
+    const updates = targets.flatMap((token) => {
+      const current = store.get(token.id);
+      return current?.kind === "token" && current.hp
+        ? [[token.id, { hp: applyDamage(current.hp, delta) }] as const]
+        : [];
+    });
+    store.update(Object.fromEntries(updates));
+    setText("");
+  };
+
+  const submit = async () => {
+    const delta = parseDamage(text);
+    if (delta !== null) return apply(delta);
+    const dice = parseDamageRoll(text);
+    if (!dice || !roll || busy) return;
+    // Il tiro finisce nel registro di tutti, con l'etichetta di danno o cura.
+    const label = t(dice.sign === 1 ? "effects.vitals.healRoll" : "effects.vitals.damageRoll");
+    setBusy(true);
+    setFailed(false);
+    try {
+      const result = await roll(`${dice.formula} # ${label}`);
+      apply(dice.sign * Math.max(0, result.total));
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <span className="field-group">
       <label htmlFor={id} className={many ? "small muted" : "visually-hidden"}>
@@ -190,21 +226,17 @@ export function DamageField({ tokens, store }: { tokens: TokenItem[]; store: Boa
       <input
         id={id}
         className="number-field damage-field"
-        inputMode="numeric"
         placeholder={t("effects.vitals.damagePlaceholder")}
         title={t("effects.vitals.damageTitle")}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        readOnly={busy}
+        aria-invalid={failed || undefined}
+        onChange={(e) => {
+          setText(e.target.value);
+          setFailed(false);
+        }}
         onKeyDown={(e) => {
-          if (e.key !== "Enter") return;
-          const delta = parseDamage(text);
-          if (delta === null) return;
-          store.update(
-            Object.fromEntries(
-              targets.map((token) => [token.id, { hp: applyDamage(token.hp as HitPoints, delta) }]),
-            ),
-          );
-          setText("");
+          if (e.key === "Enter") void submit();
         }}
       />
       <button

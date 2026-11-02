@@ -131,7 +131,9 @@ export const effects = {
     damageLabel: "Damage or healing",
     damagePlaceholder: "-7 / +5",
     damageTitle:
-      "Type -7 for damage or +5 for healing and press Enter: temporary HP are spent first. 14/2 halves, 7x2 doubles",
+      "Type -7 for damage or +5 for healing and press Enter: temporary HP are spent first. 14/2 halves, 7x2 doubles. Dice work too: 2d6+3 is damage, +1d8 healing",
+    damageRoll: "Damage",
+    healRoll: "Healing",
     healFull: "Full",
     healFullTitle: "Restore hit points to the maximum (temporary HP stay as they are)",
     damageMany: "Damage or healing to {{count}} tokens with HP",

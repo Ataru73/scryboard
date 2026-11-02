@@ -132,3 +132,28 @@ test("conditions with a duration end when the token's turn starts", async ({ bro
   await gm.keyboard.press("d");
   await expect(gm.getByLabel("Danno o cura")).toBeFocused();
 });
+
+test("damage and healing can be rolled with dice", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await player.getByRole("button", { name: "Dadi", exact: true }).click();
+  await placeToken(gm, "Orco", 105, 405);
+  await gm.keyboard.press("v");
+  await click(gm, 105, 405);
+  await gm.getByRole("button", { name: "Aggiungi PF" }).click();
+  await gm.getByLabel("PF massimi").fill("30");
+  await gm.getByLabel("PF", { exact: true }).fill("30");
+  const damage = gm.getByLabel("Danno o cura");
+  // 1d2+10 fa 11 o 12: il tiro lo fa il server e finisce nel registro di tutti.
+  await damage.fill("1d2+10");
+  await damage.press("Enter");
+  await expect(damage).toHaveValue("");
+  await expect(tokenList(gm).getByRole("listitem")).toHaveText([
+    /^Orco, 1[89] punti ferita su 30$/,
+  ]);
+  await expect(player.locator(".roll-label").last()).toHaveText("Danno");
+
+  await damage.fill("+1d2+20");
+  await damage.press("Enter");
+  await expect(tokenList(gm).getByRole("listitem")).toHaveText(["Orco, 30 punti ferita su 30"]);
+  await expect(player.locator(".roll-label").last()).toHaveText("Cura");
+});
