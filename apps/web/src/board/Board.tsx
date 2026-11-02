@@ -2548,6 +2548,7 @@ export function Board({
           onFocus={(point) => setViewport(centerOn(point, viewport.scale, size))}
         />
         {projector && <TurnBanner turn={turn} tokens={visibleTokens} />}
+        {!projector && <RoundNotice round={turn.round} />}
         {!projector && role === "player" && (
           <YourTurnNotice turn={turn} tokens={viewerTokens(visibleTokens, store.userId)} />
         )}
@@ -2671,6 +2672,33 @@ function YourTurnNotice({ turn, tokens }: { turn: TurnSettings; tokens: TokenIte
   return (
     <div className="your-turn" role="status">
       {t("effects.initiative.yourTurn", { name: shown })}
+    </div>
+  );
+}
+
+/** Per quanto resta in vista l'avviso di un nuovo round. */
+const NEW_ROUND_MS = 2500;
+
+/** Avviso per tutti quando il round avanza (non quando il GM torna indietro o riparte da 1). */
+function RoundNotice({ round }: { round: number }) {
+  const { t } = useTranslation();
+  const previous = useRef(round);
+  const [shown, setShown] = useState<number | null>(null);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = round;
+    if (round <= before) {
+      setShown(null);
+      return;
+    }
+    setShown(round);
+    const timer = setTimeout(() => setShown(null), NEW_ROUND_MS);
+    return () => clearTimeout(timer);
+  }, [round]);
+  if (shown === null) return null;
+  return (
+    <div className="your-turn new-round" role="status">
+      {t("effects.initiative.round", { round: shown })}
     </div>
   );
 }

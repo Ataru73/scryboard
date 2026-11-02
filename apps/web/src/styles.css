@@ -533,6 +533,12 @@ button.danger {
   animation: your-turn-in 0.3s ease-out;
 }
 
+/* Sotto «Tocca a te», che può comparire nello stesso momento. */
+.your-turn.new-round {
+  top: 64px;
+  border-color: #ffffff;
+}
+
 @keyframes your-turn-in {
   from {
     opacity: 0;

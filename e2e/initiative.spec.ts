@@ -45,10 +45,14 @@ test("the GM runs the turn order and players follow it", async ({ browser }) => 
   await expect(playerPanel.locator("li[aria-current=step] .initiative-name")).toHaveText("Aldo");
   await gmPanel.getByRole("button", { name: "Avanti" }).click();
   await expect(playerPanel.getByText("Round 2")).toBeVisible();
+  // Il nuovo round si annuncia a tutti sulla lavagna.
+  await expect(player.locator(".new-round")).toHaveText("Round 2");
+  await expect(gm.locator(".new-round")).toHaveText("Round 2");
   await expect(playerPanel.locator("li[aria-current=step] .initiative-name")).toHaveText("Bruna");
   // Shift+N torna indietro di un turno.
   await gm.keyboard.press("Shift+N");
   await expect(playerPanel.getByText("Round 1")).toBeVisible();
+  await expect(player.locator(".new-round")).toHaveCount(0);
   await expect(playerPanel.locator("li[aria-current=step] .initiative-name")).toHaveText("Aldo");
   await gm.keyboard.press("n");
 
