@@ -48,7 +48,10 @@ export function HomePage() {
   return (
     <main className="centered">
       <div className="card">
-        <h1 className="brand">Scryboard</h1>
+        <h1 className="brand">
+          <img className="brand-logo" src="/logo.svg" alt="" width={56} height={56} />
+          Scryboard
+        </h1>
         <p className="muted">{t("pages.home.tagline")}</p>
         <form onSubmit={onSubmit} className="stack">
           <label className="field">

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Scryboard</title>
+  <defs>
+    <radialGradient id="sb-orb" cx="0.36" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#c3b8ff"/>
+      <stop offset="0.45" stop-color="#7d66e0"/>
+      <stop offset="1" stop-color="#2a2060"/>
+    </radialGradient>
+    <linearGradient id="sb-stand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4b3d8a"/>
+      <stop offset="1" stop-color="#241c4a"/>
+    </linearGradient>
+    <radialGradient id="sb-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="0.4" stop-color="#ffb224" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#ffb224" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sb-fade" cx="0.5" cy="0.62" r="0.5">
+      <stop offset="0.55" stop-color="#fff"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="sb-board"><circle cx="32" cy="27" r="21" fill="url(#sb-fade)"/></mask>
+  </defs>
+  <!-- stand -->
+  <path d="M18.5 42.5c4 1.6 23 1.6 27 0l4.1 13.4a2 2 0 0 1-1.9 2.7H16.3a2 2 0 0 1-1.9-2.7z" fill="url(#sb-stand)"/>
+  <!-- orb -->
+  <circle cx="32" cy="27" r="21" fill="url(#sb-orb)"/>
+  <!-- the board, seen through the orb -->
+  <g mask="url(#sb-board)" fill="none" stroke="#ece7ff" stroke-width="1.1" stroke-linecap="round" opacity="0.6">
+    <path d="M10 30.5h44M10 34.5h44M10 40h44M10 47.5h44"/>
+    <path d="M32 30.5v18M26.5 30.5l-4.5 18M21 30.5l-9 18M37.5 30.5l4.5 18M43 30.5l9 18"/>
+  </g>
+  <circle cx="34.8" cy="37.2" r="6" fill="url(#sb-glow)"/>
+  <circle cx="34.8" cy="37.2" r="2.1" fill="#ffd27a"/>
+  <!-- rim + highlight -->
+  <circle cx="32" cy="27" r="20.4" fill="none" stroke="#d9d1ff" stroke-opacity="0.35" stroke-width="1.2"/>
+  <path d="M18 22.5a14.5 14.5 0 0 1 11.6-10.8" fill="none" stroke="#fff" stroke-opacity="0.75" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="17.2" cy="27.2" r="1.3" fill="#fff" opacity="0.6"/>
+  <!-- sparkle -->
+  <path d="M51 4.5l1.2 3.3 3.3 1.2-3.3 1.2L51 13.5l-1.2-3.3-3.3-1.2 3.3-1.2z" fill="#ffd27a"/>
+</svg>

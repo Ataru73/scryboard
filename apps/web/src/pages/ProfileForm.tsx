@@ -25,6 +25,10 @@ export function ProfileForm({ roomName, isGm, onSubmit }: Props) {
   return (
     <main className="centered">
       <form className="card stack" onSubmit={submit}>
+        <p className="brand small">
+          <img className="brand-logo" src="/logo.svg" alt="" width={32} height={32} />
+          Scryboard
+        </p>
         <h2>{roomName}</h2>
         <p className="muted">
           {isGm ? t("pages.profile.gmPrompt") : t("pages.profile.playerPrompt")}

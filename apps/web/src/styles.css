@@ -152,6 +152,17 @@ button.danger {
   font-size: 1.1rem;
 }
 
+.card .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.brand-logo {
+  flex: none;
+}
+
 .field {
   display: flex;
   flex-direction: column;
