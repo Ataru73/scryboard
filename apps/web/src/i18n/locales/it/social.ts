@@ -55,6 +55,8 @@ export const social = {
     statsMin: "min {{value}}",
     statsMean: "media {{value}}",
     statsMax: "max {{value}}",
+    reroll: "Tira di nuovo {{formula}}",
+    rerollTitle: "Tira di nuovo",
     successes_one: "successo",
     successes_other: "successi",
   },
