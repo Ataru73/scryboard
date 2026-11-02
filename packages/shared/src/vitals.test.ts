@@ -53,6 +53,17 @@ describe("parseDamage", () => {
     expect(parseDamage("2d6")).toBeNull();
     expect(parseDamage("-1.5")).toBeNull();
   });
+
+  it("halves for resistance (rounding down) and doubles for vulnerability", () => {
+    expect(parseDamage("15/2")).toBe(-7);
+    expect(parseDamage("-14 / 2")).toBe(-7);
+    expect(parseDamage("7x2")).toBe(-14);
+    expect(parseDamage("7 * 2")).toBe(-14);
+    expect(parseDamage("+9/2")).toBe(4);
+    expect(parseDamage("1/2")).toBe(0);
+    expect(parseDamage("7/0")).toBeNull();
+    expect(parseDamage("7/")).toBeNull();
+  });
 });
 
 describe("toggleCondition", () => {

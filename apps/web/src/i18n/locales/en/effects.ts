@@ -106,7 +106,7 @@ export const effects = {
     damageLabel: "Damage or healing",
     damagePlaceholder: "-7 / +5",
     damageTitle:
-      "Type -7 for damage or +5 for healing and press Enter: temporary HP are spent first",
+      "Type -7 for damage or +5 for healing and press Enter: temporary HP are spent first. 14/2 halves, 7x2 doubles",
     damageMany: "Damage or healing to {{count}} tokens with HP",
     visibilityLabel: "Who sees the HP",
     visibility: {
