@@ -11,6 +11,8 @@ interface Options {
   fitToContent: () => void;
   /** Centra la vista sulla selezione o sui propri token. */
   goToToken: () => void;
+  /** Sposta la selezione di un passo nella direzione data; false se non c'è niente da spostare. */
+  nudge: (dirX: number, dirY: number, fine: boolean) => boolean;
   viewportSize: { width: number; height: number };
   /** false sullo schermo condiviso, che non ha scorciatoie. */
   enabled?: boolean;
@@ -27,6 +29,13 @@ const NON_TEXT_INPUTS = new Set([
   "file",
 ]);
 
+const ARROWS: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
+
 /** Le scorciatoie si disattivano solo mentre si scrive, non con il focus su una checkbox o un bottone. */
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -40,6 +49,7 @@ export function useBoardShortcuts({
   canEdit,
   fitToContent,
   goToToken,
+  nudge,
   viewportSize,
   enabled = true,
 }: Options) {
@@ -93,6 +103,12 @@ export function useBoardShortcuts({
         // Shift+H: nasconde la selezione, o la rivela se è già tutta nascosta.
         const allHidden = ui.selectedIds.every((id) => store.isHidden(id));
         store.setHidden(ui.selectedIds, !allHidden);
+        return;
+      }
+      const arrow = ARROWS[e.key];
+      // Cursori, radio e caselle usano già le frecce.
+      if (arrow && !(e.target instanceof HTMLInputElement)) {
+        if (nudge(arrow[0], arrow[1], e.shiftKey)) e.preventDefault();
         return;
       }
       switch (e.key) {
@@ -199,5 +215,5 @@ export function useBoardShortcuts({
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [store, role, canEdit, fitToContent, goToToken, viewportSize, enabled]);
+  }, [store, role, canEdit, fitToContent, goToToken, nudge, viewportSize, enabled]);
 }

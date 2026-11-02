@@ -20,6 +20,7 @@ const SHORTCUTS: Shortcut[] = [
   { keys: "D", id: "damage" },
   { keys: "Shift+H", id: "hide", gmOnly: true },
   { keys: "Ctrl+D", id: "duplicate" },
+  { keys: "← ↑ → ↓", id: "nudge" },
   { keys: "Del", id: "delete" },
   { keys: "] / [", id: "order" },
   { keys: "Ctrl+Z / Ctrl+Shift+Z", id: "undo" },

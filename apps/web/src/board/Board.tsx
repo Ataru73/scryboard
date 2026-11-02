@@ -660,12 +660,57 @@ export function Board({
     setViewport(centerOn(token, ui.viewport.scale, size));
   }, [store, size, setViewport]);
 
+  /**
+   * Frecce: spostano la selezione di una casella (con Shift di un pixel), portandosi dietro i
+   * token agganciati. I token si agganciano alla griglia e non attraversano i muri: se uno è
+   * bloccato non si muove niente. false se non c'è niente da spostare.
+   */
+  const nudgeSelection = useCallback(
+    (dirX: number, dirY: number, fine: boolean) => {
+      const own = useBoardUi
+        .getState()
+        .selectedIds.map((id) => store.get(id))
+        .filter((item): item is BoardItem => item !== undefined && canEdit(item));
+      if (own.length === 0) return false;
+      const moving = new Set(own.map((item) => item.id));
+      const all = [...own, ...followers(store.getSnapshot(), moving).filter((t) => canEdit(t))];
+      const step = fine ? 1 : grid.enabled ? grid.size : 10;
+      let dx = dirX * step;
+      let dy = dirY * step;
+      const lead = own.find((item): item is TokenItem => item.kind === "token");
+      if (lead && grid.enabled && !fine) {
+        const target = snapTokenCenter({ x: lead.x + dx, y: lead.y + dy }, lead.size, grid);
+        dx = target.x - lead.x;
+        dy = target.y - lead.y;
+      }
+      const blocked = all.some(
+        (item) =>
+          item.kind === "token" &&
+          movementFraction(item, { x: item.x + dx, y: item.y + dy }, collisionSegments) < 1,
+      );
+      if (blocked || (dx === 0 && dy === 0)) return true;
+      const patches: Record<string, ItemPatch> = {};
+      for (const item of all) {
+        patches[item.id] = { x: item.x + dx, y: item.y + dy };
+        // Come trascinandolo, spostare da solo un token agganciato lo sgancia.
+        const parent = item.kind === "token" ? item.attachedTo : undefined;
+        if (parent && !all.some((other) => other.id === parent)) {
+          patches[item.id] = { x: item.x + dx, y: item.y + dy, attachedTo: null };
+        }
+      }
+      store.update(patches);
+      return true;
+    },
+    [store, canEdit, grid, collisionSegments],
+  );
+
   useBoardShortcuts({
     store,
     role,
     canEdit,
     fitToContent: fitView,
     goToToken,
+    nudge: nudgeSelection,
     viewportSize: size,
     enabled: !projector,
   });

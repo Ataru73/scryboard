@@ -98,6 +98,7 @@ export const effects = {
       damage: "Damage or healing for the selected tokens",
       hide: "Hide or reveal the selection",
       duplicate: "Duplicate the selection",
+      nudge: "Move the selection one cell (with Shift, one pixel); walls stop tokens",
       delete: "Delete the selection",
       order: "Bring to front / send to back",
       undo: "Undo / redo",

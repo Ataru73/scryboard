@@ -90,6 +90,7 @@ each in its own job.
 | Mouse wheel / pinch             | Zoom                                                                             |
 | G                               | Centers the view on the selection, or on your own tokens one after another       |
 | Shift+1 / Shift+0               | Fit to content / zoom 100%                                                       |
+| Arrow keys                      | Moves the selection one cell (with Shift, one pixel); walls stop tokens          |
 | Del / Backspace                 | Deletes the selection                                                            |
 | ] / [                           | Bring to front / send to back                                                    |
 | Ctrl+Z / Ctrl+Shift+Z           | Undo / redo                                                                      |

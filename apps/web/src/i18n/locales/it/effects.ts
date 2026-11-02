@@ -101,6 +101,7 @@ export const effects = {
       delete: "Elimina la selezione",
       order: "Porta in primo piano / manda sullo sfondo",
       undo: "Annulla / ripeti",
+      nudge: "Sposta la selezione di una casella (con Shift di un pixel); i muri fermano i token",
       goTo: "Centra la vista sulla selezione o, a turno, sui tuoi token",
       zoom: "Adatta al contenuto / zoom 100%",
       escape: "Deseleziona, annulla una misura o un aggancio",
