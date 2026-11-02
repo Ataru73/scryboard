@@ -10,6 +10,8 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   }
 
   await player.getByLabel("Formula dei dadi").fill("8d6+2");
+  // Prima di tirare, la formula mostra minimo, media e massimo.
+  await expect(player.locator(".roll-stats")).toHaveText("min 10 · media 30 · max 50");
   await player.getByRole("button", { name: "Tira" }).click();
   const gmLog = gm.getByRole("list", { name: "Registro dei tiri" });
   const playerLog = player.getByRole("list", { name: "Registro dei tiri" });

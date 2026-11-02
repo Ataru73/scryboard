@@ -120,7 +120,7 @@ for the GM, also walls and doors.
   or `d%`, with quick buttons from d4 to d100. Dice can **explode** (`3d6!` rolls another die for
   every 6; `3d6!5` from 5 up) and a pool can **count successes** (`10d10>=7`, also `>`, `<=`, `<`,
   `=`), alone or together (`8d10!>=8`): the total is then the number of successes. Formulas you
-  type can be saved as buttons, kept in your browser. Rolls are made by the server, appear in a public log
+  type can be saved as buttons, kept in your browser, and show their minimum, average and maximum as you type. Rolls are made by the server, appear in a public log
   (the last 200) and roll as animated 2D dice at the center of the whiteboard for a few seconds. The GM can roll in secret (the
   result stays in their browser). Typing `/r 1d4` in any conversation rolls for the whole table.
 - **Initiative**: the _Turns_ panel (zoom toolbar) lists the tokens in the order; the GM adds them,

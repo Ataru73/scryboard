@@ -1,5 +1,12 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { describeRoll, formatDice, parseDice, type Roll } from "@scryboard/shared";
+import {
+  type DiceStats,
+  describeRoll,
+  diceStats,
+  formatDice,
+  parseDice,
+  type Roll,
+} from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeApiError } from "../lib/api";
@@ -64,15 +71,17 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
     }
   }
 
-  /** La formula scritta si può salvare solo se è valida e non c'è già (stessa forma canonica). */
-  const canonical = (text: string) => {
+  /** Forma canonica e statistiche della formula scritta, o `null` se non è valida. */
+  const parsed = useMemo(() => {
     try {
-      return formatDice(parseDice(text));
+      const specs = parseDice(formula);
+      return { canonical: formatDice(specs), stats: diceStats(specs) };
     } catch {
       return null;
     }
-  };
-  const current = canonical(formula);
+  }, [formula]);
+  // La formula scritta si può salvare solo se è valida e non c'è già (stessa forma canonica).
+  const current = parsed?.canonical ?? null;
   const canSave =
     current !== null && !presets.includes(current) && presets.length < MAX_DICE_PRESETS;
 
@@ -153,6 +162,7 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
           )}
         </button>
       </form>
+      {parsed && <FormulaStats stats={parsed.stats} />}
       {error && (
         <p className="error small" role="alert">
           {error}
@@ -210,6 +220,26 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
         ))}
       </ol>
     </div>
+  );
+}
+
+/** Anteprima della formula scritta: minimo, media e massimo, prima di tirare. */
+function FormulaStats({ stats }: { stats: DiceStats }) {
+  const { t, i18n } = useTranslation();
+  const format = (value: number) =>
+    Number.isFinite(value)
+      ? value.toLocaleString(i18n.resolvedLanguage, { maximumFractionDigits: 1 })
+      : value > 0
+        ? "∞"
+        : "−∞";
+
+  return (
+    <p className="muted small roll-stats" aria-live="polite">
+      {t("social.dice.statsMin", { value: format(stats.min) })}
+      {stats.mean !== null && <> · {t("social.dice.statsMean", { value: format(stats.mean) })}</>}
+      {" · "}
+      {t("social.dice.statsMax", { value: format(stats.max) })}
+    </p>
   );
 }
 

@@ -254,3 +254,90 @@ export function describeRoll(roll: Pick<Roll, "terms" | "total">): string {
   });
   return `${parts.join(" ")} = ${roll.total}`;
 }
+
+export interface DiceStats {
+  /** Risultato più basso possibile; `-Infinity` se un termine sottratto esplode. */
+  min: number;
+  /** Risultato più alto possibile; `Infinity` se un termine esplode. */
+  max: number;
+  /** Media attesa, o `null` quando non si calcola in modo esatto (tieni/scarta con `!` o soglia). */
+  mean: number | null;
+}
+
+/** Probabilità che almeno `j` dadi su `n` superino una prova che riesce con probabilità `q`. */
+function atLeast(n: number, j: number, q: number): number {
+  if (q === 1) return j <= n ? 1 : 0;
+  // Distribuzione binomiale costruita per ricorrenza: niente fattoriali che traboccano.
+  let pmf = (1 - q) ** n;
+  let tail = 0;
+  for (let i = 0; i <= n; i++) {
+    if (i >= j) tail += pmf;
+    pmf *= ((n - i) / (i + 1)) * (q / (1 - q));
+  }
+  return Math.min(1, tail);
+}
+
+/** Media della somma dei `k` dadi più alti (o più bassi) su `n` dadi a `sides` facce. */
+function keptMean(n: number, sides: number, k: number, high: boolean): number {
+  let mean = 0;
+  // E[j-esimo più alto] = Σ_x P(almeno j dadi ≥ x). Per i più bassi si specchiano le facce.
+  for (let j = 1; j <= k; j++) {
+    let order = 0;
+    for (let x = 1; x <= sides; x++) order += atLeast(n, j, (sides - x + 1) / sides);
+    mean += high ? order : sides + 1 - order;
+  }
+  return mean;
+}
+
+/** Minimo, massimo e media di una formula, senza tirare: servono all'anteprima della formula. */
+export function diceStats(specs: DiceSpec[]): DiceStats {
+  let min = 0;
+  let max = 0;
+  let mean: number | null = 0;
+  for (const spec of specs) {
+    let lo: number;
+    let hi: number;
+    let avg: number | null;
+    if (spec.kind === "number") {
+      lo = hi = avg = spec.value;
+    } else {
+      const { count, sides, keep, explode, success } = spec;
+      const kept = !keep
+        ? count
+        : keep.mode === "kh" || keep.mode === "kl"
+          ? keep.n
+          : count - keep.n;
+      // Probabilità che un dado esploda: ogni dado ne genera in media 1/(1-p).
+      const pExplode = explode ? (sides - explode + 1) / sides : 0;
+      const chain = 1 / (1 - pExplode);
+      if (success) {
+        let hits = 0;
+        for (let face = 1; face <= sides; face++) if (meetsSuccess(face, success)) hits++;
+        const pHit = hits / sides;
+        lo = pHit === 1 ? kept : 0;
+        hi = pHit === 0 ? 0 : explode ? Infinity : kept;
+        // Con tieni/scarta la media dipende da quali dadi restano: si dà solo nei casi certi.
+        if (!keep) avg = count * chain * pHit;
+        else avg = !explode && (pHit === 0 || pHit === 1) ? pHit * kept : null;
+      } else {
+        lo = kept;
+        hi = explode ? Infinity : kept * sides;
+        if (!keep) avg = count * chain * ((sides + 1) / 2);
+        else if (explode) avg = null;
+        else {
+          const high = keep.mode === "kh" || keep.mode === "dl";
+          avg = keptMean(count, sides, kept, high);
+        }
+      }
+    }
+    if (spec.sign === 1) {
+      min += lo;
+      max += hi;
+    } else {
+      min -= hi;
+      max -= lo;
+    }
+    mean = mean === null || avg === null ? null : mean + spec.sign * avg;
+  }
+  return { min, max, mean };
+}

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DiceError, describeRoll, formatDice, parseDice, rollDice, rollSchema } from "./dice";
+import {
+  DiceError,
+  describeRoll,
+  diceStats,
+  formatDice,
+  parseDice,
+  rollDice,
+  rollSchema,
+} from "./dice";
 
 /** Dadi truccati: restituiscono i valori in sequenza. */
 const sequence = (...values: number[]) => {
@@ -133,5 +141,34 @@ describe("exploding dice and success pools", () => {
       at: new Date().toISOString(),
     });
     expect(roll.total).toBe(rolled.total);
+  });
+});
+
+describe("diceStats", () => {
+  const stats = (formula: string) => diceStats(parseDice(formula));
+
+  it("sums plain dice and constants", () => {
+    expect(stats("2d6+3")).toEqual({ min: 5, max: 15, mean: 10 });
+    expect(stats("1d20-1d4")).toEqual({ min: -3, max: 19, mean: 8 });
+    expect(stats("d%")).toEqual({ min: 1, max: 100, mean: 50.5 });
+  });
+
+  it("computes exact averages when keeping or dropping dice", () => {
+    expect(stats("2d20kh1").mean).toBeCloseTo(13.825, 6);
+    expect(stats("2d20kl1").mean).toBeCloseTo(7.175, 6);
+    expect(stats("4d6dl1").mean).toBeCloseTo(12.2446, 3);
+    expect(stats("4d6dl1")).toMatchObject({ min: 3, max: 18 });
+  });
+
+  it("has no ceiling when dice explode", () => {
+    expect(stats("1d6!")).toEqual({ min: 1, max: Infinity, mean: 4.2 });
+    expect(stats("1d10-1d6!").min).toBe(-Infinity);
+  });
+
+  it("counts expected successes", () => {
+    expect(stats("10d10>=7")).toEqual({ min: 0, max: 10, mean: 4 });
+    expect(stats("3d6>=1")).toEqual({ min: 3, max: 3, mean: 3 });
+    expect(stats("4d10!>=8").mean).toBeCloseTo((4 / 0.9) * 0.3, 9);
+    expect(stats("4d10kh2>=8").mean).toBeNull();
   });
 });
