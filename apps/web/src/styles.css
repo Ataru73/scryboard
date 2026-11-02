@@ -1598,9 +1598,20 @@ button.danger {
 .initiative-name {
   flex: 1;
   min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.initiative-name:hover {
+  text-decoration: underline;
 }
 
 .initiative-list input {
