@@ -205,6 +205,8 @@ export const effects = {
     removeFromOrder: "Togli {{name}} dall'ordine",
     hiddenActiveTurn: "Turno di qualcuno che non vedi.",
     addSelection: "Aggiungi selezione",
+    rollZeros: "Tira d20",
+    rollZerosTitle: "Tira un d20 per ogni token dell'ordine ancora a 0",
     previousTurnTitle: "Turno precedente",
     previousTurn: "Indietro",
     nextTurnTitle: "Turno successivo (N)",
