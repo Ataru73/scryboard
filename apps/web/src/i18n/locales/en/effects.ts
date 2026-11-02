@@ -205,7 +205,7 @@ export const effects = {
     removeFromOrder: "Remove {{name}} from the initiative order",
     hiddenActiveTurn: "Someone you cannot see is taking their turn.",
     addSelection: "Add selection",
-    previousTurnTitle: "Previous turn",
+    previousTurnTitle: "Previous turn (Shift+N)",
     previousTurn: "Previous",
     nextTurnTitle: "Next turn (N)",
     nextTurn: "Next",
