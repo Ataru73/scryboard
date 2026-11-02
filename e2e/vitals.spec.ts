@@ -76,7 +76,8 @@ test("damage applies to every selected token in one step", async ({ browser }) =
   await click(gm, 245, 405);
   await gm.keyboard.up("Shift");
   const damage = gm.getByLabel("Danno o cura a 2 token con PF");
-  await damage.fill("-4");
+  // «9/2» dimezza per difetto, come un danno a cui si resiste.
+  await damage.fill("9/2");
   await damage.press("Enter");
   await expect(tokenList(gm).getByRole("listitem")).toHaveText([
     "Goblin, 6 punti ferita su 10",

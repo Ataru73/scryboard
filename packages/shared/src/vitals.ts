@@ -54,12 +54,17 @@ export function applyDamage(hp: HitPoints, delta: number): HitPoints {
   };
 }
 
-/** «-7» è un danno, «+5» una cura; un numero senza segno è un danno. null se non si capisce. */
+/**
+ * «-7» è un danno, «+5» una cura; un numero senza segno è un danno. «14/2» dimezza (resistenza,
+ * per difetto) e «7x2» o «7*2» raddoppia (vulnerabilità). null se non si capisce.
+ */
 export function parseDamage(text: string): number | null {
-  const match = /^\s*([+-]?)\s*(\d{1,5})\s*$/.exec(text);
+  const match = /^\s*([+-]?)\s*(\d{1,5})\s*(?:([/x*×])\s*([1-9]))?\s*$/i.exec(text);
   if (!match) return null;
-  const amount = Number(match[2]);
-  return match[1] === "+" ? amount : -amount;
+  const base = Number(match[2]);
+  const factor = Number(match[4] ?? 1);
+  const amount = match[3] === "/" ? Math.floor(base / factor) : Math.min(99999, base * factor);
+  return match[1] === "+" || amount === 0 ? amount : -amount;
 }
 
 /**
