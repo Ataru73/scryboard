@@ -2176,6 +2176,11 @@ button.danger {
   margin: 0;
 }
 
+.roll-stats {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
 .roll-unit {
   display: block;
   font-size: 0.65rem;
