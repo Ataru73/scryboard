@@ -51,6 +51,16 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   await player.getByRole("button", { name: "Invia" }).click();
   await gm.getByRole("button", { name: "Dadi", exact: true }).click();
   await expect(gmLog.getByText("1d4", { exact: true })).toBeVisible();
+
+  // «/gr» è il tiro nascosto del GM; per un giocatore resta un messaggio.
+  await gm.getByRole("button", { name: "Messaggi" }).click();
+  await gm.getByLabel("Scrivi a").selectOption({ label: "Arwen" });
+  await gm.getByLabel("Messaggio").fill("/gr 1d6");
+  await gm.getByRole("button", { name: "Invia" }).click();
+  await gm.getByRole("button", { name: "Dadi", exact: true }).click();
+  await expect(gmLog.getByText("(nascosto)")).toHaveCount(2);
+  await player.getByRole("button", { name: "Dadi", exact: true }).click();
+  await expect(playerLog.getByText("1d6", { exact: true })).toHaveCount(0);
 });
 
 test("success pools show their successes and formulas can be saved as presets", async ({

@@ -123,8 +123,8 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   `<`, `=`), da soli o insieme (`8d10!>=8`): il totale è allora il numero di successi. Le formule
   scritte si salvano come pulsanti, nel tuo browser. I tiri li fa il server, compaiono in un registro
   pubblico (gli ultimi 200) e rotolano con un'animazione 2D al centro della lavagna per qualche
-  secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser). Scrivere `/r 1d4` in
-  qualunque conversazione tira per tutto il tavolo.
+  secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser). Scrivere `/r 1d4` (o `/roll`) in
+  qualunque conversazione tira per tutto il tavolo; il GM tira di nascosto con `/gr` (o `/gmroll`).
 - **Iniziativa**: il pannello _Turni_ (barra dello zoom) elenca i token nell'ordine; il GM li
   aggiunge, scrive i valori e avanza con _Avanti_ (`N`). Il token di turno ha un anello dorato; i
   giocatori vedono l'ordine e possono ritoccare i valori. I token nascosti restano nascosti.

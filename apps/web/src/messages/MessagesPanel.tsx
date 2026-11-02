@@ -7,6 +7,7 @@ import { unlockAudioContext } from "../dice/diceSound";
 import { RollPanel } from "../dice/RollPanel";
 import { rollFormula } from "../dice/rolls";
 import { api, describeApiError } from "../lib/api";
+import { parseRollCommand } from "./commands";
 import { groupConversations } from "./conversations";
 import { useLastRead, useMailbox } from "./useMailbox";
 
@@ -101,10 +102,12 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
           onBack={() => setOpenKey(null)}
           onSend={(text) => {
             // «/r 2d6+1» in qualunque conversazione tira i dadi per tutto il tavolo.
-            const dice = /^\/r\s+(.+)$/i.exec(text);
-            if (dice) {
+            const command = parseRollCommand(text, isGm);
+            if (command) {
               unlockAudioContext();
-              return rollFormula(roomId, dice[1] as string, myName, auth).then(() => undefined);
+              return rollFormula(roomId, command.formula, myName, auth, command.hidden).then(
+                () => undefined,
+              );
             }
             return api
               .sendMessage(roomId, { to: openPartner as string, text, fromName: myName }, auth)
