@@ -4,6 +4,7 @@ import {
   bakeScale,
   boxesIntersect,
   connectorEnds,
+  constrainShape,
   itemBounds,
   normalizeBox,
   pointInItem,
@@ -155,5 +156,25 @@ describe("pointInPolygon", () => {
     expect(pointInPolygon({ x: 75, y: 25 }, roof.points)).toBe(false);
     expect(pointInItem({ x: 75, y: 75 }, roof)).toBe(true);
     expect(pointInItem({ x: 75, y: 25 }, roof)).toBe(false);
+  });
+});
+
+describe("constrainShape", () => {
+  const o = { x: 10, y: 10 };
+
+  it("snaps lines to 45° steps, keeping their length", () => {
+    const flat = constrainShape("line", o, { x: 110, y: 18 });
+    expect(flat.x).toBeCloseTo(10 + Math.hypot(100, 8), 5);
+    expect(flat.y).toBe(10);
+    const diagonal = constrainShape("line", o, { x: 60, y: 70 });
+    expect(diagonal.x - o.x).toBeCloseTo(diagonal.y - o.y, 5);
+    const up = constrainShape("line", o, { x: 12, y: -90 });
+    expect(up.x).toBe(10);
+    expect(up.y).toBeCloseTo(10 - Math.hypot(2, 100), 5);
+  });
+
+  it("turns rectangles and ellipses into squares and circles, toward the pointer", () => {
+    expect(constrainShape("rect", o, { x: 50, y: 20 })).toEqual({ x: 50, y: 50 });
+    expect(constrainShape("ellipse", o, { x: -20, y: 0 })).toEqual({ x: -20, y: -20 });
   });
 });

@@ -76,6 +76,7 @@ con un job suo.
 | M                                      | Righello e sagome d'area (distanza, cerchio, cono, cubo, raggio)                 |
 | Q                                      | Puntatore laser: una scia che tutti vedono e che svanisce da sola                |
 | Alt (trascinando)                      | Muove o disegna senza griglia; solo il GM ignora anche i muri                    |
+| Shift (disegnando)                     | Linee a 45°, quadrati e cerchi                                                   |
 | B (solo GM)                            | Terreno: dipinge i biomi a pennello o come regioni, con gomma                    |
 | J (solo GM)                            | Percorso: strade e fiumi a clic o a mano libera; [ e ] cambiano la larghezza     |
 | W (solo GM)                            | Muri, porte, finestre, barriere invisibili, a senso unico e di terreno           |

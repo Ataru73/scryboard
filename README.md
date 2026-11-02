@@ -75,6 +75,7 @@ each in its own job.
 | M                               | Ruler and area templates (distance, circle, cone, cube, ray)                     |
 | Q                               | Laser pointer: a trail everyone sees that fades on its own                       |
 | Alt (while dragging)            | Moves or draws without the grid; only the GM also ignores walls                  |
+| Shift (while drawing)           | Lines at 45°, squares and circles                                                |
 | B (GM only)                     | Terrain: paints biomes with a brush or as regions, with an eraser                |
 | J (GM only)                     | Path: roads and rivers by clicking or freehand; [ and ] change the width         |
 | W (GM only)                     | Walls, doors, windows, invisible, one-way and terrain walls snapped to the grid  |

@@ -97,6 +97,7 @@ export const effects = {
       turn: "Next / previous turn",
       damage: "Damage or healing for the selected tokens",
       hide: "Hide or reveal the selection",
+      constrain: "While drawing: lines at 45°, squares and circles",
       duplicate: "Duplicate the selection",
       nudge: "Move the selection one cell (with Shift, one pixel); walls stop tokens",
       delete: "Delete the selection",
