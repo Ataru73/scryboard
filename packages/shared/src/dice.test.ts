@@ -146,6 +146,43 @@ describe("exploding dice and success pools", () => {
   });
 });
 
+describe("reroll once", () => {
+  it("reads ro and rejects thresholds that leave nothing to keep", () => {
+    expect(formatDice(parseDice("2D6RO2+3"))).toBe("2d6ro2+3");
+    expect(formatDice(parseDice("2d20ro1kh1!"))).toBe("2d20ro1kh1!");
+    for (const bad of ["1d6ro0", "1d6ro6", "1d6ro", "1d6kh1ro1"]) {
+      expect(() => parseDice(bad), bad).toThrow(DiceError);
+    }
+  });
+
+  it("rerolls low dice once and keeps the new result, even if lower", () => {
+    const roll = rollDice("2d6ro2", sequence(1, 5, 2));
+    expect(roll.total).toBe(7);
+    expect(describeRoll(roll)).toBe("2d6 [~1, 5, ↻2] = 7");
+    expect(rollDice("3d6ro1", sequence(4, 5, 6)).terms[0]).not.toHaveProperty("rerolled");
+  });
+
+  it("keeps, explodes and counts only the dice that were not replaced", () => {
+    expect(rollDice("2d20ro1kh1", sequence(1, 7, 3)).total).toBe(7);
+    expect(rollDice("2d20ro1kl1", sequence(1, 7, 3)).total).toBe(3);
+    expect(rollDice("1d6ro1!", sequence(1, 6, 2)).total).toBe(8);
+    expect(rollDice("3d10ro1>=7", sequence(1, 8, 9, 7)).total).toBe(3);
+  });
+
+  it("computes exact averages", () => {
+    expect(diceStats(parseDice("1d20ro1")).mean).toBeCloseTo(10.975, 6);
+    expect(diceStats(parseDice("2d6ro2"))).toMatchObject({ min: 2, max: 12 });
+    expect(diceStats(parseDice("2d6ro2")).mean).toBeCloseTo(25 / 3, 6);
+    expect(diceStats(parseDice("1d6ro1!")).mean).toBeCloseTo(
+      20 / 6 + (1 / 6) * 3.5 + (1 / 6 + 1 / 36) * 4.2,
+      6,
+    );
+    const lucky = diceStats(parseDice("2d20ro1kh1")).mean as number;
+    expect(lucky).toBeGreaterThan(13.825);
+    expect(diceStats(parseDice("2d10ro1>=6")).mean).toBeCloseTo(2 * (0.5 + 0.1 * 0.5), 6);
+  });
+});
+
 describe("diceStats", () => {
   const stats = (formula: string) => diceStats(parseDice(formula));
 
