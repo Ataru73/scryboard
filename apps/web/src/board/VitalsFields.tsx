@@ -207,6 +207,26 @@ export function DamageField({ tokens, store }: { tokens: TokenItem[]; store: Boa
           setText("");
         }}
       />
+      <button
+        type="button"
+        className="heal-full"
+        title={t("effects.vitals.healFullTitle")}
+        disabled={targets.every(
+          (token) => (token.hp as HitPoints).value >= (token.hp as HitPoints).max,
+        )}
+        onClick={() =>
+          store.update(
+            Object.fromEntries(
+              targets.map((token) => {
+                const hp = token.hp as HitPoints;
+                return [token.id, { hp: { ...hp, value: Math.max(hp.value, hp.max) } }];
+              }),
+            ),
+          )
+        }
+      >
+        {t("effects.vitals.healFull")}
+      </button>
     </span>
   );
 }

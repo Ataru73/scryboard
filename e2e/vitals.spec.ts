@@ -83,8 +83,20 @@ test("damage applies to every selected token in one step", async ({ browser }) =
     "Goblin, 6 punti ferita su 10",
     "Coboldo, 6 punti ferita su 10",
   ]);
-  // Un clic sulla lavagna vuota toglie il fuoco dal campo, così Ctrl+Z annulla sulla lavagna.
+  // «Pieni» riporta tutti al massimo in un passo, e Ctrl+Z lo annulla.
+  const full = gm.getByRole("button", { name: "Pieni", exact: true });
+  await full.click();
+  await expect(tokenList(gm).getByRole("listitem")).toHaveText([
+    "Goblin, 10 punti ferita su 10",
+    "Coboldo, 10 punti ferita su 10",
+  ]);
+  await expect(full).toBeDisabled();
   await click(gm, 600, 600);
+  await gm.keyboard.press("Control+z");
+  await expect(tokenList(gm).getByRole("listitem")).toHaveText([
+    "Goblin, 6 punti ferita su 10",
+    "Coboldo, 6 punti ferita su 10",
+  ]);
   await gm.keyboard.press("Control+z");
   await expect(tokenList(gm).getByRole("listitem")).toHaveText([
     "Goblin, 10 punti ferita su 10",

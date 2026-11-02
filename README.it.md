@@ -142,7 +142,7 @@ cancella gli oggetti e, per il GM, anche muri e porte.
 - **Punti ferita e condizioni**: il GM dà a un token i punti ferita (attuali, massimi,
   temporanei) e sceglie chi li vede: tutti, i giocatori solo come fascia (illeso, ferito,
   malconcio, a terra) o solo il GM; i numeri segreti non arrivano mai ai giocatori. Una barra sotto
-  il token li mostra. _Danno o cura_ (`D`) accetta `-7` o `+5` (`14/2` dimezza, `7x2` raddoppia), anche su più token insieme, e
+  il token li mostra. _Danno o cura_ (`D`) accetta `-7` o `+5` (`14/2` dimezza, `7x2` raddoppia), anche su più token insieme (_Pieni_ li riporta al massimo), e
   consuma prima i temporanei. Le condizioni (prono, avvelenato… o personalizzate) sono icone sul
   token e possono durare un certo numero di round, che scendono all'inizio del turno del token.
 - **Schermo al tavolo**: il _Link per lo schermo al tavolo_ (pannello Condividi) apre la lavagna

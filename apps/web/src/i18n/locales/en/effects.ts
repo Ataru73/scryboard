@@ -107,6 +107,8 @@ export const effects = {
     damagePlaceholder: "-7 / +5",
     damageTitle:
       "Type -7 for damage or +5 for healing and press Enter: temporary HP are spent first. 14/2 halves, 7x2 doubles",
+    healFull: "Full",
+    healFullTitle: "Restore hit points to the maximum (temporary HP stay as they are)",
     damageMany: "Damage or healing to {{count}} tokens with HP",
     visibilityLabel: "Who sees the HP",
     visibility: {
