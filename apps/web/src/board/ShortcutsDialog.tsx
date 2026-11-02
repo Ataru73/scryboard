@@ -10,10 +10,10 @@ interface Shortcut {
 }
 
 const SHORTCUTS: Shortcut[] = [
-  { keys: "V H P L R O T E K", id: "tools" },
+  { keys: "V H P L R O T E K C", id: "tools" },
   { keys: "M", id: "ruler" },
   { keys: "Q", id: "laser" },
-  { keys: "B J W I S F", id: "gmTools", gmOnly: true },
+  { keys: "B J W I S F A U", id: "gmTools", gmOnly: true },
   { keys: "space", id: "pan" },
   { keys: "Alt", id: "free" },
   { keys: "N / Shift+N", id: "turn", gmOnly: true },

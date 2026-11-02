@@ -88,10 +88,10 @@ export const effects = {
     close: "Chiudi",
     space: "Spazio",
     items: {
-      tools: "Selezione, mano, matita, linea, rettangolo, ellisse, testo, gomma, token",
+      tools: "Selezione, mano, matita, linea, rettangolo, ellisse, testo, gomma, token, collega",
       ruler: "Righello e sagome d'area",
       laser: "Puntatore laser",
-      gmTools: "Terreno, percorso, muri, luci, timbri, nebbia",
+      gmTools: "Terreno, percorso, muri, luci, timbri, nebbia, note, tetti",
       pan: "Tienilo premuto per spostare la vista; mentre misuri, aggiunge una tappa",
       free: "Tienilo premuto mentre trascini per ignorare la griglia",
       turn: "Turno successivo / precedente",

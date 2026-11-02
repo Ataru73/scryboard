@@ -88,10 +88,10 @@ export const effects = {
     close: "Close",
     space: "Space",
     items: {
-      tools: "Select, hand, pencil, line, rectangle, ellipse, text, eraser, token",
+      tools: "Select, hand, pencil, line, rectangle, ellipse, text, eraser, token, connect",
       ruler: "Ruler and area templates",
       laser: "Laser pointer",
-      gmTools: "Terrain, path, walls, lights, stamps, fog",
+      gmTools: "Terrain, path, walls, lights, stamps, fog, notes, roofs",
       pan: "Hold to pan the view; while measuring, adds a waypoint",
       free: "Hold while dragging to ignore the grid",
       turn: "Next / previous turn",
