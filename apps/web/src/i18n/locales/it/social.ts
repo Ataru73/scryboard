@@ -52,6 +52,8 @@ export const social = {
     soundEnable: "Attiva il suono dei dadi",
     soundDisable: "Silenzia il suono dei dadi",
     help: "Tieni i migliori: 2d20kh1 · esplode: 3d6! · successi: 10d10>=7 · insieme: 8d10!>=8",
+    reroll: "Tira di nuovo {{formula}}",
+    rerollTitle: "Tira di nuovo",
     successes_one: "successo",
     successes_other: "successi",
   },

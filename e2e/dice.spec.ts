@@ -10,7 +10,7 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   }
 
   await player.getByLabel("Formula dei dadi").fill("8d6+2");
-  await player.getByRole("button", { name: "Tira" }).click();
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
   const gmLog = gm.getByRole("list", { name: "Registro dei tiri" });
   const playerLog = player.getByRole("list", { name: "Registro dei tiri" });
   await expect(gmLog.getByText("8d6+2")).toBeVisible();
@@ -18,21 +18,24 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   expect(total).toBeGreaterThanOrEqual(10);
   expect(total).toBeLessThanOrEqual(50);
   await expect(playerLog.getByLabel("Totale di Arwen")).toHaveText(String(total));
+  // Un clic sulla formula nel registro la tira di nuovo.
+  await playerLog.getByRole("button", { name: "Tira di nuovo 8d6+2" }).click();
+  await expect(gmLog.getByText("8d6+2")).toHaveCount(2);
   // Il tiro compare anche sulla lavagna, per tutti, con i dadi 2D animati.
   await gm.emulateMedia({ reducedMotion: "reduce" });
   const recent = gm.getByRole("status", { name: "Ultimi tiri" });
   await expect(recent).toContainText("Arwen");
-  await expect(recent.locator(".roll-die")).toHaveCount(8);
+  await expect(recent.locator(".roll-die")).toHaveCount(16);
   const animationCount = await recent
     .locator(".roll-die")
     .first()
     .evaluate((el) => el.getAnimations({ subtree: true }).length);
   expect(animationCount).toBeGreaterThan(0);
-  await expect(recent.locator(".roll-die.settled")).toHaveCount(8);
+  await expect(recent.locator(".roll-die.settled")).toHaveCount(16);
 
   // Formule non valide si spiegano.
   await player.getByLabel("Formula dei dadi").fill("1d1");
-  await player.getByRole("button", { name: "Tira" }).click();
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
   await expect(player.getByRole("alert")).toContainText("facce");
   // L'errore sta subito sotto il campo, in vista, e non in fondo a una barra che scorre.
   await expect(player.getByRole("alert")).toBeInViewport();
@@ -63,7 +66,7 @@ test("success pools show their successes and formulas can be saved as presets", 
   const playerLog = player.getByRole("list", { name: "Registro dei tiri" });
 
   await player.getByLabel("Formula dei dadi").fill("10d10!>=7");
-  await player.getByRole("button", { name: "Tira" }).click();
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
   const entry = playerLog.getByRole("listitem").filter({ hasText: "10d10!>=7" });
   await expect(entry).toHaveCount(1);
   await expect(entry.getByText(/successi?/)).toBeVisible();

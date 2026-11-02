@@ -205,15 +205,29 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
       )}
       <ol className="roll-log" ref={listRef} aria-label={t("social.dice.logLabel")}>
         {log.length === 0 && <li className="muted small">{t("social.dice.empty")}</li>}
-        {log.map(({ roll, secret }) => (
-          <RollEntry key={`${secret ? "h" : "s"}-${roll.id}`} roll={roll} secret={secret} />
+        {log.map(({ roll: entry, secret }) => (
+          <RollEntry
+            key={`${secret ? "h" : "s"}-${entry.id}`}
+            roll={entry}
+            secret={secret}
+            busy={busy}
+            onReroll={() => void roll(entry.formula)}
+          />
         ))}
       </ol>
     </div>
   );
 }
 
-function RollEntry({ roll, secret }: { roll: Roll; secret: boolean }) {
+interface RollEntryProps {
+  roll: Roll;
+  secret: boolean;
+  busy: boolean;
+  /** Tira di nuovo la stessa formula. */
+  onReroll: () => void;
+}
+
+function RollEntry({ roll, secret, busy, onReroll }: RollEntryProps) {
   const { t } = useTranslation();
 
   return (
@@ -221,7 +235,16 @@ function RollEntry({ roll, secret }: { roll: Roll; secret: boolean }) {
       <span className="roll-head">
         <strong>{roll.name}</strong>{" "}
         {roll.from === "gm" && <span className="badge role-badge">GM</span>}{" "}
-        <span className="muted">{roll.formula}</span>
+        <button
+          type="button"
+          className="roll-again muted"
+          disabled={busy}
+          title={t("social.dice.rerollTitle")}
+          aria-label={t("social.dice.reroll", { formula: roll.formula })}
+          onClick={onReroll}
+        >
+          {roll.formula}
+        </button>
         {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}
       </span>
       <span className="roll-detail muted small">{describeRoll(roll)}</span>
