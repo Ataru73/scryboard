@@ -62,6 +62,18 @@ export function useBoardShortcuts({
         store.redo();
         return;
       }
+      if (mod && key === "a") {
+        // Ctrl+A: seleziona token e disegni che si possono modificare. Mappe e percorsi restano
+        // fuori, così spostando la selezione non si trascina via il terreno.
+        e.preventDefault();
+        ui.select(
+          store
+            .getSnapshot()
+            .filter((item) => (item.layer === "token" || item.layer === "draw") && canEdit(item))
+            .map((item) => item.id),
+        );
+        return;
+      }
       if (mod && key === "d") {
         // Ctrl+D: duplica la selezione e seleziona le copie.
         e.preventDefault();

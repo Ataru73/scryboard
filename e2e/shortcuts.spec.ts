@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { setupTable } from "./helpers";
+import { board, click, placeToken, setupTable } from "./helpers";
 
 test("? lists the keyboard shortcuts, GM-only ones only for the GM", async ({ browser }) => {
   const { gm, player } = await setupTable(browser);
@@ -17,4 +17,27 @@ test("? lists the keyboard shortcuts, GM-only ones only for the GM", async ({ br
   await expect(playerDialog).not.toContainText("Nasconde o rivela la selezione");
   await playerDialog.getByRole("button", { name: "Chiudi" }).click();
   await expect(playerDialog).toHaveCount(0);
+});
+
+test("Ctrl+A selects only the tokens and drawings one can edit", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await placeToken(gm, "Goblin", 105, 405);
+  await placeToken(gm, "Coboldo", 245, 405);
+  await placeToken(player, "Arwen", 385, 405);
+  await expect(board(gm)).toHaveAttribute("data-item-count", "3");
+
+  // Il GM blocca il coboldo: il giocatore seleziona e cancella tutto il resto.
+  await gm.keyboard.press("v");
+  await click(gm, 245, 405);
+  await gm.getByRole("button", { name: "Blocca" }).click();
+  await player.keyboard.press("v");
+  await player.keyboard.press("Control+a");
+  await player.keyboard.press("Delete");
+  await expect(board(gm)).toHaveAttribute("data-item-count", "1");
+
+  // Anche per il GM un oggetto bloccato resta fuori finché non lo sblocca.
+  await gm.getByRole("button", { name: "Sblocca" }).click();
+  await gm.keyboard.press("Control+a");
+  await gm.keyboard.press("Delete");
+  await expect(board(player)).toHaveAttribute("data-item-count", "0");
 });

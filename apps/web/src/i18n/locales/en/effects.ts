@@ -97,6 +97,7 @@ export const effects = {
       turn: "Next / previous turn",
       damage: "Damage or healing for the selected tokens",
       hide: "Hide or reveal the selection",
+      selectAll: "Select every token and drawing you can edit",
       duplicate: "Duplicate the selection",
       delete: "Delete the selection",
       order: "Bring to front / send to back",
