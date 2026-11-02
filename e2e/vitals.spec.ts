@@ -1,6 +1,15 @@
 import { expect, type Page, test } from "@playwright/test";
 import { board, click, placeToken, setupTable, tokenList } from "./helpers";
 
+/** Testi dei numeri di danno o cura che fluttuano sopra i token. */
+function hpFloats(page: Page) {
+  return page.evaluate(() => {
+    type Stage = { find: (s: string) => { text: () => string }[] };
+    const { Konva } = window as unknown as { Konva: { stages: Stage[] } };
+    return (Konva.stages[0]?.find(".hp-float") ?? []).map((node) => node.text());
+  });
+}
+
 test("secret hit points stay with the GM while players see the band and set conditions", async ({
   browser,
 }) => {
@@ -31,6 +40,10 @@ test("secret hit points stay with the GM while players see the band and set cond
   await damage.press("Enter");
 
   await expect(tokenList(gm).getByRole("listitem")).toHaveText(["Orco, 10 punti ferita su 30"]);
+  // Il danno sale sopra il token e svanisce; il giocatore, che non conosce i numeri, non lo vede.
+  await expect.poll(() => hpFloats(gm)).toContain("-20");
+  await expect.poll(() => hpFloats(gm)).toEqual([]);
+  expect(await hpFloats(player)).toEqual([]);
   await expect(tokenList(player).getByRole("listitem")).toHaveText(["Orco, malconcio"]);
 
   // Il giocatore non ha i campi dei PF, ma può mettere una condizione. I token stanno in basso:

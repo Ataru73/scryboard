@@ -5,6 +5,8 @@ import {
   hpBandOf,
   type TokenCondition,
 } from "@scryboard/shared";
+import Konva from "konva";
+import { useEffect, useRef, useState } from "react";
 import { Circle, Group, Line, Path, Rect, Text } from "react-konva";
 import { CONDITION_ICONS, conditionColor, conditionInitial } from "./conditionIcons";
 import { FONT_FAMILY } from "./ItemNode";
@@ -186,5 +188,96 @@ export function ConditionBadges({
         </Group>
       )}
     </>
+  );
+}
+
+/** Quanto dura un numero di danno o cura sopra il token. */
+const HP_FLOAT_SECONDS = 1.4;
+
+/**
+ * Numeri che salgono e svaniscono sopra il token quando i suoi PF cambiano: «-12» in rosso per un
+ * danno (temporanei compresi), «+5» in verde per una cura. Solo per chi conosce i numeri.
+ */
+export function HpChangeFloats({
+  hp,
+  y,
+  size,
+}: {
+  hp: HitPoints | null | undefined;
+  y: number;
+  size: number;
+}) {
+  const total = hp ? hp.value + hp.temp : null;
+  const previous = useRef(total);
+  const nextId = useRef(0);
+  const [floats, setFloats] = useState<{ id: number; delta: number }[]>([]);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = total;
+    if (before === null || total === null || before === total) return;
+    const id = nextId.current++;
+    setFloats((current) => [...current, { id, delta: total - before }]);
+  }, [total]);
+  return (
+    <>
+      {floats.map((float) => (
+        <HpFloat
+          key={float.id}
+          delta={float.delta}
+          y={y}
+          size={size}
+          onDone={() => setFloats((current) => current.filter((f) => f.id !== float.id))}
+        />
+      ))}
+    </>
+  );
+}
+
+function HpFloat({
+  delta,
+  y,
+  size,
+  onDone,
+}: {
+  delta: number;
+  y: number;
+  size: number;
+  onDone: () => void;
+}) {
+  const ref = useRef<Konva.Text>(null);
+  const done = useRef(onDone);
+  done.current = onDone;
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const tween = new Konva.Tween({
+      node,
+      y: y - size * 1.5,
+      opacity: 0,
+      duration: HP_FLOAT_SECONDS,
+      easing: Konva.Easings.EaseIn,
+      onFinish: () => done.current(),
+    });
+    tween.play();
+    return () => tween.destroy();
+  }, [y, size]);
+  return (
+    <Text
+      ref={ref}
+      name="hp-float"
+      text={delta > 0 ? `+${delta}` : String(delta)}
+      x={-size * 3}
+      y={y}
+      width={size * 6}
+      align="center"
+      fontFamily={FONT_FAMILY}
+      fontStyle="bold"
+      fontSize={size}
+      fill={delta > 0 ? HP_BAND_COLORS.healthy : HP_BAND_COLORS.down}
+      stroke="#1d1a24"
+      strokeWidth={size * 0.2}
+      fillAfterStrokeEnabled
+      listening={false}
+    />
   );
 }

@@ -138,7 +138,7 @@ for the GM, also walls and doors.
   alone detaches it.
 - **Hit points and conditions**: the GM gives a token hit points (current, maximum, temporary) and
   picks who sees them: everyone, players only as a band (unhurt, wounded, bloodied, down) or the
-  GM only; secret numbers never reach the players. A bar under the token shows them. _Damage or
+  GM only; secret numbers never reach the players. A bar under the token shows them, and damage and healing float up over it as numbers for whoever knows them. _Damage or
   healing_ (`D`) takes `-7` or `+5` (`14/2` halves, `7x2` doubles), also on several tokens at once (_Full_ restores them to the maximum), spending temporary hit points
   first. Conditions (prone, poisoned… or custom ones) appear as icons on the token and can last a
   number of rounds, counted down when the token's turn starts.
