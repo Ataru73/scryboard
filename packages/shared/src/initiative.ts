@@ -33,3 +33,16 @@ export function stepTurn(
   }
   return { activeId: (order[next] as { id: string }).id, round: turn.round };
 }
+
+/**
+ * Chi gioca dopo il token attivo, ricominciando dal primo in fondo all'ordine: così si prepara.
+ * null se nessuno è di turno nell'ordine o se c'è un solo token.
+ */
+export function nextInOrder(
+  order: Pick<TokenItem, "id">[],
+  activeId: string | null,
+): string | null {
+  const index = order.findIndex((t) => t.id === activeId);
+  if (index === -1 || order.length < 2) return null;
+  return (order[(index + 1) % order.length] as { id: string }).id;
+}

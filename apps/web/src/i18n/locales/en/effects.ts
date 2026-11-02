@@ -232,6 +232,7 @@ export const effects = {
     hiddenActiveTurn: "Someone you cannot see is taking their turn.",
     addSelection: "Add selection",
     yourTurn: "Your turn: {{name}}",
+    upNext: "next",
     focusTitle: "Select it and center the view on it",
     rollZeros: "Roll d20",
     rollZerosTitle: "Rolls a d20 for every token in the order still at 0",

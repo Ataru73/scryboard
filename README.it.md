@@ -128,7 +128,7 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser). Scrivere `/r 1d4` (o `/roll`) in
   qualunque conversazione tira per tutto il tavolo; il GM tira di nascosto con `/gr` (o `/gmroll`).
 - **Iniziativa**: il pannello _Turni_ (barra dello zoom) elenca i token nell'ordine; il GM li
-  aggiunge, scrive i valori (_Tira d20_ tira per chi è ancora a 0) e avanza con _Avanti_ (`N`). Il token di turno ha un anello dorato; i
+  aggiunge, scrive i valori (_Tira d20_ tira per chi è ancora a 0) e avanza con _Avanti_ (`N`). Il token di turno ha un anello dorato e chi viene dopo è segnato come _prossimo_; i
   giocatori vedono l'ordine e possono ritoccare i valori, e un avviso «Tocca a te» li chiama quando è il turno di un loro token; un clic su un nome seleziona il token e centra la vista su di lui. I token nascosti restano nascosti.
 - **Ping**: un clic prolungato fa un ping per tutti. Se un ping cade fuori dalla tua vista, una
   freccia sul bordo dello schermo lo indica e un clic centra la vista. Il pulsante _Porta qui i

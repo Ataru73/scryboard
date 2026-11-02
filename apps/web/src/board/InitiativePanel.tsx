@@ -1,4 +1,10 @@
-import { initiativeOrder, type Role, type TokenItem, type TurnSettings } from "@scryboard/shared";
+import {
+  initiativeOrder,
+  nextInOrder,
+  type Role,
+  type TokenItem,
+  type TurnSettings,
+} from "@scryboard/shared";
 import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import type { BoardStore } from "./store";
@@ -30,6 +36,7 @@ export function InitiativePanel({ store, role, tokens, onClose, onFocusToken }: 
   const order = initiativeOrder(tokens);
   const gm = role === "gm";
   const activeShown = order.some((t) => t.id === turn.activeId);
+  const upNext = nextInOrder(order, turn.activeId);
   // Chi è appena entrato nell'ordine ha 0: il GM può tirargli un d20 in un colpo solo.
   const unrolled = order.filter((t) => t.initiative === 0).map((t) => t.id);
   const addable = selectedIds.filter((id) => {
@@ -76,6 +83,9 @@ export function InitiativePanel({ store, role, tokens, onClose, onFocusToken }: 
                   <span className="muted small"> ({t("effects.initiative.obscured")})</span>
                 )}
               </button>
+              {token.id === upNext && (
+                <span className="badge up-next">{t("effects.initiative.upNext")}</span>
+              )}
               <VitalsSummary token={token} />
               <input
                 type="number"

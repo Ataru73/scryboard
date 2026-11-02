@@ -1623,6 +1623,11 @@ button.danger {
   outline: 2px solid #ffc53d;
 }
 
+.initiative-list .up-next {
+  flex: none;
+  color: #ffc53d;
+}
+
 .vitals-summary {
   display: inline-flex;
   flex: none;

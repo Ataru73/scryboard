@@ -126,7 +126,7 @@ for the GM, also walls and doors.
   (the last 200) and roll as animated 2D dice at the center of the whiteboard for a few seconds. The GM can roll in secret (the
   result stays in their browser). Typing `/r 1d4` (or `/roll`) in any conversation rolls for the whole table; the GM rolls in secret with `/gr` (or `/gmroll`).
 - **Initiative**: the _Turns_ panel (zoom toolbar) lists the tokens in the order; the GM adds them,
-  sets their values (_Roll d20_ rolls for everyone still at 0) and moves on with _Next_ (`N`). The active token gets a golden ring; players
+  sets their values (_Roll d20_ rolls for everyone still at 0) and moves on with _Next_ (`N`). The active token gets a golden ring and the one after it is marked _next_; players
   see the order, can edit values and get a "Your turn" notice when one of their tokens is up; clicking a name selects the token and centers the view on it. Hidden tokens stay hidden.
 - **Pings**: a long press pings everyone. If a ping falls outside your view, an arrow on the screen
   edge points to it and a click centers the view. The GM's _Bring players here_ button (or
