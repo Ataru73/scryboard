@@ -176,7 +176,7 @@ turns; the players can only open the active scene.
 
 ## Export and import
 
-_Export the room_ (Share panel, GM only) downloads a `.scryboard` file with all the scenes, the
+_Export the room_ (Share panel, GM only) downloads a `.scryboard` file, named after the room and the date, with all the scenes, the
 hidden objects and the images in use (up to 200 MB); tokens, players and private messages are not
 included. _Import a room_ on the home page turns such a file into a new room with new links. The
 file is not trusted: only valid data is accepted and images must match their names.

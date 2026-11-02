@@ -19,7 +19,7 @@ test("the GM exports a room and imports it as a new one", async ({ page }) => {
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Esporta la stanza" }).click();
   const file = await download;
-  expect(file.suggestedFilename()).toBe("Miniera.scryboard");
+  expect(file.suggestedFilename()).toMatch(/^Miniera \d{4}-\d{2}-\d{2}\.scryboard$/);
   const path = await file.path();
 
   // Una stanza nuova, da zero: nuovi link, stesse scene e oggetti.

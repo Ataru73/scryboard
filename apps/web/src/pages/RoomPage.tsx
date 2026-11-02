@@ -9,6 +9,7 @@ import { useIsTouchDevice } from "../board/touchDevice";
 import { useDevicePosture } from "../board/useDevicePosture";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
 import { ApiRequestError, api, describeApiError } from "../lib/api";
+import { exportFileName } from "../lib/exportName";
 import { gmLink, gmTokenFromHash, isProjectorView, playerLink, projectorLink } from "../lib/links";
 import { type Profile, storage } from "../lib/storage";
 import { MessagesPanel } from "../messages/MessagesPanel";
@@ -285,7 +286,7 @@ function SharePanel({
       const blob = await api.exportRoom(roomId, gmToken);
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `${roomName.replace(/[\\/:*?"<>|]+/g, "_")}.scryboard`;
+      link.download = exportFileName(roomName, new Date());
       link.click();
       setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
     } catch (e) {

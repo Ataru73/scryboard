@@ -179,7 +179,7 @@ registro dei tiri e turni; i giocatori possono aprire solo la scena attiva.
 
 ## Esporta e importa
 
-_Esporta la stanza_ (pannello Condividi, solo GM) scarica un file `.scryboard` con tutte le scene,
+_Esporta la stanza_ (pannello Condividi, solo GM) scarica un file `.scryboard`, con il nome della stanza e la data, con tutte le scene,
 gli oggetti nascosti e le immagini usate (fino a 200 MB); token, giocatori e messaggi privati non
 sono inclusi. _Importa una stanza_ nella home trasforma un file così in una stanza nuova, con nuovi
 link. Il file non è considerato affidabile: si accettano solo dati validi e le immagini devono
