@@ -40,7 +40,7 @@ import { elevationOffset, elevationShadow, pitOverlayShade } from "./measure";
 import { usePortraitPath } from "./portraitPaths";
 import { TemplateBody } from "./Templates";
 import { useImage } from "./useImage";
-import { ConditionBadges, DownMark, VitalsBar, visibleBand } from "./Vitals";
+import { ConditionBadges, DownMark, HpChangeFloats, VitalsBar, visibleBand } from "./Vitals";
 
 export const FONT_FAMILY = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
 export const LINE_HEIGHT = 1.2;
@@ -479,6 +479,7 @@ function TokenContent({
             height={barHeight}
           />
         )}
+        <HpChangeFloats hp={item.hp} y={-r - labelSize * 1.4} size={labelSize * 1.4} />
         {item.name && !masked && (
           <Text
             text={item.name}
