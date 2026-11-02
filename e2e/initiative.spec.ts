@@ -41,6 +41,7 @@ test("the GM runs the turn order and players follow it", async ({ browser }) => 
 
   await gmPanel.getByRole("button", { name: "Avanti" }).click();
   await expect(playerPanel.locator("li[aria-current=step] .initiative-name")).toHaveText("Bruna");
+  await expect(playerPanel.locator("li:has(.up-next) .initiative-name")).toHaveText("Aldo");
   await gm.keyboard.press("n");
   await expect(playerPanel.locator("li[aria-current=step] .initiative-name")).toHaveText("Aldo");
   await gmPanel.getByRole("button", { name: "Avanti" }).click();

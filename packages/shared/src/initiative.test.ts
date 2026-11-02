@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initiativeOrder, stepTurn } from "./initiative";
+import { initiativeOrder, nextInOrder, stepTurn } from "./initiative";
 
 const t = (id: string, initiative?: number | null) => ({ id, initiative });
 
@@ -30,5 +30,20 @@ describe("stepTurn", () => {
 
   it("clears the turn when the order is empty", () => {
     expect(stepTurn([], { activeId: "a", round: 3 })).toEqual({ activeId: null, round: 3 });
+  });
+});
+
+describe("nextInOrder", () => {
+  const order = [t("a", 18), t("b", 12), t("c", 3)];
+
+  it("is the token after the active one, wrapping to the first", () => {
+    expect(nextInOrder(order, "a")).toBe("b");
+    expect(nextInOrder(order, "c")).toBe("a");
+  });
+
+  it("is nobody without an active token in the order or with a single token", () => {
+    expect(nextInOrder(order, null)).toBeNull();
+    expect(nextInOrder(order, "gone")).toBeNull();
+    expect(nextInOrder([t("a", 5)], "a")).toBeNull();
   });
 });
