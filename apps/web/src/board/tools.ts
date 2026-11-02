@@ -134,6 +134,8 @@ interface BoardUiState {
   rulerShape: "ruler" | TemplateShape;
   /** Pannello dei turni aperto. */
   initiativeOpen: boolean;
+  /** Elenco delle scorciatoie aperto. */
+  shortcutsOpen: boolean;
   /** Token che si sta agganciando: il prossimo clic su un altro token è quello principale. */
   attachFrom: string | null;
   /** Condizioni finite all'inizio dell'ultimo turno (le mostra il pannello dei turni al GM). */
@@ -200,6 +202,7 @@ interface BoardUiState {
   setMeasuring: (on: boolean) => void;
   setRulerShape: (shape: BoardUiState["rulerShape"]) => void;
   setInitiativeOpen: (open: boolean) => void;
+  setShortcutsOpen: (open: boolean) => void;
   setAttachFrom: (id: string | null) => void;
   setExpiredConditions: (value: BoardUiState["expiredConditions"]) => void;
   setTokenDraft: (patch: Partial<TokenDraft>) => void;
@@ -280,6 +283,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   measuring: false,
   rulerShape: "ruler",
   initiativeOpen: false,
+  shortcutsOpen: false,
   attachFrom: null,
   expiredConditions: null,
   tokenDraft: { name: "", color: DRAW_COLORS[5], size: 1, assetId: null, portrait: null },
@@ -332,6 +336,7 @@ export const useBoardUi = create<BoardUiState>((set) => ({
   setMeasuring: (measuring) => set({ measuring }),
   setRulerShape: (rulerShape) => set({ rulerShape }),
   setInitiativeOpen: (initiativeOpen) => set({ initiativeOpen }),
+  setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
   setAttachFrom: (attachFrom) => set({ attachFrom }),
   setExpiredConditions: (expiredConditions) => set({ expiredConditions }),
   setTokenDraft: (patch) => set((s) => ({ tokenDraft: { ...s.tokenDraft, ...patch } })),

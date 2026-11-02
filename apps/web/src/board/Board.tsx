@@ -96,6 +96,7 @@ import { PROJECTOR_FOLLOW_DELAY_MS, PROJECTOR_MAX_SCALE, partyBounds } from "./p
 import { flattenPoints, RulerShape, type RulerState } from "./Ruler";
 import { SelectionPanel } from "./SelectionPanel";
 import { ShapePreview } from "./ShapePreview";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { type BoardStore, type ItemPatch, newItemId } from "./store";
 import { AreaHighlights, AreaPreview, tokensInside } from "./Templates";
 import { TerrainLayer } from "./TerrainLayer";
@@ -335,6 +336,7 @@ export function Board({
   const viewport = useBoardUi((s) => s.viewport);
   const spacePan = useBoardUi((s) => s.spacePan);
   const initiativeOpen = useBoardUi((s) => s.initiativeOpen);
+  const shortcutsOpen = useBoardUi((s) => s.shortcutsOpen);
   const attachFrom = useBoardUi((s) => s.attachFrom);
   const turn = useSyncExternalStore(store.subscribe, store.getTurn);
   const fogMode = useBoardUi((s) => s.fogMode);
@@ -2564,6 +2566,12 @@ export function Board({
           height={size.height}
         />
         <HandoutModal store={store} role={role} roomId={roomId} />
+        {!projector && shortcutsOpen && (
+          <ShortcutsDialog
+            role={role}
+            onClose={() => useBoardUi.getState().setShortcutsOpen(false)}
+          />
+        )}
         {role === "gm" && <VisionPreviewBanner store={store} provider={provider} />}
         {!projector && <NotePanel store={store} role={role} roomId={roomId} provider={provider} />}
         <TokenList

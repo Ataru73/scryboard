@@ -94,6 +94,7 @@ con un job suo.
 | Canc / Backspace                       | Elimina la selezione                                                             |
 | ] / [                                  | Porta in primo piano / sullo sfondo                                              |
 | Ctrl+Z / Ctrl+Shift+Z                  | Annulla / ripeti                                                                 |
+| ?                                      | Mostra l'elenco delle scorciatoie da tastiera                                    |
 | Esc                                    | Deseleziona, chiude l'editor di testo, annulla una misura o un aggancio          |
 | Trascinamento a due dita               | Sposta la vista (pan a due dita)                                                 |
 | Pinch (due dita)                       | Zoom fluido ancorato alle dita                                                   |

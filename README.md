@@ -93,6 +93,7 @@ each in its own job.
 | Del / Backspace                 | Deletes the selection                                                            |
 | ] / [                           | Bring to front / send to back                                                    |
 | Ctrl+Z / Ctrl+Shift+Z           | Undo / redo                                                                      |
+| ?                               | Shows the list of keyboard shortcuts                                             |
 | Esc                             | Deselects, closes the text editor, cancels a measurement or an attachment        |
 | Two-finger drag                 | Pans the view (two-finger pan)                                                   |
 | Pinch (two fingers)             | Zooms smoothly centered on the fingers                                           |
