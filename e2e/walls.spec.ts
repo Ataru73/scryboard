@@ -276,3 +276,24 @@ test("the eraser removes walls and doors for the GM, in one undo step each", asy
   await gm.keyboard.press("Control+z");
   await expect(board(gm)).toHaveAttribute("data-wall-count", "1");
 });
+
+test("arrow keys do not move tokens through walls", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await enableGrid(gm);
+  await gm.keyboard.press("w");
+  await click(gm, 210, 210);
+  await click(gm, 210, 420);
+  await gm.keyboard.press("Enter");
+  await placeToken(gm, "Arwen", 105, 315);
+  await expect(board(player)).toHaveAttribute("data-item-count", "1");
+
+  await player.keyboard.press("v");
+  await click(player, 105, 315);
+  await player.keyboard.press("ArrowRight");
+  await expect.poll(async () => (await tokenPosition(player)).x).toBeCloseTo(175, 1);
+  // Il passo successivo attraverserebbe il muro: il token resta dov'è.
+  await player.keyboard.press("ArrowRight");
+  await player.keyboard.press("ArrowDown");
+  await expect.poll(async () => (await tokenPosition(player)).y).toBeCloseTo(385, 1);
+  expect((await tokenPosition(player)).x).toBeCloseTo(175, 1);
+});

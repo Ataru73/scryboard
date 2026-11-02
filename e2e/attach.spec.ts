@@ -61,3 +61,37 @@ test("attaching refuses chains and deleting the mount frees the rider", async ({
   await expect(tokenList(gm).getByText(/agganciato/)).toHaveCount(0);
   await expect(tokenList(gm).getByText("Cavaliere")).toBeVisible();
 });
+
+test("arrow keys move the selection one cell, taking riders along", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await gm.getByRole("button", { name: "Griglia" }).click();
+  await gm.getByLabel("Mostra la griglia").check();
+  await gm.getByLabel("Casella (px)").fill("50");
+  await gm.getByLabel("Sposta X").fill("0");
+  await gm.getByLabel("Sposta Y").fill("0");
+  await gm.getByRole("button", { name: "Chiudi" }).click();
+  await placeToken(gm, "Cavallo", 175, 475);
+  await placeToken(gm, "Cavaliere", 275, 475);
+  await gm.keyboard.press("v");
+  await click(gm, 275, 475);
+  await gm.getByRole("button", { name: "Aggancia a…" }).click();
+  await click(gm, 175, 475);
+  await expect(tokenList(gm).getByText(/Cavaliere, colonna 6, riga 10, agganciato/)).toBeVisible();
+
+  // Il cavallo selezionato si sposta di una casella e il cavaliere lo segue.
+  await click(gm, 175, 475);
+  await gm.keyboard.press("ArrowUp");
+  await gm.keyboard.press("ArrowLeft");
+  await expect(tokenList(gm).getByText("Cavallo, colonna 3, riga 9")).toBeVisible();
+  await expect(tokenList(player).getByText(/Cavaliere, colonna 5, riga 9/)).toBeVisible();
+  // Con Shift si sposta di un pixel: resta nella stessa casella.
+  await gm.keyboard.press("Shift+ArrowRight");
+  await expect(tokenList(gm).getByText("Cavallo, colonna 3, riga 9")).toBeVisible();
+
+  // Il cavaliere spostato da solo si sgancia.
+  await click(gm, 225, 425);
+  await gm.keyboard.press("ArrowDown");
+  await expect(
+    tokenList(gm).getByText("Cavaliere, colonna 5, riga 10", { exact: true }),
+  ).toBeVisible();
+});
