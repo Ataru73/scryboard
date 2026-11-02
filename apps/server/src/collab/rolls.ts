@@ -58,4 +58,17 @@ export class RollService {
     }
     return roll;
   }
+
+  /** Svuota il registro pubblico della scena attiva (lo chiede il GM, a inizio sessione). */
+  async clear(roomId: string): Promise<void> {
+    const connection = await this.collab.openDirectConnection(
+      roomDocumentName(roomId, "public", this.scenes.activeId(roomId)),
+      { roomId, role: "gm" },
+    );
+    try {
+      await connection.transact((doc) => doc.getMap<Roll>(ROLLS_MAP).clear());
+    } finally {
+      await connection.disconnect();
+    }
+  }
 }

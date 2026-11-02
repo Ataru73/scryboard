@@ -18,11 +18,13 @@ interface LocalRolls {
   /** Tiri nascosti del GM: restano in questo browser, non vengono condivisi. */
   hidden: Roll[];
   addHidden: (roll: Roll) => void;
+  clearHidden: () => void;
 }
 
 export const useLocalRolls = create<LocalRolls>((set) => ({
   hidden: [],
   addHidden: (roll) => set((s) => ({ hidden: [...s.hidden, roll].slice(-50) })),
+  clearHidden: () => set({ hidden: [] }),
 }));
 
 /** Tira sul server; un tiro nascosto si aggiunge al registro locale del GM. */

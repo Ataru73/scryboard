@@ -127,7 +127,7 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   `<`, `=`), da soli o insieme (`8d10!>=8`): il totale è allora il numero di successi. `ro` ritira una volta i dadi bassi e tiene il nuovo risultato (`2d6ro2` ritira 1 e 2, `1d20ro1` l'1). Il testo dopo `#` dà un nome al tiro (`1d20+5 # Attacco`) e `3x` davanti lo ripete in tre tiri separati (`3x 1d20+5`, fino a 10). Le formule
   scritte si salvano come pulsanti, nel tuo browser, e mentre le scrivi mostrano minimo, media e massimo; un clic su una formula del registro la tira di nuovo. I tiri li fa il server, compaiono con l'ora in un registro
   pubblico (gli ultimi 200) e rotolano con un'animazione 2D al centro della lavagna per qualche
-  secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser). Scrivere `/r 1d4` (o `/roll`) in
+  secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser) e svuotare il registro per tutti. Scrivere `/r 1d4` (o `/roll`) in
   qualunque conversazione tira per tutto il tavolo; il GM tira di nascosto con `/gr` (o `/gmroll`). `/me annuisce` racconta un'azione col proprio nome.
 - **Iniziativa**: il pannello _Turni_ (barra dello zoom) elenca i token nell'ordine; il GM li
   aggiunge, scrive i valori (_Tira d20_ tira per chi è ancora a 0) e avanza con _Avanti_ (`N`). Il token di turno ha un anello dorato e chi viene dopo è segnato come _prossimo_; i

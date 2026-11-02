@@ -11,6 +11,7 @@ import {
 } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { api, describeApiError } from "../lib/api";
 import { MAX_DICE_PRESETS, storage } from "../lib/storage";
 import { playDiceRollSound, unlockAudioContext } from "./diceSound";
 import { type Auth, describeRollError, rollRepeated, useLocalRolls, useRolls } from "./rolls";
@@ -36,6 +37,7 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [presets, setPresets] = useState(() => storage.getDicePresets());
+  const [confirmClear, setConfirmClear] = useState(false);
   const formulaId = useId();
   const listRef = useRef<HTMLOListElement>(null);
 
@@ -92,6 +94,19 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
   const current = parsed?.canonical ?? null;
   const canSave =
     current !== null && !presets.includes(current) && presets.length < MAX_DICE_PRESETS;
+
+  /** Il GM svuota il registro di tutti e i propri tiri nascosti. */
+  async function clearLog() {
+    if (!("gmToken" in auth)) return;
+    setConfirmClear(false);
+    setError(null);
+    try {
+      await api.clearRolls(roomId, auth.gmToken);
+      useLocalRolls.getState().clearHidden();
+    } catch (e) {
+      setError(describeApiError(e));
+    }
+  }
 
   function updatePresets(next: string[]) {
     setPresets(next);
@@ -235,6 +250,23 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
           />
         ))}
       </ol>
+      {isGm &&
+        log.length > 0 &&
+        (confirmClear ? (
+          <p className="small roll-clear">
+            {t("social.dice.clearQuestion")}{" "}
+            <button type="button" className="danger" onClick={() => void clearLog()}>
+              {t("social.dice.clearConfirm")}
+            </button>{" "}
+            <button type="button" onClick={() => setConfirmClear(false)}>
+              {t("social.dice.clearCancel")}
+            </button>
+          </p>
+        ) : (
+          <button type="button" className="small roll-clear" onClick={() => setConfirmClear(true)}>
+            {t("social.dice.clear")}
+          </button>
+        ))}
     </div>
   );
 }
