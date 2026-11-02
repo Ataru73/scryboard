@@ -4,9 +4,11 @@ import {
   describeRoll,
   diceStats,
   formatDice,
+  MAX_ROLL_LABEL,
   parseDice,
   rollDice,
   rollSchema,
+  splitRollLabel,
 } from "./dice";
 
 /** Dadi truccati: restituiscono i valori in sequenza. */
@@ -170,5 +172,19 @@ describe("diceStats", () => {
     expect(stats("3d6>=1")).toEqual({ min: 3, max: 3, mean: 3 });
     expect(stats("4d10!>=8").mean).toBeCloseTo((4 / 0.9) * 0.3, 9);
     expect(stats("4d10kh2>=8").mean).toBeNull();
+  });
+});
+
+describe("roll labels", () => {
+  it("keeps what follows # as the label of the roll", () => {
+    const roll = rollDice("1d20+5 # Attacco con la spada", sequence(12));
+    expect(roll).toMatchObject({ formula: "1d20+5", label: "Attacco con la spada", total: 17 });
+    expect(rollSchema.shape.label.parse(roll.label)).toBe("Attacco con la spada");
+  });
+
+  it("ignores an empty label and trims a long one", () => {
+    expect(rollDice("1d6 #  ", sequence(3))).not.toHaveProperty("label");
+    expect(rollDice("1d6", sequence(3))).not.toHaveProperty("label");
+    expect(splitRollLabel(`2d6#${"x".repeat(60)}`).label).toHaveLength(MAX_ROLL_LABEL);
   });
 });

@@ -121,7 +121,7 @@ cancella gli oggetti e, per il GM, anche muri e porte.
 - **Dadi**: la scheda _Dadi_ della barra laterale tira formule come `2d20kh1+5`, `8d6`, `4d6dl1`
   o `d%`, con pulsanti rapidi da d4 a d100. I dadi possono **esplodere** (`3d6!` tira un altro dado
   per ogni 6; `3d6!5` da 5 in su) e un pool può **contare i successi** (`10d10>=7`, anche `>`, `<=`,
-  `<`, `=`), da soli o insieme (`8d10!>=8`): il totale è allora il numero di successi. Le formule
+  `<`, `=`), da soli o insieme (`8d10!>=8`): il totale è allora il numero di successi. Il testo dopo `#` dà un nome al tiro (`1d20+5 # Attacco`). Le formule
   scritte si salvano come pulsanti, nel tuo browser, e mentre le scrivi mostrano minimo, media e massimo; un clic su una formula del registro la tira di nuovo. I tiri li fa il server, compaiono in un registro
   pubblico (gli ultimi 200) e rotolano con un'animazione 2D al centro della lavagna per qualche
   secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser). Scrivere `/r 1d4` (o `/roll`) in

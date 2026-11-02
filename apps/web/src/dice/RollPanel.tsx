@@ -6,6 +6,7 @@ import {
   formatDice,
   parseDice,
   type Roll,
+  splitRollLabel,
 } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -74,8 +75,13 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
   /** Forma canonica e statistiche della formula scritta, o `null` se non è valida. */
   const parsed = useMemo(() => {
     try {
-      const specs = parseDice(formula);
-      return { canonical: formatDice(specs), stats: diceStats(specs) };
+      // L'etichetta dopo «#» non entra nel calcolo ma resta nella formula salvata.
+      const { formula: dice, label } = splitRollLabel(formula);
+      const specs = parseDice(dice);
+      return {
+        canonical: formatDice(specs) + (label ? ` # ${label}` : ""),
+        stats: diceStats(specs),
+      };
     } catch {
       return null;
     }
@@ -275,6 +281,7 @@ function RollEntry({ roll, secret, busy, onReroll }: RollEntryProps) {
         >
           {roll.formula}
         </button>
+        {roll.label && <span className="roll-label"> {roll.label}</span>}
         {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}
       </span>
       <span className="roll-detail muted small">{describeRoll(roll)}</span>

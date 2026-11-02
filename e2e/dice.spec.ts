@@ -103,6 +103,17 @@ test("success pools show their successes and formulas can be saved as presets", 
   await expect(presets.getByRole("button", { name: "8d10!>=8", exact: true })).toBeVisible();
   await expect(save).toBeDisabled(); // già salvata
 
+  // Dopo «#» si scrive per che cosa si tira: l'etichetta compare a tutti e resta nei preferiti.
+  await player.getByLabel("Formula dei dadi").fill("1d20 + 3 # Furtività");
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
+  await expect(
+    gm.getByRole("list", { name: "Registro dei tiri" }).getByRole("listitem").last(),
+  ).toContainText("1d20+3 Furtività");
+  await save.click();
+  await expect(
+    presets.getByRole("button", { name: "1d20+3 # Furtività", exact: true }),
+  ).toBeVisible();
+
   await player.reload();
   await player.getByRole("button", { name: "Dadi", exact: true }).click();
   await presets.getByRole("button", { name: "8d10!>=8", exact: true }).click();

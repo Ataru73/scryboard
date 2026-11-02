@@ -253,6 +253,7 @@ function RollToastCard({ roll, secret }: Toast) {
         <strong>{roll.name}</strong>
         {roll.from === "gm" && <span className="badge role-badge">GM</span>}
         <span className="roll-toast-formula">{roll.formula}</span>
+        {roll.label && <span className="roll-toast-label">{roll.label}</span>}
         {secret && <span className="roll-toast-secret">{t("social.dice.hiddenSuffix")}</span>}
       </div>
       <div className="roll-toast-tray" aria-hidden="true">
