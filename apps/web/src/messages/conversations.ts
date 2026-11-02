@@ -67,3 +67,8 @@ export function groupConversations(
   }
   return [...byKey.values()].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
 }
+
+/** Titolo della scheda del browser: i messaggi non letti in testa, così si notano da un'altra scheda. */
+export function roomTitle(roomName: string, unread: number): string {
+  return `${unread > 0 ? `(${unread}) ` : ""}${roomName} · Scryboard`;
+}

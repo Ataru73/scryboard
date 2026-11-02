@@ -47,6 +47,8 @@ test("private messages: players and GM write to each other, the GM reads everyth
   await writeTo(arwen, "Bilbo", secret);
   const bilboPanel = messages(bilbo);
   await expect(bilboPanel.locator(".unread-badge").first()).toHaveText("1");
+  // Il titolo della scheda lo dice anche a chi sta guardando altrove.
+  await expect(bilbo).toHaveTitle("(1) Cripta · Scryboard");
   await bilboPanel.getByRole("button", { name: /Arwen/ }).click();
   await expect(bilboPanel.getByRole("list", { name: "Conversazione con Arwen" })).toContainText(
     secret,
@@ -54,6 +56,7 @@ test("private messages: players and GM write to each other, the GM reads everyth
   await bilboPanel.getByLabel("Messaggio").fill("Perfetto, a stanotte");
   await bilboPanel.getByLabel("Messaggio").press("Enter");
   await expect(bilboPanel.locator(".unread-badge")).toHaveCount(0);
+  await expect(bilbo).toHaveTitle("Cripta · Scryboard");
 
   // Il GM legge la conversazione tra i due, senza poter rispondere.
   const gmPanel = messages(gm);
