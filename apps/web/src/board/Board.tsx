@@ -2533,6 +2533,10 @@ export function Board({
             role={role}
             tokens={visibleTokens}
             onClose={() => useBoardUi.getState().setInitiativeOpen(false)}
+            onFocusToken={(token) => {
+              useBoardUi.getState().select([token.id]);
+              setViewport(centerOn(token, viewport.scale, size));
+            }}
           />
         )}
         <WeatherOverlay

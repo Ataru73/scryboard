@@ -24,6 +24,13 @@ test("the GM runs the turn order and players follow it", async ({ browser }) => 
   const names = (panel: typeof gmPanel) => panel.locator(".initiative-name");
   await expect(names(playerPanel)).toHaveText(["Bruna", "Aldo"]);
 
+  // Un clic sul nome seleziona il token.
+  const selection = gm.getByRole("toolbar", { name: "Selezione" });
+  await click(gm, 600, 400);
+  await expect(selection).toHaveCount(0);
+  await names(gmPanel).filter({ hasText: "Aldo" }).click();
+  await expect(selection).toBeVisible();
+
   await gmPanel.getByRole("button", { name: "Avanti" }).click();
   await expect(playerPanel.locator("li[aria-current=step] .initiative-name")).toHaveText("Bruna");
   await gm.keyboard.press("n");

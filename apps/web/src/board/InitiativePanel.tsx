@@ -11,6 +11,8 @@ interface Props {
   /** Token che chi guarda può vedere: gli altri non compaiono nell'elenco. */
   tokens: TokenItem[];
   onClose: () => void;
+  /** Seleziona il token e porta la vista su di lui. */
+  onFocusToken: (token: TokenItem) => void;
 }
 
 function parseValue(text: string): number | null {
@@ -19,7 +21,7 @@ function parseValue(text: string): number | null {
 }
 
 /** Ordine dei turni: il GM lo gestisce, i giocatori lo vedono e ritoccano i valori. */
-export function InitiativePanel({ store, role, tokens, onClose }: Props) {
+export function InitiativePanel({ store, role, tokens, onClose, onFocusToken }: Props) {
   const { t } = useTranslation();
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   const turn: TurnSettings = useSyncExternalStore(store.subscribe, store.getTurn);
@@ -55,7 +57,12 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
         <ol className="initiative-list">
           {order.map((token) => (
             <li key={token.id} aria-current={token.id === turn.activeId ? "step" : undefined}>
-              <span className="initiative-name">
+              <button
+                type="button"
+                className="initiative-name"
+                title={t("effects.initiative.focusTitle")}
+                onClick={() => onFocusToken(token)}
+              >
                 {token.name ||
                   (token.obscured
                     ? t("effects.initiative.unknown")
@@ -66,7 +73,7 @@ export function InitiativePanel({ store, role, tokens, onClose }: Props) {
                 {gm && token.obscured && (
                   <span className="muted small"> ({t("effects.initiative.obscured")})</span>
                 )}
-              </span>
+              </button>
               <VitalsSummary token={token} />
               <input
                 type="number"
