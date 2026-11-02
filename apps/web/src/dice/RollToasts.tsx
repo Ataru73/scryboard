@@ -44,7 +44,8 @@ function flattenRoll(roll: Roll): { dice: DieItem[]; modifier: number; hasSucces
         value,
         sign: term.sign,
         kept: term.kept[dieIdx] ?? true,
-        extra: term.extra?.[dieIdx] ?? false,
+        // I nuovi tiri di un ritiro compaiono dopo i dadi iniziali, come quelli esplosi.
+        extra: Boolean(term.extra?.[dieIdx] || term.rerolled?.[dieIdx]),
         success: term.success,
       });
     });

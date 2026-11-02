@@ -56,7 +56,7 @@ export const social = {
     statsMax: "max {{value}}",
     reroll: "Roll {{formula}} again",
     rerollTitle: "Roll again",
-    help: "Keep highest: 2d20kh1 · explode: 3d6! · successes: 10d10>=7 · together: 8d10!>=8 · label: 1d20+5 # Attack",
+    help: "Keep highest: 2d20kh1 · reroll 1s: 1d20ro1 · explode: 3d6! · successes: 10d10>=7 · together: 8d10!>=8 · label: 1d20+5 # Attack",
     crit: "Natural 20",
     fumble: "Natural 1",
     successes_one: "success",
