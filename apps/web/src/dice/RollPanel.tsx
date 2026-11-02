@@ -278,8 +278,9 @@ interface RollEntryProps {
 }
 
 function RollEntry({ roll, secret, busy, onReroll }: RollEntryProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const natural = naturalD20(roll);
+  const timeLocale = i18n.resolvedLanguage?.startsWith("en") ? "en-US" : "it-IT";
 
   return (
     <li className={secret ? "roll-entry secret" : "roll-entry"}>
@@ -297,7 +298,10 @@ function RollEntry({ roll, secret, busy, onReroll }: RollEntryProps) {
           {roll.formula}
         </button>
         {roll.label && <span className="roll-label"> {roll.label}</span>}
-        {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}
+        {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}{" "}
+        <time className="roll-time muted small" dateTime={roll.at}>
+          {new Date(roll.at).toLocaleTimeString(timeLocale, { hour: "2-digit", minute: "2-digit" })}
+        </time>
       </span>
       <span className="roll-detail muted small">{describeRoll(roll)}</span>
       <output

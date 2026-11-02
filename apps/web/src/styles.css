@@ -1800,6 +1800,10 @@ button.danger {
   font-weight: 600;
 }
 
+.roll-time {
+  font-variant-numeric: tabular-nums;
+}
+
 .roll-entry.secret {
   outline: 1px dashed var(--border);
 }
