@@ -7,7 +7,7 @@ import { unlockAudioContext } from "../dice/diceSound";
 import { RollPanel } from "../dice/RollPanel";
 import { rollFormula } from "../dice/rolls";
 import { api, describeApiError } from "../lib/api";
-import { parseRollCommand } from "./commands";
+import { emoteText, messagePreview, parseRollCommand } from "./commands";
 import { groupConversations, roomTitle } from "./conversations";
 import { useLastRead, useMailbox } from "./useMailbox";
 
@@ -163,7 +163,8 @@ export function MessagesPanel({
                     )}
                   </span>
                   <span className="muted small conversation-preview">
-                    {c.messages.at(-1)?.text}
+                    {c.messages.length > 0 &&
+                      messagePreview(c.messages[c.messages.length - 1] as Message)}
                   </span>
                   {c.unread > 0 && <span className="badge unread-badge">{c.unread}</span>}
                 </button>
@@ -238,31 +239,43 @@ function Thread({
         ref={listRef}
         aria-label={t("social.messages.conversationWith", { title })}
       >
-        {messages.map((m) => (
-          <li key={m.id} className={m.from === me ? "bubble mine" : "bubble"}>
-            {m.from !== me && (
-              <span className="bubble-author">
-                {m.fromName} {m.from === "gm" && <span className="badge role-badge">GM</span>}
-              </span>
-            )}
-            {m.note ? (
-              <div className="bubble-note">
-                <strong>{m.note.title || t("effects.note.untitled")}</strong>
-                <div className="note-body">
-                  <Markdown text={m.note.text} />
+        {messages.map((m) => {
+          const emote = m.note ? null : emoteText(m.text);
+          if (emote !== null) {
+            return (
+              <li key={m.id} className="emote">
+                <em>
+                  {m.fromName} {emote}
+                </em>
+              </li>
+            );
+          }
+          return (
+            <li key={m.id} className={m.from === me ? "bubble mine" : "bubble"}>
+              {m.from !== me && (
+                <span className="bubble-author">
+                  {m.fromName} {m.from === "gm" && <span className="badge role-badge">GM</span>}
+                </span>
+              )}
+              {m.note ? (
+                <div className="bubble-note">
+                  <strong>{m.note.title || t("effects.note.untitled")}</strong>
+                  <div className="note-body">
+                    <Markdown text={m.note.text} />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <span className="bubble-text">{m.text}</span>
-            )}
-            <time className="bubble-time" dateTime={m.at}>
-              {new Date(m.at).toLocaleTimeString(timeLocale, {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </time>
-          </li>
-        ))}
+              ) : (
+                <span className="bubble-text">{m.text}</span>
+              )}
+              <time className="bubble-time" dateTime={m.at}>
+                {new Date(m.at).toLocaleTimeString(timeLocale, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+            </li>
+          );
+        })}
         {messages.length === 0 && <li className="muted small">{t("social.messages.empty")}</li>}
       </ol>
       {readOnly ? (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRollCommand } from "./commands";
+import { emoteText, messagePreview, parseRollCommand } from "./commands";
 
 describe("parseRollCommand", () => {
   it("reads public rolls with /r and /roll", () => {
@@ -18,5 +18,23 @@ describe("parseRollCommand", () => {
     expect(parseRollCommand("/r", true)).toBeNull();
     expect(parseRollCommand("/rolling 1d6", true)).toBeNull();
     expect(parseRollCommand("guarda /r 1d6", true)).toBeNull();
+  });
+});
+
+describe("emoteText", () => {
+  it("reads /me actions, keeping line breaks", () => {
+    expect(emoteText("/me draws her sword")).toBe("draws her sword");
+    expect(emoteText(" /ME nods\nslowly ")).toBe("nods\nslowly");
+  });
+
+  it("leaves normal messages alone", () => {
+    expect(emoteText("/me")).toBeNull();
+    expect(emoteText("/meow")).toBeNull();
+    expect(emoteText("hello /me waves")).toBeNull();
+  });
+
+  it("previews actions with the author's name", () => {
+    expect(messagePreview({ text: "/me waves", fromName: "Aldo" })).toBe("Aldo waves");
+    expect(messagePreview({ text: "hi", fromName: "Aldo" })).toBe("hi");
   });
 });

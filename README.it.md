@@ -126,7 +126,7 @@ cancella gli oggetti e, per il GM, anche muri e porte.
   scritte si salvano come pulsanti, nel tuo browser, e mentre le scrivi mostrano minimo, media e massimo; un clic su una formula del registro la tira di nuovo. I tiri li fa il server, compaiono in un registro
   pubblico (gli ultimi 200) e rotolano con un'animazione 2D al centro della lavagna per qualche
   secondo. Il GM può tirare di nascosto (il risultato resta nel suo browser). Scrivere `/r 1d4` (o `/roll`) in
-  qualunque conversazione tira per tutto il tavolo; il GM tira di nascosto con `/gr` (o `/gmroll`).
+  qualunque conversazione tira per tutto il tavolo; il GM tira di nascosto con `/gr` (o `/gmroll`). `/me annuisce` racconta un'azione col proprio nome.
 - **Iniziativa**: il pannello _Turni_ (barra dello zoom) elenca i token nell'ordine; il GM li
   aggiunge, scrive i valori (_Tira d20_ tira per chi è ancora a 0) e avanza con _Avanti_ (`N`). Il token di turno ha un anello dorato; i
   giocatori vedono l'ordine e possono ritoccare i valori, e un avviso «Tocca a te» li chiama quando è il turno di un loro token; un clic su un nome seleziona il token e centra la vista su di lui. I token nascosti restano nascosti.
