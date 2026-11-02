@@ -80,7 +80,7 @@ each in its own job.
 | W (GM only)                     | Walls, doors, windows, invisible, one-way and terrain walls snapped to the grid  |
 | I (GM only)                     | Lights, dynamic vision, ambient light and preview as a player                    |
 | S (GM only)                     | Stamps: trees, rocks and furniture; drag to scatter many                         |
-| N (GM only)                     | Next turn in the initiative order                                                |
+| N / Shift+N (GM only)           | Next / previous turn in the initiative order                                     |
 | D                               | Damage or healing for the selected tokens                                        |
 | 1–9 (Terrain, Path, Stamps)     | Recent biomes, path styles, stamps                                               |
 | Double-click on a selected path | Adds a control point                                                             |

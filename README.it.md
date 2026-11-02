@@ -81,7 +81,7 @@ con un job suo.
 | W (solo GM)                            | Muri, porte, finestre, barriere invisibili, a senso unico e di terreno           |
 | I (solo GM)                            | Luci, visione dinamica, luce ambientale e anteprima come un giocatore            |
 | S (solo GM)                            | Timbri: alberi, rocce e mobili; trascina per spargerne tanti                     |
-| N (solo GM)                            | Turno successivo nell'ordine di iniziativa                                       |
+| N / Shift+N (solo GM)                  | Turno successivo / precedente nell'ordine di iniziativa                          |
 | D                                      | Danno o cura per i token selezionati                                             |
 | 1–9 (Terreno, Percorso, Timbri)        | Biomi recenti, stili di percorso, timbri                                         |
 | Doppio clic su un percorso selezionato | Aggiunge un punto di controllo                                                   |

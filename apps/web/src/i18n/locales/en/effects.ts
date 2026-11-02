@@ -210,7 +210,7 @@ export const effects = {
     focusTitle: "Select it and center the view on it",
     rollZeros: "Roll d20",
     rollZerosTitle: "Rolls a d20 for every token in the order still at 0",
-    previousTurnTitle: "Previous turn",
+    previousTurnTitle: "Previous turn (Shift+N)",
     previousTurn: "Previous",
     nextTurnTitle: "Next turn (N)",
     nextTurn: "Next",

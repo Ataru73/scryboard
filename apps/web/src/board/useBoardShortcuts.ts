@@ -120,8 +120,12 @@ export function useBoardShortcuts({
           return;
         case "n":
         case "N":
-          // Turno successivo: solo il GM, e solo se c'è un ordine.
-          if (role === "gm") ui.setExpiredConditions(store.advanceTurn(1));
+          // Turno successivo (con Shift il precedente): solo il GM, e solo se c'è un ordine.
+          if (role !== "gm") return;
+          if (e.shiftKey) {
+            store.advanceTurn(-1);
+            ui.setExpiredConditions(null);
+          } else ui.setExpiredConditions(store.advanceTurn(1));
           return;
         case "d":
         case "D":

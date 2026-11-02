@@ -210,7 +210,7 @@ export const effects = {
     focusTitle: "Selezionalo e centra la vista su di lui",
     rollZeros: "Tira d20",
     rollZerosTitle: "Tira un d20 per ogni token dell'ordine ancora a 0",
-    previousTurnTitle: "Turno precedente",
+    previousTurnTitle: "Turno precedente (Shift+N)",
     previousTurn: "Indietro",
     nextTurnTitle: "Turno successivo (N)",
     nextTurn: "Avanti",
