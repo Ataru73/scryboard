@@ -1048,6 +1048,36 @@ button.danger {
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
 }
 
+.shortcuts-modal {
+  width: min(calc(100% - 2rem), 34rem);
+}
+
+.shortcuts-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  margin: 0;
+}
+
+.shortcuts-list div {
+  display: contents;
+}
+
+.shortcuts-list dd {
+  margin: 0;
+}
+
+.shortcuts-list kbd {
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 .modal::backdrop {
   background: rgb(0 0 0 / 0.5);
 }

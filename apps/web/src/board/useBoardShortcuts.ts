@@ -131,6 +131,9 @@ export function useBoardShortcuts({
             }
           }
           return;
+        case "?":
+          ui.setShortcutsOpen(true);
+          return;
         case "]":
           store.bringToFront(editable);
           return;
