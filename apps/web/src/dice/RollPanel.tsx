@@ -6,14 +6,14 @@ import {
   formatDice,
   parseDice,
   type Roll,
+  splitRepeat,
   splitRollLabel,
 } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { describeApiError } from "../lib/api";
 import { MAX_DICE_PRESETS, storage } from "../lib/storage";
 import { playDiceRollSound, unlockAudioContext } from "./diceSound";
-import { type Auth, rollFormula, useLocalRolls, useRolls } from "./rolls";
+import { type Auth, describeRollError, rollRepeated, useLocalRolls, useRolls } from "./rolls";
 
 const QUICK_DICE = [4, 6, 8, 10, 12, 20, 100] as const;
 
@@ -62,11 +62,11 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
     setBusy(true);
     setError(null);
     try {
-      await rollFormula(roomId, body, myName, auth, isGm && hidden);
+      await rollRepeated(roomId, body, myName, auth, isGm && hidden);
       // Con la barra laterale lunga il registro può stare sotto il bordo: lo si porta in vista.
       requestAnimationFrame(() => listRef.current?.scrollIntoView({ block: "nearest" }));
     } catch (e) {
-      setError(describeApiError(e));
+      setError(describeRollError(e));
     } finally {
       setBusy(false);
     }
@@ -75,11 +75,13 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
   /** Forma canonica e statistiche della formula scritta, o `null` se non è valida. */
   const parsed = useMemo(() => {
     try {
-      // L'etichetta dopo «#» non entra nel calcolo ma resta nella formula salvata.
-      const { formula: dice, label } = splitRollLabel(formula);
+      // Ripetizioni ed etichetta dopo «#» non entrano nel calcolo ma restano nella formula salvata.
+      const { times, formula: single } = splitRepeat(formula);
+      const { formula: dice, label } = splitRollLabel(single);
       const specs = parseDice(dice);
       return {
-        canonical: formatDice(specs) + (label ? ` # ${label}` : ""),
+        canonical:
+          (times > 1 ? `${times}x ` : "") + formatDice(specs) + (label ? ` # ${label}` : ""),
         stats: diceStats(specs),
       };
     } catch {

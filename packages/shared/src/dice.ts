@@ -14,6 +14,23 @@ export const MAX_ROLL_LABEL = 40;
 
 export class DiceError extends Error {}
 
+/** Quante volte si può ripetere una formula con «3x 1d20+5». */
+export const MAX_REPEAT = 10;
+
+/**
+ * «3x 1d20+5 # Attacco»: quante volte tirare (1 se non è indicato) e il resto della formula.
+ * Ogni ripetizione è un tiro a sé, come più attacchi nello stesso turno.
+ */
+export function splitRepeat(input: string): { times: number; formula: string } {
+  const match = /^\s*(\d+)\s*[x×]\s*(?=\S)([\s\S]*)$/i.exec(input);
+  if (!match) return { times: 1, formula: input };
+  const times = Number(match[1]);
+  if (times < 1 || times > MAX_REPEAT) {
+    throw new DiceError(`Da 1 a ${MAX_REPEAT} ripetizioni.`);
+  }
+  return { times, formula: match[2] as string };
+}
+
 /** «1d20+5 # Attacco»: la formula e l'etichetta dopo il cancelletto, se c'è. */
 export function splitRollLabel(input: string): { formula: string; label?: string } {
   const hash = input.indexOf("#");

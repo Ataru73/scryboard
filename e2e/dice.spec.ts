@@ -68,6 +68,14 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   await expect(gmLog.getByText("(nascosto)")).toHaveCount(2);
   await player.getByRole("button", { name: "Dadi", exact: true }).click();
   await expect(playerLog.getByText("1d6", { exact: true })).toHaveCount(0);
+
+  // «3x» ripete la formula: tre tiri separati, come tre attacchi.
+  await player.getByLabel("Formula dei dadi").fill("3x 1d20+5");
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
+  await expect(gmLog.getByText("1d20+5", { exact: true })).toHaveCount(3);
+  await player.getByLabel("Formula dei dadi").fill("11x 1d20");
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
+  await expect(player.getByRole("alert")).toHaveText("Si può ripetere un tiro da 1 a 10 volte.");
 });
 
 test("success pools show their successes and formulas can be saved as presets", async ({
