@@ -93,6 +93,7 @@ con un job suo.
 | G                                      | Centra la vista sulla selezione o, a turno, sui tuoi token                       |
 | Shift+1 / Shift+0                      | Adatta al contenuto / zoom 100%                                                  |
 | Frecce                                 | Sposta la selezione di una casella (Shift: un pixel); i muri fermano i token     |
+| Ctrl+A                                 | Seleziona tutti i token e i disegni che puoi modificare                          |
 | Canc / Backspace                       | Elimina la selezione                                                             |
 | ] / [                                  | Porta in primo piano / sullo sfondo                                              |
 | Ctrl+Z / Ctrl+Shift+Z                  | Annulla / ripeti                                                                 |

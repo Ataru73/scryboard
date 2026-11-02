@@ -20,6 +20,7 @@ const SHORTCUTS: Shortcut[] = [
   { keys: "N / Shift+N", id: "turn", gmOnly: true },
   { keys: "D", id: "damage" },
   { keys: "Shift+H", id: "hide", gmOnly: true },
+  { keys: "Ctrl+A", id: "selectAll" },
   { keys: "Ctrl+D", id: "duplicate" },
   { keys: "← ↑ → ↓", id: "nudge" },
   { keys: "Del", id: "delete" },

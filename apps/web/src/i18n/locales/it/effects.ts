@@ -98,6 +98,7 @@ export const effects = {
       damage: "Danno o cura per i token selezionati",
       hide: "Nasconde o rivela la selezione",
       constrain: "Disegnando: linee a 45°, quadrati e cerchi",
+      selectAll: "Seleziona tutti i token e i disegni che puoi modificare",
       duplicate: "Duplica la selezione",
       delete: "Elimina la selezione",
       order: "Porta in primo piano / manda sullo sfondo",

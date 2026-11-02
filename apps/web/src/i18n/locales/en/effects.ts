@@ -98,6 +98,7 @@ export const effects = {
       damage: "Damage or healing for the selected tokens",
       hide: "Hide or reveal the selection",
       constrain: "While drawing: lines at 45°, squares and circles",
+      selectAll: "Select every token and drawing you can edit",
       duplicate: "Duplicate the selection",
       nudge: "Move the selection one cell (with Shift, one pixel); walls stop tokens",
       delete: "Delete the selection",
