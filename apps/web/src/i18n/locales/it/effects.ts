@@ -231,6 +231,7 @@ export const effects = {
     removeFromOrder: "Togli {{name}} dall'ordine",
     hiddenActiveTurn: "Turno di qualcuno che non vedi.",
     addSelection: "Aggiungi selezione",
+    yourTurn: "Tocca a te: {{name}}",
     focusTitle: "Selezionalo e centra la vista su di lui",
     rollZeros: "Tira d20",
     rollZerosTitle: "Tira un d20 per ogni token dell'ordine ancora a 0",

@@ -77,3 +77,26 @@ test("hidden tokens in the order are not shown to players", async ({ browser }) 
     player.getByRole("region", { name: "Turni" }).locator(".initiative-name"),
   ).toHaveCount(0);
 });
+
+test("players are told when their own token's turn starts", async ({ browser }) => {
+  const { gm, player } = await setupTable(browser);
+  await placeToken(player, "Legolas", 175, 175);
+  await placeToken(gm, "Orco", 325, 175);
+  await gm.keyboard.press("v");
+  await gm.getByRole("button", { name: "Turni" }).click();
+  const gmPanel = gm.getByRole("region", { name: "Turni" });
+  for (const x of [175, 325]) {
+    await click(gm, x, 175);
+    await gmPanel.getByRole("button", { name: "Aggiungi selezione" }).click();
+  }
+  await gmPanel.getByLabel("Iniziativa di Legolas").fill("15");
+  await gmPanel.getByLabel("Iniziativa di Legolas").press("Enter");
+
+  const notice = player.locator(".your-turn");
+  await gmPanel.getByRole("button", { name: "Avanti" }).click();
+  await expect(notice).toHaveText("Tocca a te: Legolas");
+  // Il GM non riceve l'avviso, e al turno dell'orco sparisce.
+  await expect(gm.locator(".your-turn")).toHaveCount(0);
+  await gmPanel.getByRole("button", { name: "Avanti" }).click();
+  await expect(notice).toHaveCount(0);
+});
