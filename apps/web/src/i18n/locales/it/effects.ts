@@ -208,6 +208,8 @@ export const effects = {
     hiddenActiveTurn: "Turno di qualcuno che non vedi.",
     addSelection: "Aggiungi selezione",
     focusTitle: "Selezionalo e centra la vista su di lui",
+    rollZeros: "Tira d20",
+    rollZerosTitle: "Tira un d20 per ogni token dell'ordine ancora a 0",
     previousTurnTitle: "Turno precedente",
     previousTurn: "Indietro",
     nextTurnTitle: "Turno successivo (N)",

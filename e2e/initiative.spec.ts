@@ -16,6 +16,14 @@ test("the GM runs the turn order and players follow it", async ({ browser }) => 
   await gmPanel.getByRole("button", { name: "Aggiungi selezione" }).click();
   await click(gm, 325, 175);
   await gmPanel.getByRole("button", { name: "Aggiungi selezione" }).click();
+  // Chi è ancora a 0 riceve un d20 con un clic.
+  await gmPanel.getByRole("button", { name: "Tira d20" }).click();
+  await expect(gmPanel.getByRole("button", { name: "Tira d20" })).toBeDisabled();
+  for (const name of ["Aldo", "Bruna"]) {
+    const value = () => playerPanel.getByLabel(`Iniziativa di ${name}`).inputValue().then(Number);
+    await expect.poll(value).toBeGreaterThanOrEqual(1);
+    expect(await value()).toBeLessThanOrEqual(20);
+  }
   await gmPanel.getByLabel("Iniziativa di Aldo").fill("5");
   await gmPanel.getByLabel("Iniziativa di Aldo").press("Enter");
   await gmPanel.getByLabel("Iniziativa di Bruna").fill("15");

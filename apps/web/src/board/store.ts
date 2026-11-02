@@ -67,6 +67,11 @@ interface DocPart {
   loaded: Map<string, BoardItem>;
 }
 
+/** d20 con il generatore crittografico, come i dadi del server. */
+function rollD20(): number {
+  return 1 + ((crypto.getRandomValues(new Uint32Array(1))[0] as number) % 20);
+}
+
 /**
  * Stato della board costruito su due documenti Yjs: quello pubblico (oggetti visibili, griglia,
  * nebbia) e, solo per il GM, quello con gli oggetti nascosti. Espone snapshot immutabili per
@@ -707,7 +712,17 @@ export class BoardStore {
     if (Object.keys(patches).length > 0) this.update(patches);
   }
 
-  /** Passa al token successivo (o precedente) dell'ordine. */
+  /**
+   * Tira un d20 di iniziativa per ciascun token, in un solo passo di annulla. `random` restituisce
+   * un intero tra 1 e 20.
+   */
+  rollInitiative(ids: string[], random: () => number = rollD20) {
+    const patches: Record<string, ItemPatch> = {};
+    for (const id of ids)
+      if (this.byId.get(id)?.kind === "token") patches[id] = { initiative: random() };
+    if (Object.keys(patches).length > 0) this.update(patches);
+  }
+
   /**
    * Passa al turno successivo o precedente. Andando avanti, all'inizio del turno di un token le
    * durate delle sue condizioni scendono di uno e quelle a zero spariscono, nello stesso passo di

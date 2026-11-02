@@ -30,6 +30,8 @@ export function InitiativePanel({ store, role, tokens, onClose, onFocusToken }: 
   const order = initiativeOrder(tokens);
   const gm = role === "gm";
   const activeShown = order.some((t) => t.id === turn.activeId);
+  // Chi è appena entrato nell'ordine ha 0: il GM può tirargli un d20 in un colpo solo.
+  const unrolled = order.filter((t) => t.initiative === 0).map((t) => t.id);
   const addable = selectedIds.filter((id) => {
     const item = store.get(id);
     return item?.kind === "token" && typeof item.initiative !== "number";
@@ -130,6 +132,14 @@ export function InitiativePanel({ store, role, tokens, onClose, onFocusToken }: 
             onClick={() => store.setInitiative(addable, 0)}
           >
             {t("effects.initiative.addSelection")}
+          </button>
+          <button
+            type="button"
+            title={t("effects.initiative.rollZerosTitle")}
+            disabled={unrolled.length === 0}
+            onClick={() => store.rollInitiative(unrolled)}
+          >
+            {t("effects.initiative.rollZeros")}
           </button>
           <button
             type="button"

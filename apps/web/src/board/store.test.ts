@@ -130,6 +130,25 @@ describe("BoardStore", () => {
     expect(player.getTurn()).toEqual({ activeId: null, round: 1 });
   });
 
+  it("rolls initiative for several tokens in a single undo step", () => {
+    const store = new BoardStore(new Y.Doc(), null, "gm");
+    store.add([token("a"), token("b"), token("c")]);
+    store.setInitiative(["a", "b"], 0);
+    const rolls = [7, 19];
+    store.rollInitiative(["a", "b"], () => rolls.shift() as number);
+    expect(store.getInitiativeOrder().map((t) => [t.id, t.initiative])).toEqual([
+      ["b", 19],
+      ["a", 7],
+    ]);
+    store.rollInitiative(["c"]);
+    const c = store.get("c") as TokenItem;
+    expect(c.initiative).toBeGreaterThanOrEqual(1);
+    expect(c.initiative).toBeLessThanOrEqual(20);
+    store.undo();
+    store.undo();
+    expect(store.getInitiativeOrder().map((t) => t.initiative)).toEqual([0, 0]);
+  });
+
   it("shares grid settings and undoes them like any other action", () => {
     const [docA, docB] = linkedDocs();
     const gm = new BoardStore(docA, null, "gm");
