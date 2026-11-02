@@ -20,6 +20,8 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   expect(total).toBeGreaterThanOrEqual(10);
   expect(total).toBeLessThanOrEqual(50);
   await expect(playerLog.getByLabel("Totale di Arwen")).toHaveText(String(total));
+  // Ogni tiro dice anche a che ora è stato fatto.
+  await expect(playerLog.locator(".roll-time").first()).toHaveText(/^\d\d:\d\d$/);
   // Un clic sulla formula nel registro la tira di nuovo.
   await playerLog.getByRole("button", { name: "Tira di nuovo 8d6+2" }).click();
   await expect(gmLog.getByText("8d6+2")).toHaveCount(2);
