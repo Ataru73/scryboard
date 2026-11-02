@@ -88,6 +88,7 @@ each in its own job.
 | Shift+H (GM only)               | Hides the selection from the players, or reveals it                              |
 | Space (held down)               | Pans the view with any tool; while measuring, adds a waypoint                    |
 | Mouse wheel / pinch             | Zoom                                                                             |
+| G                               | Centers the view on the selection, or on your own tokens one after another       |
 | Shift+1 / Shift+0               | Fit to content / zoom 100%                                                       |
 | Del / Backspace                 | Deletes the selection                                                            |
 | ] / [                           | Bring to front / send to back                                                    |

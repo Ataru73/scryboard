@@ -9,6 +9,8 @@ interface Options {
   role: Role;
   canEdit: (item: BoardItem | undefined) => boolean;
   fitToContent: () => void;
+  /** Centra la vista sulla selezione o sui propri token. */
+  goToToken: () => void;
   viewportSize: { width: number; height: number };
   /** false sullo schermo condiviso, che non ha scorciatoie. */
   enabled?: boolean;
@@ -37,6 +39,7 @@ export function useBoardShortcuts({
   role,
   canEdit,
   fitToContent,
+  goToToken,
   viewportSize,
   enabled = true,
 }: Options) {
@@ -131,6 +134,10 @@ export function useBoardShortcuts({
             }
           }
           return;
+        case "g":
+        case "G":
+          goToToken();
+          return;
         case "]":
           store.bringToFront(editable);
           return;
@@ -185,5 +192,5 @@ export function useBoardShortcuts({
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [store, role, canEdit, fitToContent, viewportSize, enabled]);
+  }, [store, role, canEdit, fitToContent, goToToken, viewportSize, enabled]);
 }

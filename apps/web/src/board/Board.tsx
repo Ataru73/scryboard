@@ -53,7 +53,7 @@ import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
 import { ExploredMap } from "../vision/explored";
 import { drawVisibleArea } from "../vision/render";
-import { isDoorSeen, partyTokens, type Viewpoint } from "../vision/sources";
+import { isDoorSeen, partyTokens, type Viewpoint, viewerTokens } from "../vision/sources";
 import { useVision } from "../vision/useVision";
 import { VisionLayer } from "../vision/VisionLayer";
 import { movementFraction, wallSegments } from "../walls/geometry";
@@ -640,11 +640,30 @@ export function Board({
     contentBounds,
   ]);
 
+  /**
+   * «Vai al token» (G): centra la vista sulla selezione o, senza selezione, sui propri token,
+   * uno dopo l'altro a ogni pressione.
+   */
+  const goToCycle = useRef(0);
+  const goToToken = useCallback(() => {
+    if (size.width === 0) return;
+    const ui = useBoardUi.getState();
+    const selected = ui.selectedIds
+      .map((id) => store.get(id))
+      .filter((item): item is TokenItem => item?.kind === "token");
+    const candidates =
+      selected.length > 0 ? selected : viewerTokens(store.getSnapshot(), store.userId);
+    if (candidates.length === 0) return;
+    const token = candidates[goToCycle.current++ % candidates.length] as TokenItem;
+    setViewport(centerOn(token, ui.viewport.scale, size));
+  }, [store, size, setViewport]);
+
   useBoardShortcuts({
     store,
     role,
     canEdit,
     fitToContent: fitView,
+    goToToken,
     viewportSize: size,
     enabled: !projector,
   });
