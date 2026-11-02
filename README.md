@@ -125,7 +125,7 @@ for the GM, also walls and doors.
   `=`), alone or together (`8d10!>=8`): the total is then the number of successes. Text after `#` labels the roll (`1d20+5 # Attack`). Formulas you
   type can be saved as buttons, kept in your browser, and show their minimum, average and maximum as you type; clicking a formula in the log rolls it again. Rolls are made by the server, appear in a public log
   (the last 200) and roll as animated 2D dice at the center of the whiteboard for a few seconds. The GM can roll in secret (the
-  result stays in their browser). Typing `/r 1d4` (or `/roll`) in any conversation rolls for the whole table; the GM rolls in secret with `/gr` (or `/gmroll`).
+  result stays in their browser). Typing `/r 1d4` (or `/roll`) in any conversation rolls for the whole table; the GM rolls in secret with `/gr` (or `/gmroll`). `/me nods` narrates an action under your name.
 - **Initiative**: the _Turns_ panel (zoom toolbar) lists the tokens in the order; the GM adds them,
   sets their values (_Roll d20_ rolls for everyone still at 0) and moves on with _Next_ (`N`). The active token gets a golden ring; players
   see the order, can edit values and get a "Your turn" notice when one of their tokens is up; clicking a name selects the token and centers the view on it. Hidden tokens stay hidden.

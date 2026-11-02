@@ -57,6 +57,10 @@ test("private messages: players and GM write to each other, the GM reads everyth
   await bilboPanel.getByLabel("Messaggio").press("Enter");
   await expect(bilboPanel.locator(".unread-badge")).toHaveCount(0);
   await expect(bilbo).toHaveTitle("Cripta · Scryboard");
+  // «/me» racconta un'azione in terza persona, col nome di chi la fa.
+  await bilboPanel.getByLabel("Messaggio").fill("/me annuisce");
+  await bilboPanel.getByLabel("Messaggio").press("Enter");
+  await expect(bilboPanel.locator(".emote")).toHaveText("Bilbo annuisce");
 
   // Il GM legge la conversazione tra i due, senza poter rispondere.
   const gmPanel = messages(gm);

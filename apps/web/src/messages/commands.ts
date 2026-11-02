@@ -14,3 +14,15 @@ export function parseRollCommand(
   if (hidden && !isGm) return null;
   return { formula: (match[2] as string).trim(), hidden };
 }
+
+/** «/me sguaina la spada»: un'azione in terza persona. Il testo dopo /me, o null. */
+export function emoteText(text: string): string | null {
+  const match = /^\/me\s+(\S[\s\S]*)$/i.exec(text.trim());
+  return match ? (match[1] as string) : null;
+}
+
+/** Come si legge un messaggio in breve: le azioni con il nome di chi le fa. */
+export function messagePreview(message: { text: string; fromName: string }): string {
+  const emote = emoteText(message.text);
+  return emote === null ? message.text : `${message.fromName} ${emote}`;
+}
