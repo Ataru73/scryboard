@@ -8,7 +8,7 @@ import { RollPanel } from "../dice/RollPanel";
 import { rollFormula } from "../dice/rolls";
 import { api, describeApiError } from "../lib/api";
 import { parseRollCommand } from "./commands";
-import { groupConversations } from "./conversations";
+import { groupConversations, roomTitle } from "./conversations";
 import { useLastRead, useMailbox } from "./useMailbox";
 
 interface Props {
@@ -22,13 +22,24 @@ interface Props {
   /** Utenti connessi (presenza), per scegliere a chi scrivere. */
   users: (PresenceUser & { clientId: number })[];
   auth: { gmToken: string } | { credentials: string };
+  /** Nome della stanza, per il titolo della scheda. */
+  roomName: string;
 }
 
 /**
  * Messaggi privati nella barra laterale. I giocatori scrivono al GM o tra loro; il GM scrive a
  * chiunque e legge anche le conversazioni tra giocatori (in sola lettura).
  */
-export function MessagesPanel({ roomId, me, myName, mailProvider, provider, users, auth }: Props) {
+export function MessagesPanel({
+  roomId,
+  me,
+  myName,
+  mailProvider,
+  provider,
+  users,
+  auth,
+  roomName,
+}: Props) {
   const { t, i18n } = useTranslation();
   const language = i18n.resolvedLanguage;
   const [tab, setTab] = useState<"messages" | "dice">("messages");
@@ -51,6 +62,15 @@ export function MessagesPanel({ roomId, me, myName, mailProvider, provider, user
   );
   const [openKey, setOpenKey] = useState<string | null>(null);
   const unread = conversations.reduce((n, c) => n + c.unread, 0);
+  useEffect(() => {
+    document.title = roomTitle(roomName, unread);
+  }, [roomName, unread]);
+  useEffect(
+    () => () => {
+      document.title = "Scryboard";
+    },
+    [],
+  );
   const isGm = me === GM_MAILBOX;
   const recipientId = useId();
 

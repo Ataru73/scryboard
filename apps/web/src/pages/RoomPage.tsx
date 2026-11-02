@@ -220,6 +220,7 @@ function Room({
         </section>
         <MessagesPanel
           roomId={room.id}
+          roomName={room.name}
           me={gmToken ? GM_MAILBOX : profile.id}
           myName={profile.name}
           mailProvider={mailProvider}

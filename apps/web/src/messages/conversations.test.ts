@@ -1,6 +1,6 @@
 import type { Message } from "@scryboard/shared";
 import { describe, expect, it } from "vitest";
-import { groupConversations } from "./conversations";
+import { groupConversations, roomTitle } from "./conversations";
 
 const A = "a1a1a1a1";
 const B = "b2b2b2b2";
@@ -50,5 +50,12 @@ describe("groupConversations", () => {
   it("prefers the current names of connected players", () => {
     const list = groupConversations([msg(A, B, "x")], A, {}, new Map([[B, "Bilbo Baggins"]]));
     expect(list[0]?.title).toBe("Bilbo Baggins");
+  });
+});
+
+describe("roomTitle", () => {
+  it("puts the unread count in front of the room name", () => {
+    expect(roomTitle("Cripta", 0)).toBe("Cripta · Scryboard");
+    expect(roomTitle("Cripta", 3)).toBe("(3) Cripta · Scryboard");
   });
 });
