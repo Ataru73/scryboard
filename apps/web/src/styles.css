@@ -1794,6 +1794,8 @@ button.danger {
 
 .roll-again:hover:not(:disabled) {
   text-decoration: underline;
+}
+
 .roll-label {
   font-weight: 600;
 }
