@@ -53,7 +53,7 @@ import { simplify, terrainOpBounds } from "../terrain/geometry";
 import { biomeColor } from "../terrain/textures";
 import { ExploredMap } from "../vision/explored";
 import { drawVisibleArea } from "../vision/render";
-import { isDoorSeen, partyTokens, type Viewpoint } from "../vision/sources";
+import { isDoorSeen, partyTokens, type Viewpoint, viewerTokens } from "../vision/sources";
 import { useVision } from "../vision/useVision";
 import { VisionLayer } from "../vision/VisionLayer";
 import { movementFraction, wallSegments } from "../walls/geometry";
@@ -2527,6 +2527,9 @@ export function Board({
           onFocus={(point) => setViewport(centerOn(point, viewport.scale, size))}
         />
         {projector && <TurnBanner turn={turn} tokens={visibleTokens} />}
+        {!projector && role === "player" && (
+          <YourTurnNotice turn={turn} tokens={viewerTokens(visibleTokens, store.userId)} />
+        )}
         {!projector && initiativeOpen && (
           <InitiativePanel
             store={store}
@@ -2613,6 +2616,30 @@ function TurnBanner({ turn, tokens }: { turn: TurnSettings; tokens: TokenItem[] 
       {name
         ? t("pages.projector.turnOf", { round: turn.round, name })
         : t("pages.projector.round", { round: turn.round })}
+    </div>
+  );
+}
+
+/** Per quanto resta in vista l'avviso «Tocca a te». */
+const YOUR_TURN_MS = 4000;
+
+/** Avviso per il giocatore quando inizia il turno di uno dei suoi token. */
+function YourTurnNotice({ turn, tokens }: { turn: TurnSettings; tokens: TokenItem[] }) {
+  const { t } = useTranslation();
+  const mine = tokens.find((token) => token.id === turn.activeId);
+  const name = mine ? mine.name || t("effects.initiative.token") : null;
+  const [shown, setShown] = useState<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ricompare a ogni turno, anche se nell'ordine c'è solo un token.
+  useEffect(() => {
+    setShown(name);
+    if (!name) return;
+    const timer = setTimeout(() => setShown(null), YOUR_TURN_MS);
+    return () => clearTimeout(timer);
+  }, [name, turn.activeId, turn.round]);
+  if (!shown) return null;
+  return (
+    <div className="your-turn" role="status">
+      {t("effects.initiative.yourTurn", { name: shown })}
     </div>
   );
 }

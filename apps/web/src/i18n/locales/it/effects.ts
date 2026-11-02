@@ -205,6 +205,7 @@ export const effects = {
     removeFromOrder: "Togli {{name}} dall'ordine",
     hiddenActiveTurn: "Turno di qualcuno che non vedi.",
     addSelection: "Aggiungi selezione",
+    yourTurn: "Tocca a te: {{name}}",
     previousTurnTitle: "Turno precedente",
     previousTurn: "Indietro",
     nextTurnTitle: "Turno successivo (N)",
