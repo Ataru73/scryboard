@@ -227,7 +227,9 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
             roll={entry}
             secret={secret}
             busy={busy}
-            onReroll={() => void roll(entry.formula)}
+            onReroll={() =>
+              void roll(entry.label ? `${entry.formula} # ${entry.label}` : entry.formula)
+            }
           />
         ))}
       </ol>
@@ -255,6 +257,18 @@ function FormulaStats({ stats }: { stats: DiceStats }) {
   );
 }
 
+/** Un d20 tenuto è uscito 20 (critico) o 1 (fallimento critico)? Le riserve a soglia non contano. */
+export function naturalD20(roll: Pick<Roll, "terms">): "crit" | "fumble" | null {
+  const faces = roll.terms.flatMap((term) =>
+    term.kind === "dice" && term.sides === 20 && !term.success
+      ? term.dice.filter((_, i) => term.kept[i])
+      : [],
+  );
+  if (faces.includes(20)) return "crit";
+  if (faces.includes(1)) return "fumble";
+  return null;
+}
+
 interface RollEntryProps {
   roll: Roll;
   secret: boolean;
@@ -265,6 +279,7 @@ interface RollEntryProps {
 
 function RollEntry({ roll, secret, busy, onReroll }: RollEntryProps) {
   const { t } = useTranslation();
+  const natural = naturalD20(roll);
 
   return (
     <li className={secret ? "roll-entry secret" : "roll-entry"}>
@@ -285,7 +300,16 @@ function RollEntry({ roll, secret, busy, onReroll }: RollEntryProps) {
         {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}
       </span>
       <span className="roll-detail muted small">{describeRoll(roll)}</span>
-      <output className="roll-total" aria-label={t("social.dice.total", { name: roll.name })}>
+      <output
+        className={natural ? `roll-total ${natural}` : "roll-total"}
+        aria-label={[
+          t("social.dice.total", { name: roll.name }),
+          natural && t(`social.dice.${natural}`),
+        ]
+          .filter(Boolean)
+          .join(", ")}
+        title={natural ? t(`social.dice.${natural}`) : undefined}
+      >
         {roll.total}
         {roll.terms.some((term) => term.kind === "dice" && term.success) && (
           <span className="roll-unit muted small">

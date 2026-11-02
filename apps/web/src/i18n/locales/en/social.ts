@@ -57,6 +57,8 @@ export const social = {
     reroll: "Roll {{formula}} again",
     rerollTitle: "Roll again",
     help: "Keep highest: 2d20kh1 · explode: 3d6! · successes: 10d10>=7 · together: 8d10!>=8 · label: 1d20+5 # Attack",
+    crit: "Natural 20",
+    fumble: "Natural 1",
     successes_one: "success",
     successes_other: "successes",
   },

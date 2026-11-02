@@ -57,6 +57,8 @@ export const social = {
     reroll: "Tira di nuovo {{formula}}",
     rerollTitle: "Tira di nuovo",
     help: "Tieni i migliori: 2d20kh1 · esplode: 3d6! · successi: 10d10>=7 · insieme: 8d10!>=8 · etichetta: 1d20+5 # Attacco",
+    crit: "20 naturale",
+    fumble: "1 naturale",
     successes_one: "successo",
     successes_other: "successi",
   },

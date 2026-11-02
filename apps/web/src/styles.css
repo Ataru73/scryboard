@@ -1756,6 +1756,14 @@ button.danger {
   font-weight: 700;
 }
 
+.roll-total.crit {
+  color: var(--ok);
+}
+
+.roll-total.fumble {
+  color: var(--danger);
+}
+
 .roll-toasts {
   position: absolute;
   inset: 0;
