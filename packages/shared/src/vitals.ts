@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DiceError, parseDice } from "./dice";
 
 /**
  * Punti ferita di un token: contatori generici, senza regole (a 0 il token resta dov'è). `value`
@@ -65,6 +66,23 @@ export function parseDamage(text: string): number | null {
   const factor = Number(match[4] ?? 1);
   const amount = match[3] === "/" ? Math.floor(base / factor) : Math.min(99999, base * factor);
   return match[1] === "+" || amount === 0 ? amount : -amount;
+}
+
+/**
+ * Danno o cura da tirare: «2d6+3» o «-2d6+3» sono un danno, «+1d8+2» una cura. Il segno davanti
+ * vale per tutta la formula, che deve contenere almeno un dado. null se non è una formula valida.
+ */
+export function parseDamageRoll(text: string): { sign: 1 | -1; formula: string } | null {
+  const match = /^\s*([+-]?)(.*)$/.exec(text) as RegExpExecArray;
+  const formula = (match[2] as string).trim();
+  if (/^[+-]/.test(formula)) return null;
+  try {
+    if (!parseDice(formula).some((spec) => spec.kind === "dice")) return null;
+  } catch (error) {
+    if (error instanceof DiceError) return null;
+    throw error;
+  }
+  return { sign: match[1] === "+" ? 1 : -1, formula };
 }
 
 /**

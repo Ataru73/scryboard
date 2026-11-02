@@ -5,6 +5,7 @@ import {
   applyDamage,
   hpBandOf,
   parseDamage,
+  parseDamageRoll,
   removeCondition,
   setConditionRounds,
   tickConditions,
@@ -41,6 +42,21 @@ describe("applyDamage", () => {
     expect(applyDamage(hp(15, 20, 3), 10)).toEqual(hp(20, 20, 3));
     expect(applyDamage(hp(-4), 6)).toEqual(hp(2));
     expect(applyDamage(hp(12), 2.9)).toEqual(hp(14));
+  });
+});
+
+describe("parseDamageRoll", () => {
+  it("reads dice as damage unless they start with +", () => {
+    expect(parseDamageRoll("2d6+3")).toEqual({ sign: -1, formula: "2d6+3" });
+    expect(parseDamageRoll(" - 8d6 ")).toEqual({ sign: -1, formula: "8d6" });
+    expect(parseDamageRoll("+1d8+2")).toEqual({ sign: 1, formula: "1d8+2" });
+  });
+
+  it("is null without dice or with a formula it cannot read", () => {
+    expect(parseDamageRoll("-7")).toBeNull();
+    expect(parseDamageRoll("")).toBeNull();
+    expect(parseDamageRoll("2d")).toBeNull();
+    expect(parseDamageRoll("+-2d6")).toBeNull();
   });
 });
 

@@ -130,7 +130,9 @@ export const effects = {
     damageLabel: "Danno o cura",
     damagePlaceholder: "-7 / +5",
     damageTitle:
-      "Scrivi -7 per un danno o +5 per una cura e premi Invio: i temporanei si consumano per primi. 14/2 dimezza, 7x2 raddoppia",
+      "Scrivi -7 per un danno o +5 per una cura e premi Invio: i temporanei si consumano per primi. 14/2 dimezza, 7x2 raddoppia. Anche coi dadi: 2d6+3 è un danno, +1d8 una cura",
+    damageRoll: "Danno",
+    healRoll: "Cura",
     healFull: "Pieni",
     healFullTitle: "Riporta i punti ferita al massimo (i temporanei restano come sono)",
     damageMany: "Danno o cura a {{count}} token con PF",

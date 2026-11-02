@@ -1,5 +1,5 @@
 import { GM_MAILBOX, playerCredentials, type RoomInfo } from "@scryboard/shared";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AssetAuthContext } from "../board/assetAuth";
 import { Board } from "../board/Board";
@@ -7,6 +7,8 @@ import { FlexModeIcon, InfoIcon, SettingsIcon, SidebarIcon } from "../board/icon
 import { BoardStore } from "../board/store";
 import { useIsTouchDevice } from "../board/touchDevice";
 import { useDevicePosture } from "../board/useDevicePosture";
+import { RollContext } from "../dice/rollContext";
+import { rollFormula } from "../dice/rolls";
 import { type ConnectionStatus, useRoomConnection } from "../hooks/useRoomConnection";
 import { ApiRequestError, api, describeApiError } from "../lib/api";
 import { exportFileName } from "../lib/exportName";
@@ -146,6 +148,14 @@ function Room({
     [ready, provider, gmProvider, profile.id],
   );
   useEffect(() => () => store?.destroy(), [store]);
+  const auth = useMemo(
+    () => (gmToken ? { gmToken } : { credentials: playerCredentials(profile.id, profile.secret) }),
+    [gmToken, profile.id, profile.secret],
+  );
+  const roll = useCallback(
+    (formula: string) => rollFormula(room.id, formula, profile.name, auth),
+    [room.id, profile.name, auth],
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isFolded, foldType, toggleManualFlexMode } = useDevicePosture();
   const isTouch = useIsTouchDevice();
@@ -226,9 +236,7 @@ function Room({
           mailProvider={mailProvider}
           provider={provider}
           users={users}
-          auth={
-            gmToken ? { gmToken } : { credentials: playerCredentials(profile.id, profile.secret) }
-          }
+          auth={auth}
         />
         <p className="muted small attribution">{t("pages.poweredBy")}</p>
       </aside>
@@ -248,14 +256,16 @@ function Room({
           <AssetAuthContext.Provider
             value={gmToken ?? playerCredentials(profile.id, profile.secret)}
           >
-            <Board
-              key={sceneId}
-              store={store}
-              provider={provider}
-              roomId={room.id}
-              sceneId={sceneId ?? "main"}
-              role={gmToken ? "gm" : "player"}
-            />
+            <RollContext.Provider value={roll}>
+              <Board
+                key={sceneId}
+                store={store}
+                provider={provider}
+                roomId={room.id}
+                sceneId={sceneId ?? "main"}
+                role={gmToken ? "gm" : "player"}
+              />
+            </RollContext.Provider>
           </AssetAuthContext.Provider>
         ) : (
           <div className="board-placeholder muted">{t("pages.room.boardConnecting")}</div>
