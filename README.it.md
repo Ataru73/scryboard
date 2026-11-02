@@ -89,6 +89,7 @@ con un job suo.
 | Shift+H (solo GM)                      | Nasconde ai giocatori la selezione, o la rivela                                  |
 | Spazio (tenuto premuto)                | Sposta la vista con qualsiasi strumento; durante una misura aggiunge una tappa   |
 | Rotella / pinch                        | Zoom                                                                             |
+| G                                      | Centra la vista sulla selezione o, a turno, sui tuoi token                       |
 | Shift+1 / Shift+0                      | Adatta al contenuto / zoom 100%                                                  |
 | Canc / Backspace                       | Elimina la selezione                                                             |
 | ] / [                                  | Porta in primo piano / sullo sfondo                                              |
