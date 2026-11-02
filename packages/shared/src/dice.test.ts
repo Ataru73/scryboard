@@ -8,6 +8,7 @@ import {
   parseDice,
   rollDice,
   rollSchema,
+  splitRepeat,
   splitRollLabel,
 } from "./dice";
 
@@ -143,6 +144,22 @@ describe("exploding dice and success pools", () => {
       at: new Date().toISOString(),
     });
     expect(roll.total).toBe(rolled.total);
+  });
+});
+
+describe("splitRepeat", () => {
+  it("reads how many times to roll a formula", () => {
+    expect(splitRepeat("3x 1d20+5 # Attacco")).toEqual({ times: 3, formula: "1d20+5 # Attacco" });
+    expect(splitRepeat("2X1d6")).toEqual({ times: 2, formula: "1d6" });
+    expect(splitRepeat("2×d8")).toEqual({ times: 2, formula: "d8" });
+  });
+
+  it("rolls once without a prefix and refuses too many repetitions", () => {
+    expect(splitRepeat("2d6x2")).toEqual({ times: 1, formula: "2d6x2" });
+    expect(splitRepeat("1d20")).toEqual({ times: 1, formula: "1d20" });
+    expect(splitRepeat("3x")).toEqual({ times: 1, formula: "3x" });
+    expect(() => splitRepeat("11x 1d20")).toThrow(DiceError);
+    expect(() => splitRepeat("0x 1d20")).toThrow(DiceError);
   });
 });
 

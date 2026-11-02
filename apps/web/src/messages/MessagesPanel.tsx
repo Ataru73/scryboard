@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Markdown } from "../board/markdown";
 import { unlockAudioContext } from "../dice/diceSound";
 import { RollPanel } from "../dice/RollPanel";
-import { rollFormula } from "../dice/rolls";
-import { api, describeApiError } from "../lib/api";
+import { describeRollError, rollRepeated } from "../dice/rolls";
+import { api } from "../lib/api";
 import { parseRollCommand } from "./commands";
 import { groupConversations, roomTitle } from "./conversations";
 import { useLastRead, useMailbox } from "./useMailbox";
@@ -125,7 +125,7 @@ export function MessagesPanel({
             const command = parseRollCommand(text, isGm);
             if (command) {
               unlockAudioContext();
-              return rollFormula(roomId, command.formula, myName, auth, command.hidden).then(
+              return rollRepeated(roomId, command.formula, myName, auth, command.hidden).then(
                 () => undefined,
               );
             }
@@ -214,7 +214,7 @@ function Thread({
       await onSend(body);
       setText("");
     } catch (e) {
-      setError(describeApiError(e));
+      setError(describeRollError(e));
     } finally {
       setSending(false);
     }

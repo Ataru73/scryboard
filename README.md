@@ -121,7 +121,7 @@ for the GM, also walls and doors.
 - **Dice**: the _Dice_ tab in the sidebar rolls formulas like `2d20kh1+5`, `8d6`, `4d6dl1`
   or `d%`, with quick buttons from d4 to d100. Dice can **explode** (`3d6!` rolls another die for
   every 6; `3d6!5` from 5 up) and a pool can **count successes** (`10d10>=7`, also `>`, `<=`, `<`,
-  `=`), alone or together (`8d10!>=8`): the total is then the number of successes. Text after `#` labels the roll (`1d20+5 # Attack`). Formulas you
+  `=`), alone or together (`8d10!>=8`): the total is then the number of successes. Text after `#` labels the roll (`1d20+5 # Attack`) and a `3x` in front repeats it as three separate rolls (`3x 1d20+5`, up to 10). Formulas you
   type can be saved as buttons, kept in your browser, and show their minimum, average and maximum as you type; clicking a formula in the log rolls it again. Rolls are made by the server, appear in a public log
   (the last 200) and roll as animated 2D dice at the center of the whiteboard for a few seconds. The GM can roll in secret (the
   result stays in their browser). Typing `/r 1d4` (or `/roll`) in any conversation rolls for the whole table; the GM rolls in secret with `/gr` (or `/gmroll`).

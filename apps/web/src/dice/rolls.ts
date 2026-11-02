@@ -1,8 +1,16 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { ROLLS_MAP, type Roll, rollSchema } from "@scryboard/shared";
+import {
+  DiceError,
+  MAX_REPEAT,
+  ROLLS_MAP,
+  type Roll,
+  rollSchema,
+  splitRepeat,
+} from "@scryboard/shared";
 import { useEffect, useState } from "react";
 import { create } from "zustand";
-import { api } from "../lib/api";
+import i18n from "../i18n";
+import { api, describeApiError } from "../lib/api";
 
 export type Auth = { gmToken: string } | { credentials: string };
 
@@ -28,6 +36,27 @@ export async function rollFormula(
   const roll = await api.roll(roomId, { formula, name, ...(hidden ? { hidden } : {}) }, auth);
   if (hidden) useLocalRolls.getState().addHidden(roll);
   return roll;
+}
+
+/** «3x 1d20+5»: tira la formula più volte, un tiro dopo l'altro (più attacchi in un turno). */
+export async function rollRepeated(
+  roomId: string,
+  input: string,
+  name: string,
+  auth: Auth,
+  hidden = false,
+): Promise<Roll[]> {
+  const { times, formula } = splitRepeat(input);
+  const rolls: Roll[] = [];
+  for (let i = 0; i < times; i++)
+    rolls.push(await rollFormula(roomId, formula, name, auth, hidden));
+  return rolls;
+}
+
+/** Messaggio per un tiro non riuscito, comprese le ripetizioni fuori misura. */
+export function describeRollError(error: unknown): string {
+  if (error instanceof DiceError) return i18n.t("social.dice.tooManyRepeats", { max: MAX_REPEAT });
+  return describeApiError(error);
 }
 
 /** Registro condiviso dei tiri, dal più vecchio al più recente. */
