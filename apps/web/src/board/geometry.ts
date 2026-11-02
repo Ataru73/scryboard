@@ -14,6 +14,32 @@ export function normalizeBox(a: Point, b: Point): Box {
 }
 
 /**
+ * Con Shift premuto: una linea scatta a multipli di 45° mantenendo la lunghezza, rettangoli ed
+ * ellissi diventano quadrati e cerchi (il lato più lungo vince).
+ */
+export function constrainShape(
+  shape: "line" | "rect" | "ellipse",
+  start: Point,
+  end: Point,
+): Point {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (shape === "line") {
+    const step = Math.PI / 4;
+    const angle = Math.round(Math.atan2(dy, dx) / step) * step;
+    const length = Math.hypot(dx, dy);
+    // Arrotonda per evitare residui come 1e-15 sugli assi.
+    const round = (v: number) => Math.round(v * 1e6) / 1e6;
+    return {
+      x: round(start.x + Math.cos(angle) * length),
+      y: round(start.y + Math.sin(angle) * length),
+    };
+  }
+  const side = Math.max(Math.abs(dx), Math.abs(dy));
+  return { x: start.x + Math.sign(dx || 1) * side, y: start.y + Math.sign(dy || 1) * side };
+}
+
+/**
  * Riquadro dell'oggetto non ruotato, relativo alla sua origine (x, y). Per i token l'origine è
  * il centro sul terreno; in quota include anche il disco sollevato o sprofondato.
  */

@@ -1,5 +1,5 @@
 import { type Browser, expect, type Page, test } from "@playwright/test";
-import { pickTool } from "./helpers";
+import { pickTool, setupTable } from "./helpers";
 
 async function joinAs(page: Page, name: string) {
   await page.getByLabel("Nome", { exact: true }).fill(name);
@@ -233,4 +233,24 @@ test("GM clears the board after confirming in the modal, and can undo", async ({
 
   await gm.page.keyboard.press("Control+z");
   await expectItems(player, 1);
+});
+
+test("Shift draws squares and lines at 45°", async ({ browser }) => {
+  const { gm } = await setupTable(browser);
+  const sizes = () =>
+    gm.evaluate(() => {
+      type Node = { getClientRect: () => { width: number; height: number } };
+      const { Konva } = window as unknown as {
+        Konva: { stages: { find: (s: string) => Node[] }[] };
+      };
+      return (Konva.stages[0]?.find(".item") ?? []).map((node) => {
+        const { width, height } = node.getClientRect();
+        return Math.round(width / Math.max(height, 1));
+      });
+    });
+  await gm.keyboard.press("r");
+  await gm.keyboard.down("Shift");
+  await drag(gm, [200, 200], [400, 260]);
+  await gm.keyboard.up("Shift");
+  await expect.poll(sizes).toEqual([1]);
 });

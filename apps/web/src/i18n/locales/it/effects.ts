@@ -97,6 +97,7 @@ export const effects = {
       turn: "Turno successivo / precedente",
       damage: "Danno o cura per i token selezionati",
       hide: "Nasconde o rivela la selezione",
+      constrain: "Disegnando: linee a 45°, quadrati e cerchi",
       duplicate: "Duplica la selezione",
       delete: "Elimina la selezione",
       order: "Porta in primo piano / manda sullo sfondo",

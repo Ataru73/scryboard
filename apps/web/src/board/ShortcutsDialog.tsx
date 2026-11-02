@@ -16,6 +16,7 @@ const SHORTCUTS: Shortcut[] = [
   { keys: "B J W I S F A U", id: "gmTools", gmOnly: true },
   { keys: "space", id: "pan" },
   { keys: "Alt", id: "free" },
+  { keys: "Shift", id: "constrain" },
   { keys: "N / Shift+N", id: "turn", gmOnly: true },
   { keys: "D", id: "damage" },
   { keys: "Shift+H", id: "hide", gmOnly: true },

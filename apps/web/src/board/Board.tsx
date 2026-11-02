@@ -69,6 +69,7 @@ import {
   bakeScale,
   boxesIntersect,
   connectorEnds,
+  constrainShape,
   itemBounds,
   normalizeBox,
   pointInItem,
@@ -1416,6 +1417,13 @@ export function Board({
         return;
       }
       case "shape":
+        setInteraction({
+          ...interaction,
+          end: raw.shiftKey
+            ? constrainShape(interaction.shape, interaction.start, p.world)
+            : p.world,
+        });
+        return;
       case "calibrate":
       case "fogRect":
       case "marquee":
