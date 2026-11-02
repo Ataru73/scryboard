@@ -82,6 +82,28 @@ describe("dice rolls", () => {
     watcher.provider.destroy();
   });
 
+  it("lets only the GM clear the shared log", async () => {
+    const room = await createRoom(server);
+    const watcher = await connect(server, roomDocumentName(room.id, "public"), "player");
+    if (watcher.status !== "synced") throw new Error("not synced");
+    expect((await post(room.id, `Player ${arwen}`, { formula: "1d6", name: "Arwen" })).status).toBe(
+      201,
+    );
+    const clear = (authorization: string) =>
+      fetch(`${server.baseUrl}/api/rooms/${room.id}/rolls`, {
+        method: "DELETE",
+        headers: { authorization },
+      });
+
+    expect((await clear(`Player ${arwen}`)).status).toBe(403);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(watcher.doc.getMap(ROLLS_MAP).size).toBe(1);
+    expect((await clear(`Bearer ${room.gmToken}`)).status).toBe(200);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(watcher.doc.getMap(ROLLS_MAP).size).toBe(0);
+    watcher.provider.destroy();
+  });
+
   it("rejects bad formulas and unknown senders", async () => {
     const room = await createRoom(server);
     const bad = await post(room.id, `Player ${arwen}`, { formula: "1d1", name: "A" });

@@ -66,6 +66,13 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   await expect(gmLog.getByText("(nascosto)")).toHaveCount(2);
   await player.getByRole("button", { name: "Dadi", exact: true }).click();
   await expect(playerLog.getByText("1d6", { exact: true })).toHaveCount(0);
+
+  // Il GM svuota il registro per tutti, dopo una conferma; i giocatori non hanno il pulsante.
+  await expect(player.getByRole("button", { name: "Svuota il registro" })).toHaveCount(0);
+  await gm.getByRole("button", { name: "Svuota il registro" }).click();
+  await gm.getByRole("button", { name: "Svuota", exact: true }).click();
+  await expect(playerLog.getByRole("listitem")).toHaveText(["Ancora nessun tiro."]);
+  await expect(gmLog.getByRole("listitem")).toHaveText(["Ancora nessun tiro."]);
 });
 
 test("success pools show their successes and formulas can be saved as presets", async ({

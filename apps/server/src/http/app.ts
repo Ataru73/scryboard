@@ -285,6 +285,17 @@ export function createApi(
     }
   });
 
+  // Il GM svuota il registro dei tiri.
+  api.delete("/rooms/:id/rolls", async (c) => {
+    const room = findRoom(c.req.param("id"));
+    if (!room) return c.json({ error: "Stanza non trovata" }, 404);
+    if (!isGmRequest(room.id, c.req.header("authorization"))) {
+      return c.json({ error: "Solo il GM può svuotare il registro" }, 403);
+    }
+    await messaging.rolls.clear(room.id);
+    return c.json({ ok: true });
+  });
+
   // Scene: le gestisce solo il GM. «Attiva» sposta i giocatori nella scena.
   const { service: sceneService, collab: sceneCollab } = messaging.scenes;
   const sceneRoute = async (

@@ -148,6 +148,12 @@ export const api = {
         authorization: "gmToken" in auth ? `Bearer ${auth.gmToken}` : `Player ${auth.credentials}`,
       },
     }),
+  /** Il GM svuota il registro pubblico dei tiri. */
+  clearRolls: (roomId: string, gmToken: string) =>
+    request<{ ok: true }>(`/rooms/${encodeURIComponent(roomId)}/rolls`, {
+      method: "DELETE",
+      headers: gmHeaders(gmToken),
+    }),
   /** Immagini della stanza: il GM (con il token) le vede tutte, gli altri solo le pubbliche. */
   listAssets: (roomId: string, gmToken: string | null) =>
     request<ListAssetsResponse>(`/rooms/${encodeURIComponent(roomId)}/assets`, {
