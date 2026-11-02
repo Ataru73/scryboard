@@ -51,7 +51,7 @@ export const social = {
     presetSaveHint: "Salva la formula scritta tra i pulsanti rapidi (resta in questo browser)",
     soundEnable: "Attiva il suono dei dadi",
     soundDisable: "Silenzia il suono dei dadi",
-    help: "Tieni i migliori: 2d20kh1 · esplode: 3d6! · successi: 10d10>=7 · insieme: 8d10!>=8",
+    help: "Tieni i migliori: 2d20kh1 · esplode: 3d6! · successi: 10d10>=7 · insieme: 8d10!>=8 · etichetta: 1d20+5 # Attacco",
     successes_one: "successo",
     successes_other: "successi",
   },

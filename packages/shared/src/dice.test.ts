@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { DiceError, describeRoll, formatDice, parseDice, rollDice, rollSchema } from "./dice";
+import {
+  DiceError,
+  describeRoll,
+  formatDice,
+  MAX_ROLL_LABEL,
+  parseDice,
+  rollDice,
+  rollSchema,
+  splitRollLabel,
+} from "./dice";
 
 /** Dadi truccati: restituiscono i valori in sequenza. */
 const sequence = (...values: number[]) => {
@@ -133,5 +142,19 @@ describe("exploding dice and success pools", () => {
       at: new Date().toISOString(),
     });
     expect(roll.total).toBe(rolled.total);
+  });
+});
+
+describe("roll labels", () => {
+  it("keeps what follows # as the label of the roll", () => {
+    const roll = rollDice("1d20+5 # Attacco con la spada", sequence(12));
+    expect(roll).toMatchObject({ formula: "1d20+5", label: "Attacco con la spada", total: 17 });
+    expect(rollSchema.shape.label.parse(roll.label)).toBe("Attacco con la spada");
+  });
+
+  it("ignores an empty label and trims a long one", () => {
+    expect(rollDice("1d6 #  ", sequence(3))).not.toHaveProperty("label");
+    expect(rollDice("1d6", sequence(3))).not.toHaveProperty("label");
+    expect(splitRollLabel(`2d6#${"x".repeat(60)}`).label).toHaveLength(MAX_ROLL_LABEL);
   });
 });

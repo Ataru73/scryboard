@@ -9,7 +9,21 @@ export const MAX_CONSTANT = 10000;
 /** Dadi in più che un termine può guadagnare esplodendo: oltre, l'esplosione si ferma. */
 export const MAX_EXPLOSIONS = 100;
 
+/** Lunghezza massima dell'etichetta di un tiro («1d20+5 # Attacco»). */
+export const MAX_ROLL_LABEL = 40;
+
 export class DiceError extends Error {}
+
+/** «1d20+5 # Attacco»: la formula e l'etichetta dopo il cancelletto, se c'è. */
+export function splitRollLabel(input: string): { formula: string; label?: string } {
+  const hash = input.indexOf("#");
+  if (hash === -1) return { formula: input };
+  const label = input
+    .slice(hash + 1)
+    .trim()
+    .slice(0, MAX_ROLL_LABEL);
+  return { formula: input.slice(0, hash), ...(label ? { label } : {}) };
+}
 
 export type KeepMode = "kh" | "kl" | "dh" | "dl";
 
@@ -163,6 +177,8 @@ export const rollSchema = z.object({
   from: z.string().max(64),
   name: z.string().max(40),
   formula: z.string().max(MAX_FORMULA_LENGTH),
+  /** Per che cosa si tira («Attacco»), scritto dopo un «#» nella formula. */
+  label: z.string().max(MAX_ROLL_LABEL).optional(),
   terms: z.array(rollTermSchema).max(MAX_TERMS),
   total: z.number(),
   at: z.iso.datetime(),
@@ -179,12 +195,16 @@ export const rollRequestSchema = z.object({
 });
 export type RollRequest = z.infer<typeof rollRequestSchema>;
 
-/** Tira i dadi di una formula. `random(sides)` restituisce un intero tra 1 e `sides`. */
+/**
+ * Tira i dadi di una formula, con un'etichetta facoltativa dopo «#». `random(sides)` restituisce
+ * un intero tra 1 e `sides`.
+ */
 export function rollDice(
   input: string,
   random: (sides: number) => number,
-): Pick<Roll, "formula" | "terms" | "total"> {
-  const specs = parseDice(input);
+): Pick<Roll, "formula" | "label" | "terms" | "total"> {
+  const { formula, label } = splitRollLabel(input);
+  const specs = parseDice(formula);
   let total = 0;
   const terms = specs.map((spec): RollTerm => {
     if (spec.kind === "number") {
@@ -230,7 +250,7 @@ export function rollDice(
     total += spec.sign * dice.reduce((sum, v, i) => sum + (kept[i] ? v : 0), 0);
     return { ...base, dice, kept, ...exploded };
   });
-  return { formula: formatDice(specs), terms, total };
+  return { formula: formatDice(specs), ...(label ? { label } : {}), terms, total };
 }
 
 /**

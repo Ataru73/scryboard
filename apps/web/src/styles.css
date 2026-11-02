@@ -1714,6 +1714,10 @@ button.danger {
   background: var(--surface-2);
 }
 
+.roll-label {
+  font-weight: 600;
+}
+
 .roll-entry.secret {
   outline: 1px dashed var(--border);
 }
@@ -1778,6 +1782,10 @@ button.danger {
   color: #b7b0c8;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
+}
+
+.roll-toast-label {
+  font-weight: 600;
 }
 
 .roll-toast-secret {

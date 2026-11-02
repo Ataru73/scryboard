@@ -10,7 +10,7 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
   }
 
   await player.getByLabel("Formula dei dadi").fill("8d6+2");
-  await player.getByRole("button", { name: "Tira" }).click();
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
   const gmLog = gm.getByRole("list", { name: "Registro dei tiri" });
   const playerLog = player.getByRole("list", { name: "Registro dei tiri" });
   await expect(gmLog.getByText("8d6+2")).toBeVisible();
@@ -32,7 +32,7 @@ test("everyone sees the rolls, the GM can roll in secret, /r works from chat", a
 
   // Formule non valide si spiegano.
   await player.getByLabel("Formula dei dadi").fill("1d1");
-  await player.getByRole("button", { name: "Tira" }).click();
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
   await expect(player.getByRole("alert")).toContainText("facce");
   // L'errore sta subito sotto il campo, in vista, e non in fondo a una barra che scorre.
   await expect(player.getByRole("alert")).toBeInViewport();
@@ -63,7 +63,7 @@ test("success pools show their successes and formulas can be saved as presets", 
   const playerLog = player.getByRole("list", { name: "Registro dei tiri" });
 
   await player.getByLabel("Formula dei dadi").fill("10d10!>=7");
-  await player.getByRole("button", { name: "Tira" }).click();
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
   const entry = playerLog.getByRole("listitem").filter({ hasText: "10d10!>=7" });
   await expect(entry).toHaveCount(1);
   await expect(entry.getByText(/successi?/)).toBeVisible();
@@ -87,6 +87,17 @@ test("success pools show their successes and formulas can be saved as presets", 
   const presets = player.getByRole("region", { name: "Formule salvate" });
   await expect(presets.getByRole("button", { name: "8d10!>=8", exact: true })).toBeVisible();
   await expect(save).toBeDisabled(); // già salvata
+
+  // Dopo «#» si scrive per che cosa si tira: l'etichetta compare a tutti e resta nei preferiti.
+  await player.getByLabel("Formula dei dadi").fill("1d20 + 3 # Furtività");
+  await player.getByRole("button", { name: "Tira", exact: true }).click();
+  await expect(
+    gm.getByRole("list", { name: "Registro dei tiri" }).getByRole("listitem").last(),
+  ).toContainText("1d20+3 Furtività");
+  await save.click();
+  await expect(
+    presets.getByRole("button", { name: "1d20+3 # Furtività", exact: true }),
+  ).toBeVisible();
 
   await player.reload();
   await player.getByRole("button", { name: "Dadi", exact: true }).click();

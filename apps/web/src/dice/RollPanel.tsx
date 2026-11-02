@@ -1,5 +1,5 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider";
-import { describeRoll, formatDice, parseDice, type Roll } from "@scryboard/shared";
+import { describeRoll, formatDice, parseDice, type Roll, splitRollLabel } from "@scryboard/shared";
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { describeApiError } from "../lib/api";
@@ -67,7 +67,8 @@ export function RollPanel({ roomId, provider, myName, auth }: Props) {
   /** La formula scritta si può salvare solo se è valida e non c'è già (stessa forma canonica). */
   const canonical = (text: string) => {
     try {
-      return formatDice(parseDice(text));
+      const { formula, label } = splitRollLabel(text);
+      return formatDice(parseDice(formula)) + (label ? ` # ${label}` : "");
     } catch {
       return null;
     }
@@ -222,6 +223,7 @@ function RollEntry({ roll, secret }: { roll: Roll; secret: boolean }) {
         <strong>{roll.name}</strong>{" "}
         {roll.from === "gm" && <span className="badge role-badge">GM</span>}{" "}
         <span className="muted">{roll.formula}</span>
+        {roll.label && <span className="roll-label"> {roll.label}</span>}
         {secret && <span className="muted small"> {t("social.dice.hiddenSuffix")}</span>}
       </span>
       <span className="roll-detail muted small">{describeRoll(roll)}</span>
